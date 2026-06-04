@@ -1,0 +1,21 @@
+name: Sync Notion to Portfolio
+
+on:
+  schedule:
+    # Chạy tự động mỗi 15 phút. 
+    # (Tần suất này dùng khoảng 2.800 phút/tháng, rất an toàn trong ngưỡng 2.000 - 3.000 phút miễn phí của GitHub)
+    - cron: '*/15 * * * *'
+  
+  # Cho phép bạn vào thẳng GitHub bấm nút chạy thủ công bất cứ lúc nào nếu cần update gấp
+  workflow_dispatch: 
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Next.js Revalidation
+        run: |
+          # Gọi API xóa cache để trang web kéo data mới từ Notion
+          curl -X POST "${{ secrets.PRODUCTION_URL }}/api/revalidate?secret=${{ secrets.REVALIDATE_SECRET }}" \
+          -H "Content-Type: application/json" \
+          -w "\nHTTP Status: %{http_code}\n"
