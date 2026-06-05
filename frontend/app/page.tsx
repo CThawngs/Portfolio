@@ -17,6 +17,7 @@ export default async function HomePage() {
     ]);
     projects = data.map((item: any) => ({
       id: item.id,
+      status: item.status || "",
       title_vn: item.title_vn || "",
       title_en: item.title_en || "",
       desc_vn: item.desc_vn || "",

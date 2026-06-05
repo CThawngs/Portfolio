@@ -7,6 +7,7 @@ import { Code, Briefcase, Camera, Mail } from "lucide-react";
 
 export interface Project {
   id: string;
+  status: string;
   title_vn: string;
   title_en: string;
   desc_vn: string;
@@ -186,7 +187,9 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
 
   // 5. Filter and sort projects based on dynamic controls
   const filteredAndSortedProjects = useMemo(() => {
-    let result = [...projects];
+    // ── Safety guard: only render fully Published items ──────────────────────
+    // This is a second layer of defence on top of the Notion API filter.
+    let result = projects.filter((p) => p.status === "Published");
 
     // Category filter
     if (activeTab !== "All") {

@@ -46,6 +46,7 @@ export async function getPublishedPortfolio() {
       const properties = page.properties ?? {};
       return {
         id: page.id,
+        status: properties['Status']?.status?.name ?? "",
         title_vn: properties['Title (VN)']?.title[0]?.plain_text ?? "Untitled",
         title_en: properties['Title (EN)']?.rich_text[0]?.plain_text ?? "Untitled",
         desc_vn: properties['Description (VN)']?.rich_text[0]?.plain_text ?? "",
