@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { Code, Briefcase, Camera, Mail } from "lucide-react";
@@ -87,6 +87,17 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Ref for the horizontally-scrollable tag container (md+ only)
+  const tagScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollTags = (direction: "left" | "right") => {
+    if (!tagScrollRef.current) return;
+    tagScrollRef.current.scrollBy({
+      left: direction === "left" ? -200 : 200,
+      behavior: "smooth",
+    });
+  };
 
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -463,33 +474,67 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
           )}
         </div>
 
-        {/* Dynamic Tag Filters (Deterministic colors) */}
+        {/* Dynamic Tag Filters — wrap on mobile, horizontal-scroll + arrows on md+ */}
         {uniqueTags.length > 0 && (
-          <div
-            className="flex overflow-x-auto flex-nowrap gap-1.5 hide-scrollbar"
-          >
-            {uniqueTags.map((tag) => {
-              const isSelected = selectedTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedTags(selectedTags.filter((t) => t !== tag));
-                    } else {
-                      setSelectedTags([...selectedTags, tag]);
-                    }
-                  }}
-                  className={`cursor-pointer shrink-0 whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border ${
-                    isSelected
-                      ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm border-2"
-                      : `${getTagStyle(tag)} hover:opacity-85`
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+
+            {/* LEFT arrow — md+ only */}
+            <button
+              onClick={() => scrollTags("left")}
+              aria-label="Scroll tags left"
+              className="hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-200 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+
+            {/* Tag pills container
+                  · Mobile  : flex-wrap, no overflow, no scrollbar
+                  · md+     : flex-nowrap, overflow-x-auto, visible scrollbar */}
+            <div
+              ref={tagScrollRef}
+              className="
+                flex flex-wrap gap-1.5
+                md:flex-nowrap md:overflow-x-auto
+                pb-1
+              "
+            >
+              {uniqueTags.map((tag) => {
+                const isSelected = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedTags(selectedTags.filter((t) => t !== tag));
+                      } else {
+                        setSelectedTags([...selectedTags, tag]);
+                      }
+                    }}
+                    className={`cursor-pointer shrink-0 whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border ${
+                      isSelected
+                        ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm border-2"
+                        : `${getTagStyle(tag)} hover:opacity-85`
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* RIGHT arrow — md+ only */}
+            <button
+              onClick={() => scrollTags("right")}
+              aria-label="Scroll tags right"
+              className="hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-200 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+
           </div>
         )}
       </section>
