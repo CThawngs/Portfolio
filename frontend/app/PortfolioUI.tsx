@@ -229,7 +229,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-8 min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white pb-20 transition-colors duration-300">
       
       {/* ── HEADER & NAVIGATION ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-300">
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50/90 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-300">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-5 flex items-center justify-between w-full">
           
           <h1 className="text-2xl font-bold tracking-tight text-left text-slate-900 dark:text-white animate-fade-in">
@@ -288,7 +288,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
       {/* ── PROFILE BIO SECTION ────────────────────────────────────────── */}
       {profileData && (
         <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 animate-fade-in">
-          <div className="flex flex-col items-center text-center w-full max-w-4xl mx-auto p-6 md:p-8 bg-white dark:bg-slate-800/30 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-2xl gap-4">
+          <div className="flex flex-col items-center text-center w-full max-w-4xl mx-auto p-6 md:p-8 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-2xl gap-4">
             
             {/* Top Section (Personal Info) */}
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 text-center text-slate-900 dark:text-white">
@@ -428,7 +428,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-750"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 outline-none hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-750"
             >
               <option value="newest">{lang === "EN" ? "Newest" : "Mới nhất"}</option>
               <option value="oldest">{lang === "EN" ? "Oldest" : "Cũ nhất"}</option>
@@ -482,7 +482,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
       {/* ── PROJECTS GRID ──────────────────────────────────────────────── */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 mt-8">
         {filteredAndSortedProjects.length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-slate-950/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
+          <div className="text-center py-20 bg-slate-50 dark:bg-slate-950/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
             <span className="text-4xl">🔎</span>
             <h3 className="mt-4 text-lg font-bold text-slate-700 dark:text-slate-300">
               {lang === "EN" ? "No projects found" : "Không tìm thấy dự án nào"}
@@ -507,7 +507,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                   <motion.div
                     key={project.id}
                     onClick={() => setSelectedProject(project)}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/60 transition-all duration-300 hover:-translate-y-1.5 dark:hover:border-slate-700 dark:hover:shadow-indigo-505/5 cursor-pointer"
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 hover:border-indigo-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/60 transition-all duration-300 hover:-translate-y-1.5 dark:hover:border-slate-700 dark:hover:shadow-indigo-505/5 cursor-pointer"
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
@@ -608,10 +608,10 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
           onClick={() => setSelectedProject(null)}
         >
           <div
-            className="w-full max-w-5xl max-h-[90vh] flex flex-col bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative"
+            className="w-full max-w-2xl flex flex-col bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button (X) - Top-right corner of the Modal's main container */}
+            {/* Close Button (X) - always visible top-right */}
             <button
               onClick={() => setSelectedProject(null)}
               className="absolute right-4 top-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-950/80 hover:bg-slate-950 text-slate-300 hover:text-white transition-colors duration-200 border border-slate-800/50 shadow-sm"
@@ -620,11 +620,11 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
               ✕
             </button>
 
-            {/* Inner Content Wrapper */}
-            <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
+            {/* Inner Content Wrapper — vertical on ALL screen sizes */}
+            <div className="flex flex-col max-h-[80vh] overflow-y-auto">
               
-              {/* Left Column (Media/Image/Iframe) */}
-              <div className="w-full md:w-[55%] lg:w-[60%] shrink-0 relative bg-black/50 h-[35vh] min-h-[250px] md:h-full">
+              {/* Top Section: Media/Image */}
+              <div className="w-full shrink-0 relative bg-black/50 h-[40vw] min-h-[200px] max-h-[300px]">
                 {selectedProject.images && selectedProject.images[0] ? (
                   <img
                     src={selectedProject.images[0]}
@@ -638,8 +638,8 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 )}
               </div>
 
-              {/* Right Column (Info & Actions) */}
-              <div className="w-full md:w-[45%] lg:w-[40%] p-6 md:p-8 flex flex-col h-full overflow-y-auto text-white">
+              {/* Bottom Section: Info & Actions */}
+              <div className="w-full p-6 flex flex-col gap-1 text-white">
                 <div>
                   {/* Category Badge */}
                   {selectedProject.category && (
@@ -675,7 +675,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 </div>
 
                 {/* Description */}
-                <div className="flex-1 mt-4 text-slate-300 overflow-y-auto">
+                <div className="mt-4 text-slate-300">
                   <p className="leading-relaxed text-sm">
                     {lang === "EN"
                       ? selectedProject.desc_en || selectedProject.desc_vn
@@ -683,8 +683,8 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                   </p>
                 </div>
 
-                {/* Sticky/Footer of Right Column */}
-                <div className="mt-auto pt-6 flex justify-end gap-4 border-t border-slate-800 shrink-0">
+                {/* Actions footer */}
+                <div className="mt-6 pt-4 flex justify-end gap-4 border-t border-slate-800">
                   <button
                     onClick={() => setSelectedProject(null)}
                     className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors duration-200"
