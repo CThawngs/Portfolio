@@ -8,7 +8,8 @@ Processes TWO Notion databases:
 
   2. Profile Config (NOTION_PROFILE_DATABASE_ID)
      Fields: Name (VN) [title], Name (EN) [rich_text],
-             Bio (VN) [rich_text],   Bio (EN) [rich_text]
+             Role (VN) [rich_text], Role (EN) [rich_text],
+             Bio  (VN) [rich_text], Bio  (EN) [rich_text]
 
 Gatekeeper rule (ZERO-cost protection) applied to every field pair:
   • BOTH empty  → skip (nothing to translate)
@@ -18,9 +19,8 @@ Gatekeeper rule (ZERO-cost protection) applied to every field pair:
 
 Status workflow:
   • Only pages with Status == "Pending" are fetched.
-  • After ALL field pairs of a page are processed, Status is set to "Published".
-  • If a translation call fails, the page is NOT marked Published so it will
-    be retried on the next run.
+  • Status is intentionally left as "Pending" after translation so the user
+    can review the output manually before publishing.
 
 Dependencies: pip install requests python-dotenv
 """
@@ -104,8 +104,8 @@ NOTION_HEADERS = {
 OPENROUTER_HEADERS = {
     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://portfolio-cms.notion.so",
-    "X-Title": "Portfolio CMS AI Automation",
+    "HTTP-Referer": "https://www.notion.so",
+    "X-Title": "Portfolio",
 }
 
 # System prompt — see CONTEXT.md §5
@@ -173,6 +173,13 @@ PROFILE_FIELDS: list[FieldPair] = [
         en_type="rich_text",
     ),
     FieldPair(
+        label="Role",
+        vn_key="Role (VN)",
+        en_key="Role (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+    FieldPair(
         label="Bio",
         vn_key="Bio (VN)",
         en_key="Bio (EN)",
@@ -180,9 +187,6 @@ PROFILE_FIELDS: list[FieldPair] = [
         en_type="rich_text",
     ),
 ]
-
-# Role fields are informational only (translator doesn't need to handle them).
-# They are omitted intentionally.
 
 
 # ---------------------------------------------------------------------------
@@ -363,10 +367,13 @@ def update_notion_page(page_id: str, properties: dict) -> None:
 # ---------------------------------------------------------------------------
 def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
     """
-    Apply the Gatekeeper logic to each field pair, write translations to Notion
-    immediately as they are produced, and finally flip Status → Published.
+    Apply the Gatekeeper logic to each field pair and write translations to
+    Notion immediately as they are produced.
 
-    Returns True if all translations succeeded, False otherwise.
+    Status is intentionally left unchanged (remains Pending) so the user can
+    review translations manually before publishing.
+
+    Returns True if all attempted translations succeeded, False if any failed.
     """
     page_id: str = page["id"]
     props: dict = page.get("properties", {})
@@ -414,7 +421,7 @@ def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
                 "    [%s] Translation FAILED for page %s: %s", fp.label, page_id, exc
             )
             any_failure = True
-            continue  # Try remaining field pairs; do NOT mark Published
+            continue  # Try remaining field pairs
 
         # Write translation immediately — fail fast if Notion is unreachable
         try:
@@ -430,20 +437,14 @@ def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
             any_failure = True
             continue
 
-    # ── Mark as Published only when everything succeeded ─────────────────────
+    # Status is NOT modified — user reviews and publishes manually.
     if any_failure:
         logger.warning(
-            "  ⚠  Page %s had errors — keeping Status = Pending for retry.", page_id
+            "  ⚠  Page %s had errors — some fields may be incomplete.", page_id
         )
         return False
 
-    try:
-        update_notion_page(page_id, {"Status": {"status": {"name": "Published"}}})
-        logger.info("  ✅ Page %s → Published.", page_id)
-    except RuntimeError as exc:
-        logger.error("  Failed to mark page %s as Published: %s", page_id, exc)
-        return False
-
+    logger.info("  ✅ Page %s — all translations written. Status left as Pending.", page_id)
     return True
 
 
@@ -510,7 +511,7 @@ def main() -> None:
 
     logger.info("=" * 60)
     logger.info(
-        "ALL DONE — %d page(s) published, %d page(s) kept pending (errors).",
+        "ALL DONE — %d page(s) translated (awaiting review), %d page(s) had errors.",
         total_success, total_fail,
     )
 
