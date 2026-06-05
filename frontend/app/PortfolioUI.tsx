@@ -371,13 +371,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 mt-6">
         <div 
           className="flex overflow-x-auto flex-nowrap gap-3 pb-2 border-b border-slate-200 dark:border-slate-800 snap-x snap-mandatory hide-scrollbar transition-colors duration-300"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <style dangerouslySetInnerHTML={{__html: `
-            .hide-scrollbar::-webkit-scrollbar {
-              display: none;
-            }
-          `}} />
           {categories.map((cat) => {
             const isActive = activeTab === cat;
             return (
@@ -471,7 +465,9 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
 
         {/* Dynamic Tag Filters (Deterministic colors) */}
         {uniqueTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div
+            className="flex overflow-x-auto flex-nowrap gap-1.5 hide-scrollbar"
+          >
             {uniqueTags.map((tag) => {
               const isSelected = selectedTags.includes(tag);
               return (
@@ -484,7 +480,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                       setSelectedTags([...selectedTags, tag]);
                     }
                   }}
-                  className={`cursor-pointer px-3 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border ${
+                  className={`cursor-pointer shrink-0 whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border ${
                     isSelected
                       ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm border-2"
                       : `${getTagStyle(tag)} hover:opacity-85`
