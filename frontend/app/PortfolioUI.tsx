@@ -390,7 +390,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 className={`cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 shrink-0 snap-start ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                    : "bg-slate-200/65 text-slate-650 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    : "bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 }`}
               >
                 {cat}
@@ -462,7 +462,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 setActiveTab("All");
                 setSelectedTags([]);
               }}
-              className="hidden md:block text-xs font-semibold text-indigo-650 dark:text-indigo-400 hover:underline cursor-pointer self-start sm:self-center"
+              className="hidden md:block text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer self-start sm:self-center"
             >
               {lang === "EN" ? "Clear Filters" : "Xoá bộ lọc"}
             </button>
@@ -562,7 +562,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                       {/* Date display below Title */}
                       {renderDateRange(project.project_date)}
                       
-                      <p className="mt-2 text-xs text-slate-650 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
+                      <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
                         {lang === "EN"
                           ? project.desc_en || project.desc_vn
                           : project.desc_vn || project.desc_en}
@@ -600,7 +600,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-650 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {"<-"}
                 </button>
@@ -610,7 +610,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                 <button
                   disabled={currentPage === totalPages || totalPages === 0}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-650 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {"->"}
                 </button>
@@ -660,9 +660,8 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
               {/* Bottom Section: Info & Actions */}
               <div className="w-full p-6 flex flex-col gap-1 text-white">
                 <div>
-                  {/* Category Badge */}
                   {selectedProject.category && (
-                    <span className="mb-3 inline-block rounded-lg bg-indigo-650 px-3 py-1 text-xs font-bold tracking-wider uppercase text-white shadow-lg shadow-indigo-650/30">
+                    <span className="mb-3 inline-block rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-3.5 py-1 text-[10px] font-extrabold tracking-widest uppercase text-white shadow-lg shadow-indigo-500/25 border border-indigo-400/20">
                       {selectedProject.category}
                     </span>
                   )}
