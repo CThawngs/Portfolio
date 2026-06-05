@@ -507,7 +507,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                   <motion.div
                     key={project.id}
                     onClick={() => setSelectedProject(project)}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-md dark:shadow-none hover:border-indigo-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/60 transition-all duration-300 hover:-translate-y-1.5 dark:hover:border-slate-700 dark:hover:shadow-indigo-505/5 cursor-pointer"
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-xl dark:shadow-none hover:border-indigo-300 hover:shadow-2xl dark:border-slate-800 dark:bg-slate-900/60 transition-all duration-300 hover:-translate-y-1.5 dark:hover:border-slate-700 dark:hover:shadow-indigo-505/5 cursor-pointer"
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
