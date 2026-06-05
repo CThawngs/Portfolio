@@ -58,6 +58,25 @@ const getTagStyle = (tagName: string): string => {
   return tagThemes[hash % tagThemes.length];
 };
 
+const getVisitButtonText = (category: string | undefined, lang: "EN" | "VN") => {
+  const cleanCategory = (category || "Project").trim();
+  const lowerCategory = cleanCategory.toLowerCase();
+
+  const translations: Record<string, { en: string; vn: string }> = {
+    project: { en: "Project", vn: "Dự án" },
+    certificate: { en: "Certification", vn: "Chứng chỉ" },
+  };
+
+  if (lang === "EN") {
+    const displayCategory = translations[lowerCategory]?.en || cleanCategory;
+    return `Visit ${displayCategory}`;
+  } else {
+    const displayCategory = translations[lowerCategory]?.vn || cleanCategory;
+    return `Truy cập ${displayCategory}`;
+  }
+};
+
+
 export default function PortfolioUI({ projects = [], profileData = null }: PortfolioUIProps) {
   const [activeTab, setActiveTab] = useState<string>("All");
   const [lang, setLang] = useState<"EN" | "VN">("EN");
@@ -698,7 +717,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all duration-200"
                     >
-                      {lang === "EN" ? "Visit Project" : "Truy cập Dự án"} ↗
+                      {getVisitButtonText(selectedProject.category, lang)} ↗
                     </a>
                   )}
                 </div>
