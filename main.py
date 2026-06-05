@@ -1,19 +1,38 @@
 """
-Portfolio AI Automation CMS
-============================
-Reads Notion pages with Status == "Pending", translates their
-Title / Description fields (EN <-> VN) via OpenRouter LLM, writes
-the translated text back, and flips Status to "Published".
+Portfolio AI Automation CMS — v2 (Dual-Database Edition)
+=========================================================
+Processes TWO Notion databases:
+  1. Portfolio CMS  (NOTION_DATABASE_ID)
+     Fields: Title (VN) [title], Title (EN) [rich_text],
+             Description (VN) [rich_text], Description (EN) [rich_text]
 
-Dependencies: requests, python-dotenv
-Install: pip install requests python-dotenv
+  2. Profile Config (NOTION_PROFILE_DATABASE_ID)
+     Fields: Name (VN) [title], Name (EN) [rich_text],
+             Bio (VN) [rich_text],   Bio (EN) [rich_text]
+
+Gatekeeper rule (ZERO-cost protection) applied to every field pair:
+  • BOTH empty  → skip (nothing to translate)
+  • BOTH filled → skip (already done; don't waste tokens)
+  • VN filled / EN empty → translate VN → EN, write result immediately
+  • EN filled / VN empty → translate EN → VN, write result immediately
+
+Status workflow:
+  • Only pages with Status == "Pending" are fetched.
+  • After ALL field pairs of a page are processed, Status is set to "Published".
+  • If a translation call fails, the page is NOT marked Published so it will
+    be retried on the next run.
+
+Dependencies: pip install requests python-dotenv
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import os
 import sys
 import time
+from dataclasses import dataclass, field
 from typing import Optional
 
 import requests
@@ -30,47 +49,47 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Load environment variables from .env
+# Environment & config
 # ---------------------------------------------------------------------------
 load_dotenv()
 
 NOTION_API_KEY: str = os.environ.get("NOTION_API_KEY", "")
 OPENROUTER_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
+PORTFOLIO_DB_ID: str = os.environ.get("NOTION_DATABASE_ID", "")
+PROFILE_DB_ID: str = os.environ.get("NOTION_PROFILE_DATABASE_ID", "")
 
-if not NOTION_API_KEY:
-    logger.error("NOTION_API_KEY is missing from .env. Exiting.")
-    sys.exit(1)
+for var_name, var_value in [
+    ("NOTION_API_KEY", NOTION_API_KEY),
+    ("OPENROUTER_API_KEY", OPENROUTER_API_KEY),
+    ("NOTION_DATABASE_ID", PORTFOLIO_DB_ID),
+    ("NOTION_PROFILE_DATABASE_ID", PROFILE_DB_ID),
+]:
+    if not var_value:
+        logger.error("%s is missing from .env — exiting.", var_name)
+        sys.exit(1)
 
-if not OPENROUTER_API_KEY:
-    logger.error("OPENROUTER_API_KEY is missing from .env. Exiting.")
-    sys.exit(1)
-
-# ---------------------------------------------------------------------------
-# Load model configuration from config.json
-# ---------------------------------------------------------------------------
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-
 try:
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        config: dict = json.load(f)
+    with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
+        _cfg: dict = json.load(fh)
 except FileNotFoundError:
-    logger.error("config.json not found at %s. Exiting.", CONFIG_PATH)
+    logger.error("config.json not found at %s — exiting.", CONFIG_PATH)
     sys.exit(1)
 except json.JSONDecodeError as exc:
-    logger.error("Failed to parse config.json: %s. Exiting.", exc)
+    logger.error("Failed to parse config.json: %s — exiting.", exc)
     sys.exit(1)
 
-LLM_MODEL: str = config.get("model", "")
-LLM_TEMPERATURE: float = float(config.get("temperature", 0.3))
+LLM_MODEL: str = _cfg.get("model", "")
+LLM_TEMPERATURE: float = float(_cfg.get("temperature", 0.3))
 
 if not LLM_MODEL:
-    logger.error("'model' key is missing or empty in config.json. Exiting.")
+    logger.error("'model' key is missing or empty in config.json — exiting.")
     sys.exit(1)
 
-logger.info("Using LLM model: %s (temperature=%.2f)", LLM_MODEL, LLM_TEMPERATURE)
+logger.info("LLM model: %s  (temperature=%.2f)", LLM_MODEL, LLM_TEMPERATURE)
 
 # ---------------------------------------------------------------------------
-# Constants
+# API constants
 # ---------------------------------------------------------------------------
 NOTION_VERSION = "2022-06-28"
 NOTION_BASE_URL = "https://api.notion.com/v1"
@@ -85,57 +104,134 @@ NOTION_HEADERS = {
 OPENROUTER_HEADERS = {
     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
     "Content-Type": "application/json",
-    # Routing headers — identify this app in OpenRouter usage logs.
-    # Replace the Referer with your real deployed portfolio URL when available.
-    "HTTP-Referer": "https://app.notion.com/p/373ff6736afa80348c3bdf90581104a4?v=373ff6736afa80ba9788000c2589f363&source=copy_link",
-    "X-Title": "Portfolio",
+    "HTTP-Referer": "https://portfolio-cms.notion.so",
+    "X-Title": "Portfolio CMS AI Automation",
 }
 
-# Exact system prompt as specified in CONTEXT.md §5
+# System prompt — see CONTEXT.md §5
 SYSTEM_PROMPT = (
-    "You are an expert bilingual translator (English and Vietnamese) specializing in "
+    "You are an expert bilingual translator (English and Vietnamese) specialising in "
     "IT, Software Engineering, and Tech Portfolios. Your task is to automatically detect "
     "the language of the provided text and translate it into the other language.\n\n"
     "CRITICAL RULES:\n"
-    "1. You must ONLY output the exact translated text. Do not include any introductions, "
-    "explanations, quotation marks, or conversational fillers.\n"
-    "2. Preserve common IT/Tech terminology (e.g., Test, Bug, Deploy, App, Web, Frontend, "
-    "Backend) in English even when translating to Vietnamese, unless there is a universally "
-    "accepted Vietnamese tech equivalent.\n"
+    "1. Output ONLY the exact translated text. No introductions, explanations, "
+    "quotation marks, or conversational fillers.\n"
+    "2. Preserve common IT/Tech terminology (e.g., Test, Bug, Deploy, App, Web, "
+    "Frontend, Backend) in English even when translating to Vietnamese, unless a "
+    "universally accepted Vietnamese tech equivalent exists.\n"
     "3. Maintain a professional, concise tone suitable for a Software Engineer's portfolio."
 )
 
-# Rate-limit retry settings
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
 
 
 # ---------------------------------------------------------------------------
-# Helper: extract plain text from a Notion rich-text array
+# Field-pair descriptor
 # ---------------------------------------------------------------------------
-def extract_rich_text(rich_text_list: list) -> str:
-    """Return concatenated plain_text from a Notion rich_text property."""
-    return "".join(block.get("plain_text", "") for block in rich_text_list).strip()
+@dataclass
+class FieldPair:
+    """
+    Describes one bilingual pair inside a Notion page.
+
+    vn_key / en_key   — property names in Notion
+    vn_type / en_type — "title" or "rich_text"
+    label             — human-readable name for logs
+    """
+
+    label: str
+    vn_key: str
+    en_key: str
+    vn_type: str = "rich_text"
+    en_type: str = "rich_text"
+
+
+# Database schemas
+PORTFOLIO_FIELDS: list[FieldPair] = [
+    FieldPair(
+        label="Title",
+        vn_key="Title (VN)",
+        en_key="Title (EN)",
+        vn_type="title",
+        en_type="rich_text",
+    ),
+    FieldPair(
+        label="Description",
+        vn_key="Description (VN)",
+        en_key="Description (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+]
+
+PROFILE_FIELDS: list[FieldPair] = [
+    FieldPair(
+        label="Name",
+        vn_key="Name (VN)",
+        en_key="Name (EN)",
+        vn_type="title",
+        en_type="rich_text",
+    ),
+    FieldPair(
+        label="Bio",
+        vn_key="Bio (VN)",
+        en_key="Bio (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+]
+
+# Role fields are informational only (translator doesn't need to handle them).
+# They are omitted intentionally.
 
 
 # ---------------------------------------------------------------------------
-# Helper: extract plain text from a Notion title property
+# Helpers — extract text from Notion property blocks
 # ---------------------------------------------------------------------------
-def extract_title(title_list: list) -> str:
-    """Return concatenated plain_text from a Notion title property."""
-    return "".join(block.get("plain_text", "") for block in title_list).strip()
+def _extract(prop: dict, kind: str) -> str:
+    """
+    Extract plain text from a Notion property dict.
+
+    kind must be "title" or "rich_text".
+    Returns an empty string if the property is absent or empty.
+    """
+    blocks: list = prop.get(kind, [])
+    return "".join(b.get("plain_text", "") for b in blocks).strip()
+
+
+def extract_text(props: dict, key: str, kind: str) -> str:
+    """Safe wrapper: returns '' if key not present."""
+    return _extract(props.get(key, {}), kind)
 
 
 # ---------------------------------------------------------------------------
-# Notion API: fetch all Pending pages from the database
+# Helpers — build Notion property payloads
+# ---------------------------------------------------------------------------
+def rich_text_payload(text: str) -> dict:
+    return {"rich_text": [{"type": "text", "text": {"content": text}}]}
+
+
+def title_payload(text: str) -> dict:
+    return {"title": [{"type": "text", "text": {"content": text}}]}
+
+
+def make_payload(text: str, kind: str) -> dict:
+    """Return the correct Notion property payload for the given field type."""
+    if kind == "title":
+        return title_payload(text)
+    return rich_text_payload(text)
+
+
+# ---------------------------------------------------------------------------
+# Notion API — fetch pending pages
 # ---------------------------------------------------------------------------
 def fetch_pending_pages(database_id: str) -> list[dict]:
     """
-    Query the Notion database for all pages where Status == 'Pending'.
-    Handles pagination automatically.
+    Query a Notion database for pages where Status == 'Pending'.
+    Automatically follows pagination cursors.
     """
     url = f"{NOTION_BASE_URL}/databases/{database_id}/query"
-    payload = {
+    payload: dict = {
         "filter": {
             "property": "Status",
             "status": {"equals": "Pending"},
@@ -151,32 +247,35 @@ def fetch_pending_pages(database_id: str) -> list[dict]:
             payload["start_cursor"] = start_cursor
 
         try:
-            response = requests.post(url, headers=NOTION_HEADERS, json=payload, timeout=30)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as exc:
-            logger.error("Notion query failed (HTTP %s): %s", response.status_code, response.text)
-            raise RuntimeError("Failed to fetch pages from Notion.") from exc
+            resp = requests.post(url, headers=NOTION_HEADERS, json=payload, timeout=30)
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError:
+            logger.error(
+                "Notion query error (HTTP %s) for DB %s: %s",
+                resp.status_code, database_id, resp.text,
+            )
+            raise RuntimeError(f"Failed to fetch pages from Notion DB {database_id}.")
         except requests.exceptions.RequestException as exc:
-            logger.error("Notion request error: %s", exc)
-            raise RuntimeError("Network error while contacting Notion API.") from exc
+            logger.error("Network error querying Notion DB %s: %s", database_id, exc)
+            raise RuntimeError(f"Network error for Notion DB {database_id}.") from exc
 
-        data = response.json()
+        data = resp.json()
         pages.extend(data.get("results", []))
         has_more = data.get("has_more", False)
         start_cursor = data.get("next_cursor")
 
-    logger.info("Fetched %d pending page(s) from Notion.", len(pages))
+    logger.info("  → %d pending page(s) found in DB %s.", len(pages), database_id)
     return pages
 
 
 # ---------------------------------------------------------------------------
-# OpenRouter API: translate text via LLM
+# OpenRouter API — translate with retries
 # ---------------------------------------------------------------------------
 def translate_text(text: str) -> str:
     """
-    Send `text` to OpenRouter for EN <-> VN translation.
-    Returns only the translated string.
-    Retries up to MAX_RETRIES times on rate-limit (429) errors.
+    Send `text` to OpenRouter for EN ↔ VN translation.
+    Retries up to MAX_RETRIES times on rate-limit (429) or transient errors.
+    Returns the translated string.
     """
     url = f"{OPENROUTER_BASE_URL}/chat/completions"
     payload = {
@@ -190,210 +289,229 @@ def translate_text(text: str) -> str:
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = requests.post(
-                url, headers=OPENROUTER_HEADERS, json=payload, timeout=60
+            resp = requests.post(
+                url, headers=OPENROUTER_HEADERS, json=payload, timeout=90
             )
 
-            if response.status_code == 429:
+            if resp.status_code == 429:
                 wait = RETRY_BACKOFF_SECONDS * attempt
                 logger.warning(
-                    "OpenRouter rate limit hit (attempt %d/%d). Waiting %ds...",
+                    "OpenRouter rate limit (attempt %d/%d). Waiting %ds…",
                     attempt, MAX_RETRIES, wait,
                 )
                 time.sleep(wait)
                 continue
 
-            response.raise_for_status()
+            resp.raise_for_status()
 
-        except requests.exceptions.HTTPError as exc:
+        except requests.exceptions.HTTPError:
             logger.error(
                 "OpenRouter HTTP error (attempt %d/%d, status %s): %s",
-                attempt, MAX_RETRIES, response.status_code, response.text,
+                attempt, MAX_RETRIES, resp.status_code, resp.text,
             )
             if attempt == MAX_RETRIES:
-                raise RuntimeError("OpenRouter API request failed after retries.") from exc
-            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
-            continue
-        except requests.exceptions.RequestException as exc:
-            logger.error("OpenRouter network error (attempt %d/%d): %s", attempt, MAX_RETRIES, exc)
-            if attempt == MAX_RETRIES:
-                raise RuntimeError("Network error while contacting OpenRouter API.") from exc
+                raise RuntimeError("OpenRouter API request failed after retries.")
             time.sleep(RETRY_BACKOFF_SECONDS * attempt)
             continue
 
-        # Parse the response
-        data = response.json()
+        except requests.exceptions.RequestException as exc:
+            logger.error(
+                "OpenRouter network error (attempt %d/%d): %s",
+                attempt, MAX_RETRIES, exc,
+            )
+            if attempt == MAX_RETRIES:
+                raise RuntimeError("Network error contacting OpenRouter API.") from exc
+            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+            continue
+
         try:
-            translated = data["choices"][0]["message"]["content"].strip()
+            translated = resp.json()["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError) as exc:
             raise RuntimeError(
-                f"Unexpected OpenRouter response format: {data}"
+                f"Unexpected OpenRouter response: {resp.text[:300]}"
             ) from exc
 
         return translated
 
-    raise RuntimeError("Exhausted all retries for OpenRouter API.")
+    raise RuntimeError("Exhausted all retries for OpenRouter.")
 
 
 # ---------------------------------------------------------------------------
-# Notion API: update a page's properties
+# Notion API — update a page
 # ---------------------------------------------------------------------------
 def update_notion_page(page_id: str, properties: dict) -> None:
-    """
-    PATCH a Notion page with the given properties payload.
-    Raises RuntimeError if the API call fails.
-    """
+    """PATCH a Notion page with the given properties. Raises RuntimeError on failure."""
     url = f"{NOTION_BASE_URL}/pages/{page_id}"
     try:
-        response = requests.patch(
+        resp = requests.patch(
             url, headers=NOTION_HEADERS, json={"properties": properties}, timeout=30
         )
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as exc:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError:
         logger.error(
-            "Failed to update Notion page %s (HTTP %s): %s",
-            page_id, response.status_code, response.text,
+            "Failed to update page %s (HTTP %s): %s",
+            page_id, resp.status_code, resp.text,
         )
-        raise RuntimeError(f"Notion update failed for page {page_id}.") from exc
+        raise RuntimeError(f"Notion update failed for page {page_id}.")
     except requests.exceptions.RequestException as exc:
-        logger.error("Network error updating Notion page %s: %s", page_id, exc)
-        raise RuntimeError(f"Network error for Notion page {page_id}.") from exc
+        logger.error("Network error updating page %s: %s", page_id, exc)
+        raise RuntimeError(f"Network error updating Notion page {page_id}.") from exc
 
 
 # ---------------------------------------------------------------------------
-# Build Notion rich-text / title property payloads
+# Core: process a single page
 # ---------------------------------------------------------------------------
-def build_rich_text_payload(text: str) -> list[dict]:
-    return [{"type": "text", "text": {"content": text}}]
-
-
-def build_title_payload(text: str) -> list[dict]:
-    return [{"type": "text", "text": {"content": text}}]
-
-
-# ---------------------------------------------------------------------------
-# Core processing logic for a single page
-# ---------------------------------------------------------------------------
-def process_page(page: dict) -> None:
+def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
     """
-    Extract text from the page, translate missing fields, and update Notion.
+    Apply the Gatekeeper logic to each field pair, write translations to Notion
+    immediately as they are produced, and finally flip Status → Published.
+
+    Returns True if all translations succeeded, False otherwise.
     """
     page_id: str = page["id"]
     props: dict = page.get("properties", {})
 
-    # ── Extract current field values ────────────────────────────────────────
-    title_vn: str = extract_title(props.get("Title (VN)", {}).get("title", []))
-    title_en: str = extract_rich_text(props.get("Title (EN)", {}).get("rich_text", []))
-    desc_vn: str = extract_rich_text(props.get("Description (VN)", {}).get("rich_text", []))
-    desc_en: str = extract_rich_text(props.get("Description (EN)", {}).get("rich_text", []))
+    any_failure = False
 
-    logger.info(
-        "Processing page %s | Title VN: '%s' | Title EN: '%s'",
-        page_id, title_vn[:40] or "<empty>", title_en[:40] or "<empty>",
-    )
+    for fp in field_pairs:
+        vn_text = extract_text(props, fp.vn_key, fp.vn_type)
+        en_text = extract_text(props, fp.en_key, fp.en_type)
 
-    updated_properties: dict = {}
+        # ── Gatekeeper ──────────────────────────────────────────────────────
+        if vn_text and en_text:
+            logger.info(
+                "    [%s] Both fields filled → SKIP (saving tokens)", fp.label
+            )
+            continue
 
-    # ── Translate Title ──────────────────────────────────────────────────────
-    if title_vn and not title_en:
-        logger.info("  Translating Title (VN → EN)...")
-        translated_title = translate_text(title_vn)
-        updated_properties["Title (EN)"] = {
-            "rich_text": build_rich_text_payload(translated_title)
-        }
-        logger.info("  Title EN: '%s'", translated_title[:80])
+        if not vn_text and not en_text:
+            logger.info(
+                "    [%s] Both fields empty → SKIP (nothing to translate)", fp.label
+            )
+            continue
 
-    elif title_en and not title_vn:
-        logger.info("  Translating Title (EN → VN)...")
-        translated_title = translate_text(title_en)
-        updated_properties["Title (VN)"] = {
-            "title": build_title_payload(translated_title)
-        }
-        logger.info("  Title VN: '%s'", translated_title[:80])
+        # ── Exactly one field is populated: translate ────────────────────────
+        if vn_text and not en_text:
+            direction = "VN → EN"
+            source_text = vn_text
+            target_key = fp.en_key
+            target_type = fp.en_type
+        else:
+            direction = "EN → VN"
+            source_text = en_text
+            target_key = fp.vn_key
+            target_type = fp.vn_type
 
-    elif not title_vn and not title_en:
-        logger.warning("  Page %s has no title content in either language — skipping title.", page_id)
-
-    # ── Translate Description ────────────────────────────────────────────────
-    if desc_vn and not desc_en:
-        logger.info("  Translating Description (VN → EN)...")
-        translated_desc = translate_text(desc_vn)
-        updated_properties["Description (EN)"] = {
-            "rich_text": build_rich_text_payload(translated_desc)
-        }
-        logger.info("  Description EN: '%s'", translated_desc[:80])
-
-    elif desc_en and not desc_vn:
-        logger.info("  Translating Description (EN → VN)...")
-        translated_desc = translate_text(desc_en)
-        updated_properties["Description (VN)"] = {
-            "rich_text": build_rich_text_payload(translated_desc)
-        }
-        logger.info("  Description VN: '%s'", translated_desc[:80])
-
-    elif not desc_vn and not desc_en:
-        logger.warning(
-            "  Page %s has no description content in either language — skipping description.", page_id
+        logger.info(
+            "    [%s] Translating (%s) — source: '%.60s…'",
+            fp.label, direction, source_text,
         )
 
-    # ── Mark as Published ────────────────────────────────────────────────────
-    updated_properties["Status"] = {"status": {"name": "Published"}}
+        try:
+            translated = translate_text(source_text)
+        except RuntimeError as exc:
+            logger.error(
+                "    [%s] Translation FAILED for page %s: %s", fp.label, page_id, exc
+            )
+            any_failure = True
+            continue  # Try remaining field pairs; do NOT mark Published
 
-    if updated_properties:
-        update_notion_page(page_id, updated_properties)
-        logger.info("  ✅ Page %s updated and marked as Published.", page_id)
-    else:
-        logger.warning("  ⚠️  No properties to update for page %s.", page_id)
+        # Write translation immediately — fail fast if Notion is unreachable
+        try:
+            update_notion_page(page_id, {target_key: make_payload(translated, target_type)})
+            logger.info(
+                "    [%s] Written to Notion — result: '%.60s…'",
+                fp.label, translated,
+            )
+        except RuntimeError as exc:
+            logger.error(
+                "    [%s] Notion write FAILED for page %s: %s", fp.label, page_id, exc
+            )
+            any_failure = True
+            continue
+
+    # ── Mark as Published only when everything succeeded ─────────────────────
+    if any_failure:
+        logger.warning(
+            "  ⚠  Page %s had errors — keeping Status = Pending for retry.", page_id
+        )
+        return False
+
+    try:
+        update_notion_page(page_id, {"Status": {"status": {"name": "Published"}}})
+        logger.info("  ✅ Page %s → Published.", page_id)
+    except RuntimeError as exc:
+        logger.error("  Failed to mark page %s as Published: %s", page_id, exc)
+        return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Database runner
+# ---------------------------------------------------------------------------
+def run_database(db_label: str, database_id: str, field_pairs: list[FieldPair]) -> tuple[int, int]:
+    """
+    Fetch all pending pages from *database_id*, process each one,
+    and return (success_count, fail_count).
+    """
+    logger.info("=" * 60)
+    logger.info("Database: %s  (ID: %s)", db_label, database_id)
+    logger.info("=" * 60)
+
+    try:
+        pages = fetch_pending_pages(database_id)
+    except RuntimeError as exc:
+        logger.error("Skipping database %s — fetch error: %s", db_label, exc)
+        return 0, 0
+
+    if not pages:
+        logger.info("No pending pages in %s — nothing to do.", db_label)
+        return 0, 0
+
+    success = 0
+    fail = 0
+
+    for i, page in enumerate(pages, start=1):
+        page_id = page.get("id", "unknown")
+        logger.info(
+            "Processing page %d/%d  [%s]  ID: %s",
+            i, len(pages), db_label, page_id,
+        )
+        ok = process_page(page, field_pairs)
+        if ok:
+            success += 1
+        else:
+            fail += 1
+
+    logger.info(
+        "Finished %s — %d succeeded, %d failed.\n", db_label, success, fail
+    )
+    return success, fail
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    # The Notion Database ID can optionally be stored in .env as NOTION_DATABASE_ID,
-    # or passed as the first CLI argument: python main.py <database_id>
-    database_id: str = os.environ.get("NOTION_DATABASE_ID", "")
+    logger.info("Portfolio AI Automation CMS — Dual-Database Edition")
+    logger.info("Model: %s", LLM_MODEL)
 
-    if not database_id and len(sys.argv) > 1:
-        database_id = sys.argv[1].strip()
+    total_success = 0
+    total_fail = 0
 
-    if not database_id:
-        logger.error(
-            "No Notion Database ID provided.\n"
-            "Set NOTION_DATABASE_ID in .env, or pass it as a CLI argument:\n"
-            "  python main.py <database_id>"
-        )
-        sys.exit(1)
+    for db_label, database_id, field_pairs in [
+        ("Portfolio CMS", PORTFOLIO_DB_ID, PORTFOLIO_FIELDS),
+        ("Profile Config", PROFILE_DB_ID, PROFILE_FIELDS),
+    ]:
+        s, f = run_database(db_label, database_id, field_pairs)
+        total_success += s
+        total_fail += f
 
-    logger.info("Starting Portfolio AI Automation CMS...")
-    logger.info("Target Notion Database ID: %s", database_id)
-
-    # 1. Fetch all pending pages
-    try:
-        pending_pages = fetch_pending_pages(database_id)
-    except RuntimeError as exc:
-        logger.error("Aborting: %s", exc)
-        sys.exit(1)
-
-    if not pending_pages:
-        logger.info("No pending pages found. Nothing to do.")
-        return
-
-    # 2. Process each page
-    success_count = 0
-    fail_count = 0
-
-    for page in pending_pages:
-        try:
-            process_page(page)
-            success_count += 1
-        except RuntimeError as exc:
-            logger.error("Failed to process page %s: %s", page.get("id"), exc)
-            fail_count += 1
-
+    logger.info("=" * 60)
     logger.info(
-        "Done. %d page(s) processed successfully, %d failed.",
-        success_count, fail_count,
+        "ALL DONE — %d page(s) published, %d page(s) kept pending (errors).",
+        total_success, total_fail,
     )
 
 
