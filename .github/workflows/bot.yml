@@ -6,6 +6,10 @@ on:
   workflow_dispatch: 
     # Cho phép bạn bấm nút chạy bằng tay trên GitHub nếu muốn test ngay lập tức
 
+concurrency:
+  group: translation-bot-group
+  cancel-in-progress: true
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
