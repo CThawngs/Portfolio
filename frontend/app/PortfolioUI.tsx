@@ -648,7 +648,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                   <img
                     src={selectedProject.images[0]}
                     alt={selectedProject.title_en}
-                    className="w-full h-full absolute inset-0 object-cover"
+                    className="w-full h-full absolute inset-0 object-contain"
                   />
                 ) : (
                   <div className="flex w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950">
