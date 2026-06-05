@@ -108,19 +108,32 @@ OPENROUTER_HEADERS = {
     "X-Title": "Portfolio",
 }
 
-# System prompt — see CONTEXT.md §5
-SYSTEM_PROMPT = (
-    "You are an expert bilingual translator (English and Vietnamese) specialising in "
-    "IT, Software Engineering, and Tech Portfolios. Your task is to automatically detect "
-    "the language of the provided text and translate it into the other language.\n\n"
-    "CRITICAL RULES:\n"
-    "1. Output ONLY the exact translated text. No introductions, explanations, "
-    "quotation marks, or conversational fillers.\n"
-    "2. Preserve common IT/Tech terminology (e.g., Test, Bug, Deploy, App, Web, "
-    "Frontend, Backend) in English even when translating to Vietnamese, unless a "
-    "universally accepted Vietnamese tech equivalent exists.\n"
-    "3. Maintain a professional, concise tone suitable for a Software Engineer's portfolio."
-)
+# System prompt factory — builds a target-language-aware prompt to prevent
+# the model from incorrectly translating embedded technical English terms.
+def build_system_prompt(target_lang: str) -> str:
+    """
+    Return a system prompt that explicitly instructs the model to translate
+    into *target_lang* (either "English" or "Vietnamese").
+
+    Three strict rules guard against the most common failure modes:
+      1. Preserve industry keywords / proper nouns as-is.
+      2. If the text is already in the target language, echo it unchanged.
+      3. Output only the translated string — no filler.
+    """
+    return (
+        f"You are a professional localized translator specialising in "
+        f"IT, Software Engineering, and Tech Portfolios.\n"
+        f"You are translating text into {target_lang}.\n\n"
+        f"STRICT RULES — follow every rule without exception:\n"
+        f"RULE 1: DO NOT translate industry-specific keywords, technical terms, "
+        f"certifications, or proper nouns (e.g., Data Analytics, TOEIC, Coding, "
+        f"Gemini Arena, Frontend, Backend, Deploy, API, App, Web, Bug, Test). "
+        f"Keep them EXACTLY as they appear in the source text.\n"
+        f"RULE 2: If the input text is already written in {target_lang}, return it "
+        f"EXACTLY as-is. Do NOT translate it back into the other language.\n"
+        f"RULE 3: Output ONLY the final translated string. "
+        f"No introductions, explanations, quotation marks, or conversational fillers."
+    )
 
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
@@ -275,9 +288,15 @@ def fetch_pending_pages(database_id: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 # OpenRouter API — translate with retries
 # ---------------------------------------------------------------------------
-def translate_text(text: str) -> str:
+def translate_text(text: str, target_lang: str) -> str:
     """
-    Send `text` to OpenRouter for EN ↔ VN translation.
+    Send `text` to OpenRouter and translate it into *target_lang*
+    ("English" or "Vietnamese").
+
+    The system prompt is built dynamically so the model knows the exact
+    target language and will not incorrectly translate embedded technical
+    English terms that appear inside Vietnamese source text (and vice-versa).
+
     Retries up to MAX_RETRIES times on rate-limit (429) or transient errors.
     Returns the translated string.
     """
@@ -286,8 +305,11 @@ def translate_text(text: str) -> str:
         "model": LLM_MODEL,
         "temperature": LLM_TEMPERATURE,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text},
+            {"role": "system", "content": build_system_prompt(target_lang)},
+            {
+                "role": "user",
+                "content": f"Translate this to {target_lang}:\n{text}",
+            },
         ],
     }
 
@@ -400,11 +422,13 @@ def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
         # ── Exactly one field is populated: translate ────────────────────────
         if vn_text and not en_text:
             direction = "VN → EN"
+            target_lang = "English"
             source_text = vn_text
             target_key = fp.en_key
             target_type = fp.en_type
         else:
             direction = "EN → VN"
+            target_lang = "Vietnamese"
             source_text = en_text
             target_key = fp.vn_key
             target_type = fp.vn_type
@@ -415,7 +439,7 @@ def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
         )
 
         try:
-            translated = translate_text(source_text)
+            translated = translate_text(source_text, target_lang)
         except RuntimeError as exc:
             logger.error(
                 "    [%s] Translation FAILED for page %s: %s", fp.label, page_id, exc
