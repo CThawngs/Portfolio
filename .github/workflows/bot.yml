@@ -1,9 +1,8 @@
 name: Portfolio AI Translator Bot
 
 on:
-  schedule:
-    # Chạy tự động mỗi giờ 1 lần (cú pháp Cron)
-    - cron: '0 */1 * * *'
+  repository_dispatch:
+    types: [trigger-translation-bot]
   workflow_dispatch: 
     # Cho phép bạn bấm nút chạy bằng tay trên GitHub nếu muốn test ngay lập tức
 
