@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -104,9 +105,16 @@ NOTION_HEADERS = {
 OPENROUTER_HEADERS = {
     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://www.notion.so",
+    "HTTP-Referer": "https://nguyen-chi-thang-portfolio.vercel.app/",
     "X-Title": "Portfolio",
 }
+
+# Regex to detect Vietnamese-specific diacritics (case-insensitive)
+VIETNAMESE_DIACRITICS_RE = re.compile(
+    r"[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]",
+    re.IGNORECASE,
+)
+
 
 # System prompt factory — builds a target-language-aware prompt to prevent
 # the model from incorrectly translating embedded technical English terms.
@@ -300,6 +308,16 @@ def translate_text(text: str, target_lang: str) -> str:
     Retries up to MAX_RETRIES times on rate-limit (429) or transient errors.
     Returns the translated string.
     """
+    # ── Cost-Saving Input Guardrail ──────────────────────────────────────────
+    if target_lang.lower() == "english":
+        has_diacritics = bool(VIETNAMESE_DIACRITICS_RE.search(text))
+        if not has_diacritics and len(text) < 50:
+            logger.info(
+                "    [Guardrail] Text has no Vietnamese diacritics and is short (%d chars). Bypassing API call.",
+                len(text),
+            )
+            return text
+
     url = f"{OPENROUTER_BASE_URL}/chat/completions"
     payload = {
         "model": LLM_MODEL,

@@ -23,7 +23,7 @@ This project is an AI-powered automation script acting as a serverless bridge be
 ## 4. System Logic & Workflow
 1. **Fetch:** GitHub Actions triggers `main.py` hourly. Queries Notion for pages where `Status` == `Pending`.
 2. **Extract:** If 0 pages, script terminates immediately (0 tokens used). Otherwise, extracts filled content.
-3. **Process (Context-Aware AI):** Sends text to OpenRouter using the App ID headers (`HTTP-Referer` pointed to Notion, `X-Title` set to "Portfolio").
+3. **Process (Context-Aware AI):** Sends text to OpenRouter using the App ID headers (`HTTP-Referer` pointed to the portfolio website, `X-Title` set to "Portfolio").
 4. **Update & Finalize:** Writes translation back to Notion and flips `Status` to `Published` in a single PATCH call.
 
 ## 5. The AI System Prompt (Tech-Context Aware)
