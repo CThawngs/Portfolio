@@ -14,8 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Next.js Revalidation
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: |
-          # Gọi API xóa cache để trang web kéo data mới từ Notion
-          curl -X POST "${{ secrets.PRODUCTION_URL }}/api/revalidate?secret=${{ secrets.REVALIDATE_SECRET }}" \
+          if [ -z "$PRODUCTION_URL" ] || [ -z "$REVALIDATE_SECRET" ]; then
+            echo "Error: Missing PRODUCTION_URL or REVALIDATE_SECRET in GitHub Secrets"
+            exit 1
+          fi
+          echo "Triggering cache revalidation..."
+          curl -X POST "$PRODUCTION_URL/api/revalidate?secret=$REVALIDATE_SECRET" \
           -H "Content-Type: application/json" \
           -w "\nHTTP Status: %{http_code}\n"
