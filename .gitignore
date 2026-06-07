@@ -1,1 +1,4 @@
 .env*
+# Demo source videos (too large for git; GIFs committed instead)
+frontend/public/*.mp4
+convert_to_gif*.py

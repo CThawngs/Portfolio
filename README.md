@@ -22,27 +22,21 @@ Managing a portfolio shouldn't mean touching code every time you ship a new proj
 ### 📦 Archiving a Project
 Need to hide a project from the live site? Just change its status in Notion. Done.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
-</video>
+![Archiving a project in Notion — status change hides it from the live site instantly](./frontend/public/Portfolio%20Archive.gif)
 
 ---
 
 ### 🚀 1-Click Publishing
 Add your content in Notion, set the status to "Published", and trigger a single webhook. The website updates in seconds.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
-</video>
+![1-click publish workflow — add content in Notion, trigger webhook, site updates in seconds](./frontend/public/Portfolio%20Publish%20One%20Click.gif)
 
 ---
 
 ### 🤖 AI Translation Automation
 Write in one language. The bot detects the gap, translates the missing fields using a tech-aware prompt, and writes the result back to Notion — preserving terms like *Deploy*, *Frontend*, *Backend*, and *API*.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
-</video>
+![AI bot detecting missing translation, calling OpenRouter, and writing the result back to Notion](./frontend/public/Portfolio%20Translate%20Automation.gif)
 
 ---
 
@@ -116,27 +110,21 @@ Quản lý portfolio không nên đồng nghĩa với việc phải sửa code m
 ### 📦 Lưu trữ Dự án
 Cần ẩn một dự án khỏi website? Chỉ cần thay đổi trạng thái của nó trong Notion. Xong.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
-</video>
+![Luu tru du an trong Notion — thay doi trang thai an du an khoi website](./frontend/public/Portfolio%20Archive.gif)
 
 ---
 
 ### 🚀 Xuất bản 1-Click
 Thêm nội dung trong Notion, đặt trạng thái thành "Published", và kích hoạt một webhook duy nhất. Website cập nhật trong vài giây.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
-</video>
+![Xuat ban 1-click — them noi dung Notion, kich hoat webhook, website cap nhat trong vai giay](./frontend/public/Portfolio%20Publish%20One%20Click.gif)
 
 ---
 
 ### 🤖 Tự động Dịch thuật bằng AI
 Viết bằng một ngôn ngữ. Bot phát hiện khoảng trống, dịch các trường còn thiếu bằng prompt có nhận thức về công nghệ, và ghi kết quả trở lại Notion — giữ nguyên các thuật ngữ như *Deploy*, *Frontend*, *Backend*, và *API*.
 
-<video autoplay loop muted playsinline width="100%">
-  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
-</video>
+![Bot AI phat hien thieu ban dich, goi OpenRouter, ghi ket qua vao Notion](./frontend/public/Portfolio%20Translate%20Automation.gif)
 
 ---
 
