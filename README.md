@@ -23,7 +23,7 @@ Managing a portfolio shouldn't mean touching code every time you ship a new proj
 Need to hide a project from the live site? Just change its status in Notion. Done.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
 </video>
 
 ---
@@ -32,7 +32,7 @@ Need to hide a project from the live site? Just change its status in Notion. Don
 Add your content in Notion, set the status to "Published", and trigger a single webhook. The website updates in seconds.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
 </video>
 
 ---
@@ -41,7 +41,7 @@ Add your content in Notion, set the status to "Published", and trigger a single 
 Write in one language. The bot detects the gap, translates the missing fields using a tech-aware prompt, and writes the result back to Notion — preserving terms like *Deploy*, *Frontend*, *Backend*, and *API*.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
 </video>
 
 ---
@@ -117,7 +117,7 @@ Quản lý portfolio không nên đồng nghĩa với việc phải sửa code m
 Cần ẩn một dự án khỏi website? Chỉ cần thay đổi trạng thái của nó trong Notion. Xong.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Archive.mp4" type="video/mp4">
 </video>
 
 ---
@@ -126,7 +126,7 @@ Cần ẩn một dự án khỏi website? Chỉ cần thay đổi trạng thái 
 Thêm nội dung trong Notion, đặt trạng thái thành "Published", và kích hoạt một webhook duy nhất. Website cập nhật trong vài giây.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Publish%20One%20Click.mp4" type="video/mp4">
 </video>
 
 ---
@@ -135,7 +135,7 @@ Thêm nội dung trong Notion, đặt trạng thái thành "Published", và kíc
 Viết bằng một ngôn ngữ. Bot phát hiện khoảng trống, dịch các trường còn thiếu bằng prompt có nhận thức về công nghệ, và ghi kết quả trở lại Notion — giữ nguyên các thuật ngữ như *Deploy*, *Frontend*, *Backend*, và *API*.
 
 <video autoplay loop muted playsinline width="100%">
-  <source src="./frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
+  <source src="https://github.com/CThawngs/Portfolio/raw/main/frontend/public/Portfolio%20Translate%20Automation.mp4" type="video/mp4">
 </video>
 
 ---
