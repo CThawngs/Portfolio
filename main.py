@@ -123,10 +123,11 @@ def build_system_prompt(target_lang: str) -> str:
     Return a system prompt that explicitly instructs the model to translate
     into *target_lang* (either "English" or "Vietnamese").
 
-    Three strict rules guard against the most common failure modes:
+    Four strict rules guard against the most common failure modes:
       1. Preserve industry keywords / proper nouns as-is.
       2. If the text is already in the target language, echo it unchanged.
       3. Output only the translated string — no filler.
+      4. Never modify URLs — copy them verbatim into the output.
     """
     return (
         f"You are a professional localized translator specialising in "
@@ -140,8 +141,13 @@ def build_system_prompt(target_lang: str) -> str:
         f"RULE 2: If the input text is already written in {target_lang}, return it "
         f"EXACTLY as-is. Do NOT translate it back into the other language.\n"
         f"RULE 3: Output ONLY the final translated string. "
-        f"No introductions, explanations, quotation marks, or conversational fillers."
+        f"No introductions, explanations, quotation marks, or conversational fillers.\n"
+        f"RULE 4: Any URL or hyperlink found in the source text (starting with "
+        f"http://, https://, or www.) MUST be copied into the output EXACTLY as-is, "
+        f"character for character. Do NOT translate, shorten, paraphrase, or alter "
+        f"any URL in any way."
     )
+
 
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5

@@ -5,6 +5,48 @@ import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { Code, Briefcase, Camera, Mail } from "lucide-react";
 
+// ── LinkifiedText ─────────────────────────────────────────────────────────────
+// Detects URLs (http/https/www) inside plain text and renders them as styled
+// anchor tags: dark-blue, bold, pointer cursor, opens in a new tab.
+// All other text is rendered as plain React nodes.
+const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
+function LinkifiedText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  const parts = text.split(URL_REGEX);
+  return (
+    <span className={className}>
+      {parts.map((part, i) => {
+        if (URL_REGEX.test(part)) {
+          // Reset lastIndex after test() so subsequent calls work correctly
+          URL_REGEX.lastIndex = 0;
+          const href = part.startsWith("www.") ? `https://${part}` : part;
+          return (
+            <a
+              key={i}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-150 break-all"
+            >
+              {part}
+            </a>
+          );
+        }
+        URL_REGEX.lastIndex = 0;
+        return <React.Fragment key={i}>{part}</React.Fragment>;
+      })}
+    </span>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface Project {
   id: string;
   status: string;
@@ -561,11 +603,14 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                       {/* Date display below Title */}
                       {renderDateRange(project.project_date)}
                       
-                      <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
-                        {lang === "EN"
-                          ? project.desc_en || project.desc_vn
-                          : project.desc_vn || project.desc_en}
-                      </p>
+                      <LinkifiedText
+                        className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1 block"
+                        text={
+                          lang === "EN"
+                            ? project.desc_en || project.desc_vn
+                            : project.desc_vn || project.desc_en
+                        }
+                      />
 
                       {/* Tags (Deterministic colors) */}
                       {project.tags && project.tags.length > 0 && (
@@ -693,11 +738,14 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
 
                 {/* Description */}
                 <div className="mt-4 text-slate-300">
-                  <p className="leading-relaxed text-sm">
-                    {lang === "EN"
-                      ? selectedProject.desc_en || selectedProject.desc_vn
-                      : selectedProject.desc_vn || selectedProject.desc_en}
-                  </p>
+                  <LinkifiedText
+                    className="leading-relaxed text-sm block"
+                    text={
+                      lang === "EN"
+                        ? selectedProject.desc_en || selectedProject.desc_vn
+                        : selectedProject.desc_vn || selectedProject.desc_en
+                    }
+                  />
                 </div>
 
                 {/* Actions footer */}
