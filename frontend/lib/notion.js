@@ -1,3 +1,12 @@
+// ── Helper: concatenate ALL rich-text segments into a single string ──────────
+// Notion splits long or formatted text across multiple segments in the array.
+// Reading only [0] silently drops everything after the first segment —
+// that was the root cause of descriptions not matching what's in Notion CMS.
+function richText(field) {
+  if (!field || !Array.isArray(field)) return "";
+  return field.map((s) => s.plain_text ?? "").join("");
+}
+
 export async function getPublishedPortfolio() {
   const databaseId = process.env.NOTION_DATABASE_ID;
   const apiKey = process.env.NOTION_API_KEY;
@@ -23,7 +32,7 @@ export async function getPublishedPortfolio() {
       ...(nextCursor ? { start_cursor: nextCursor } : {}),
     };
 
-    // Notion API call with revalidate / caching config
+    // Notion API call with no-store to always fetch fresh data
     const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
       method: 'POST',
       headers: {
@@ -32,7 +41,7 @@ export async function getPublishedPortfolio() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-      cache: 'no-store', // force fresh data
+      cache: 'no-store',
     });
 
     if (!res.ok) {
@@ -45,28 +54,30 @@ export async function getPublishedPortfolio() {
     const mapped = response.results.map((page) => {
       const properties = page.properties ?? {};
       return {
-        id: page.id,
-        status: properties['Status']?.status?.name ?? "",
-        title_vn: properties['Title (VN)']?.title[0]?.plain_text ?? "Untitled",
-        title_en: properties['Title (EN)']?.rich_text[0]?.plain_text ?? "Untitled",
-        desc_vn: properties['Description (VN)']?.rich_text[0]?.plain_text ?? "",
-        desc_en: properties['Description (EN)']?.rich_text[0]?.plain_text ?? "",
+        id:       page.id,
+        status:   properties['Status']?.status?.name ?? "",
+        // Use richText() on title arrays too — titles can also have multiple segments
+        title_vn: richText(properties['Title (VN)']?.title)       || "Untitled",
+        title_en: richText(properties['Title (EN)']?.rich_text)   || "Untitled",
+        // KEY FIX: join ALL rich_text segments, not just [0]
+        desc_vn:  richText(properties['Description (VN)']?.rich_text),
+        desc_en:  richText(properties['Description (EN)']?.rich_text),
         category: properties['Category']?.select?.name ?? "Uncategorized",
-        tags: properties['Tags']?.multi_select?.map(t => t.name) ?? [],
-        images: properties['Images']?.files?.map(f => f.file?.url || f.external?.url) ?? [],
-        links: properties['Links']?.url ?? "",
+        tags:     properties['Tags']?.multi_select?.map(t => t.name) ?? [],
+        images:   properties['Images']?.files?.map(f => f.file?.url || f.external?.url) ?? [],
+        links:    properties['Links']?.url ?? "",
         last_edited_time: properties['Last edited time']?.last_edited_time ?? page.last_edited_time,
-        project_date: (properties['Date'] && properties['Date'].date) ? { 
-          start: properties['Date'].date.start || null, 
-          end: properties['Date'].date.end || null 
+        project_date: (properties['Date'] && properties['Date'].date) ? {
+          start: properties['Date'].date.start || null,
+          end:   properties['Date'].date.end   || null
         } : null
       };
     });
 
     items.push(...mapped);
 
-    hasMore = response.has_more;
-    nextCursor = response.next_cursor ?? undefined;
+    hasMore     = response.has_more;
+    nextCursor  = response.next_cursor ?? undefined;
   }
 
   return items;
@@ -96,7 +107,7 @@ export async function getProfileData() {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-    cache: 'no-store', // force fresh data
+    cache: 'no-store',
   });
 
   if (!res.ok) {
@@ -109,20 +120,23 @@ export async function getProfileData() {
     return null;
   }
 
-  const page = response.results[0];
+  const page       = response.results[0];
   const properties = page.properties ?? {};
 
   return {
-    name_vn: properties['Name (VN)']?.title[0]?.plain_text ?? "Untitled",
-    name_en: properties['Name (EN)']?.rich_text[0]?.plain_text ?? "Untitled",
-    role_vn: properties['Role (VN)']?.rich_text[0]?.plain_text ?? "",
-    role_en: properties['Role (EN)']?.rich_text[0]?.plain_text ?? "",
-    bio_vn: properties['Bio (VN)']?.rich_text[0]?.plain_text ?? "",
-    bio_en: properties['Bio (EN)']?.rich_text[0]?.plain_text ?? "",
-    dob: properties['Dob']?.date?.start ?? properties['DOB']?.date?.start ?? properties['Date of Birth']?.date?.start ?? null,
-    email: properties['Email']?.email ?? "",
-    github: properties['Github']?.url ?? properties['GitHub']?.url ?? "",
-    linkedin: properties['Linkedin']?.url ?? properties['LinkedIn']?.url ?? "",
-    instagram: properties['Instagram']?.url ?? ""
+    name_vn:   richText(properties['Name (VN)']?.title)     || "Untitled",
+    name_en:   richText(properties['Name (EN)']?.rich_text) || "Untitled",
+    role_vn:   richText(properties['Role (VN)']?.rich_text),
+    role_en:   richText(properties['Role (EN)']?.rich_text),
+    bio_vn:    richText(properties['Bio (VN)']?.rich_text),
+    bio_en:    richText(properties['Bio (EN)']?.rich_text),
+    dob:       properties['Dob']?.date?.start
+               ?? properties['DOB']?.date?.start
+               ?? properties['Date of Birth']?.date?.start
+               ?? null,
+    email:     properties['Email']?.email     ?? "",
+    github:    properties['Github']?.url      ?? properties['GitHub']?.url    ?? "",
+    linkedin:  properties['Linkedin']?.url    ?? properties['LinkedIn']?.url  ?? "",
+    instagram: properties['Instagram']?.url   ?? ""
   };
 }
