@@ -8,8 +8,14 @@ import { Code, Briefcase, Camera, Mail } from "lucide-react";
 // ── LinkifiedText ─────────────────────────────────────────────────────────────
 // Detects URLs (http/https/www) inside plain text and renders them as styled
 // anchor tags: dark-blue, bold, pointer cursor, opens in a new tab.
-// All other text is rendered as plain React nodes.
+//
+// Trailing punctuation fix: after matching, we strip characters like ) ] . , ; ! ?
+// that commonly wrap a URL in prose (e.g. "(see https://example.com)") but are
+// NOT part of the URL itself.  Stripped chars are rendered as plain text after
+// the <a> tag so the sentence still reads correctly.
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+// Characters that are never a valid URL ending when used as surrounding prose punctuation
+const TRAILING_PUNCT_RE = /[)\].,;!?'"]+$/;
 
 function LinkifiedText({
   text,
@@ -22,30 +28,39 @@ function LinkifiedText({
   return (
     <span className={className}>
       {parts.map((part, i) => {
-        if (URL_REGEX.test(part)) {
-          // Reset lastIndex after test() so subsequent calls work correctly
+        // Reset stateful regex before each test
+        URL_REGEX.lastIndex = 0;
+        if (!URL_REGEX.test(part)) {
           URL_REGEX.lastIndex = 0;
-          const href = part.startsWith("www.") ? `https://${part}` : part;
-          return (
+          return <React.Fragment key={i}>{part}</React.Fragment>;
+        }
+        URL_REGEX.lastIndex = 0;
+
+        // Strip trailing punctuation that belongs to surrounding prose, not the URL
+        const clean = part.replace(TRAILING_PUNCT_RE, "");
+        const trailing = part.slice(clean.length); // e.g. ")" or ")."
+        const href = clean.startsWith("www.") ? `https://${clean}` : clean;
+
+        return (
+          <React.Fragment key={i}>
             <a
-              key={i}
               href={href}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-150 break-all"
             >
-              {part}
+              {clean}
             </a>
-          );
-        }
-        URL_REGEX.lastIndex = 0;
-        return <React.Fragment key={i}>{part}</React.Fragment>;
+            {trailing}
+          </React.Fragment>
+        );
       })}
     </span>
   );
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
 
 export interface Project {
   id: string;
