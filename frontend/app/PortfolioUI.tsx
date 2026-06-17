@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { Code, Briefcase, Camera, Mail } from "lucide-react";
@@ -590,12 +591,17 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                     {/* Card Image */}
                     <div className="relative w-full overflow-hidden transition-colors duration-300">
                       {hasImage ? (
-                        <img
-                          src={project.images[0]}
-                          alt={title}
-                          className="w-full aspect-[16/10] object-cover object-top transition-transform duration-500 hover:scale-105"
-                          loading="lazy"
-                        />
+                        <div className="relative w-full aspect-[16/10] overflow-hidden">
+                          <Image
+                            src={project.images[0]}
+                            alt={title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                            priority={index < 3}
+                            quality={80}
+                          />
+                        </div>
                       ) : (
                         <div className="flex aspect-[16/10] w-full items-center justify-center bg-gradient-to-br from-indigo-50 via-slate-100 to-purple-55 dark:from-indigo-950 dark:via-slate-900 dark:to-purple-950">
                           <span className="text-3xl opacity-50 dark:opacity-40">💻</span>
@@ -704,11 +710,17 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
               {/* Top Section: Media/Image */}
               <div className="w-full shrink-0 relative bg-black/50 h-[40vw] min-h-[200px] max-h-[300px]">
                 {selectedProject.images && selectedProject.images[0] ? (
-                  <img
-                    src={selectedProject.images[0]}
-                    alt={selectedProject.title_en}
-                    className="w-full h-full absolute inset-0 object-contain"
-                  />
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={selectedProject.images[0]}
+                      alt={selectedProject.title_en}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 80vw"
+                      className="object-contain"
+                      priority
+                      quality={90}
+                    />
+                  </div>
                 ) : (
                   <div className="flex w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950">
                     <span className="text-5xl opacity-50 dark:opacity-40">💻</span>
