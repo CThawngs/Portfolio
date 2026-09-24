@@ -7,62 +7,36 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@notionhq/client"],
 
   images: {
-    // Allow Next.js Image Optimization for all domains that Notion uses
-    // to serve file attachments and S3-hosted assets.
+    // Explicit hostname list — Next.js does NOT support multi-level wildcards
+    // like *.s3.*.amazonaws.com (that pattern caused the build crash).
+    // We enumerate the real hosts Notion uses instead.
     remotePatterns: [
-      // Notion's own file hosting (file.notion.so)
-      {
-        protocol: "https",
-        hostname: "file.notion.so",
-        pathname: "/**",
-      },
-      // Notion's secure S3 proxy (prod-files-secure.s3.us-west-2.amazonaws.com)
-      {
-        protocol: "https",
-        hostname: "prod-files-secure.s3.us-west-2.amazonaws.com",
-        pathname: "/**",
-      },
-      // Generic AWS S3 buckets (*.s3.amazonaws.com)
-      {
-        protocol: "https",
-        hostname: "*.s3.amazonaws.com",
-        pathname: "/**",
-      },
-      // AWS S3 regional buckets (*.s3.*.amazonaws.com)
-      {
-        protocol: "https",
-        hostname: "*.s3.*.amazonaws.com",
-        pathname: "/**",
-      },
-      // Notion CDN images
-      {
-        protocol: "https",
-        hostname: "www.notion.so",
-        pathname: "/**",
-      },
-      // External images users might paste into Notion (e.g. lh3.googleusercontent.com)
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        pathname: "/**",
-      },
-      // Unsplash (common for placeholder images)
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
+      // Notion's own file hosting
+      { protocol: "https", hostname: "file.notion.so", pathname: "/**" },
+      // Notion's primary S3 proxy (most file uploads go here)
+      { protocol: "https", hostname: "prod-files-secure.s3.us-west-2.amazonaws.com", pathname: "/**" },
+      // Notion CDN
+      { protocol: "https", hostname: "www.notion.so", pathname: "/**" },
+      { protocol: "https", hostname: "notion.so", pathname: "/**" },
+      // Google-hosted images (profile photos pasted from Google)
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "lh4.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "lh5.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "lh6.googleusercontent.com", pathname: "/**" },
+      // Unsplash
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+      // Imgur
+      { protocol: "https", hostname: "i.imgur.com", pathname: "/**" },
     ],
 
-    // WebP is the best tradeoff for photo-heavy portfolio thumbnails.
-    // AVIF gives ~30% better compression but takes longer to encode on the server.
+    // WebP gives ~30% smaller files vs JPEG with no visible quality loss
     formats: ["image/webp"],
 
-    // Thumbnail sizes used in the 3-column card grid + popup hero
+    // Sizes tuned for the 3-column card grid and popup hero image
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 480],
+    imageSizes: [64, 128, 256, 384, 480],
 
-    // Cache optimised images for 7 days on CDN (Vercel default is 60s)
+    // Cache optimised images for 7 days on Vercel's CDN edge
     minimumCacheTTL: 60 * 60 * 24 * 7,
   },
 };
