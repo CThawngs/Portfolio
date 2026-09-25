@@ -63,21 +63,23 @@ function LinkifiedText({
 // ─────────────────────────────────────────────────────────────────────────────
 
 
-// ── TerminalTyping ────────────────────────────────────────────────────────────
-// Developer-style terminal window that:
-//  1. Types the Role character-by-character
-//  2. Types each Bio sentence one-by-one (split on ". " or ".\n")
-//  3. After the last sentence, pauses, then erases everything and loops
-// Only the active language is shown — switching lang resets the animation.
-const CHAR_SPEED   = 40;   // ms per character typed
-const ERASE_SPEED  = 18;   // ms per character erased
-const PAUSE_AFTER  = 2000; // ms pause at end of last line before erase
-const LINE_GAP     = 350;  // ms gap between lines
+// ── TerminalTyping (Single-Line Typewriter) ────────────────────────────────────
+// Clean single-line typing animation that:
+//  1. Types Role character-by-character
+//  2. Pauses, then deletes Role character-by-character
+//  3. Types Bio sentence 1 -> deletes sentence 1
+//  4. Types Bio sentence 2 -> deletes sentence 2 ... -> types Bio sentence N -> deletes sentence N
+//  5. Loops back to Role infinitely
+// No terminal box, no leading arrows, strictly 1 single standard line.
+const TYPING_SPEED  = 45;   // ms per character typed
+const DELETING_SPEED = 20;  // ms per character erased
+const PAUSE_TIME    = 2000; // ms to pause after full sentence is typed
+const GAP_TIME      = 300;  // ms gap before typing next sentence
 
 function splitBioSentences(bio: string): string[] {
-  // Split on period+space or period+newline; keep trailing periods
+  if (!bio) return [];
   return bio
-    .split(/(?<=\.)\s+/)
+    .split(/(?<=[.!?])\s+|\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -88,117 +90,67 @@ interface TerminalTypingProps {
 }
 
 function TerminalTyping({ role, bio }: TerminalTypingProps) {
-  // lines[0] = role prompt line, lines[1..N] = bio sentences
-  const lines = useMemo(() => {
+  const items = useMemo(() => {
     const bioLines = bio ? splitBioSentences(bio) : [];
     return [role, ...bioLines].filter(Boolean);
   }, [role, bio]);
 
-  // displayed: array of fully committed lines (shown above cursor line)
-  const [displayedLines, setDisplayedLines] = useState<string[]>([]);
-  // cursor: the in-progress line currently being typed/erased
-  const [cursor, setCursor]   = useState("");
-  const [phase, setPhase]     = useState<"typing" | "pause" | "erasing">("typing");
-  const [lineIdx, setLineIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
+  const [itemIdx, setItemIdx] = useState(0);
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Reset when lines change (lang switch)
+  // Reset when items change (e.g. language toggle)
   useEffect(() => {
-    setDisplayedLines([]);
-    setCursor("");
-    setPhase("typing");
-    setLineIdx(0);
-    setCharIdx(0);
-  }, [lines]);
+    setItemIdx(0);
+    setDisplayText("");
+    setIsDeleting(false);
+  }, [items]);
 
   useEffect(() => {
-    if (!lines.length) return;
+    if (!items.length) return;
 
-    if (phase === "typing") {
-      const target = lines[lineIdx] ?? "";
-      if (charIdx < target.length) {
-        const t = setTimeout(() => {
-          setCursor(target.slice(0, charIdx + 1));
-          setCharIdx((c) => c + 1);
-        }, CHAR_SPEED);
-        return () => clearTimeout(t);
+    const currentItem = items[itemIdx] || "";
+
+    if (!isDeleting) {
+      if (displayText.length < currentItem.length) {
+        const timeout = setTimeout(() => {
+          setDisplayText(currentItem.slice(0, displayText.length + 1));
+        }, TYPING_SPEED);
+        return () => clearTimeout(timeout);
       } else {
-        // Finished typing this line
-        const isLastLine = lineIdx === lines.length - 1;
-        if (isLastLine) {
-          // Pause before erasing everything
-          const t = setTimeout(() => setPhase("erasing"), PAUSE_AFTER);
-          return () => clearTimeout(t);
-        } else {
-          // Commit line, move to next
-          const t = setTimeout(() => {
-            setDisplayedLines((prev) => [...prev, target]);
-            setCursor("");
-            setCharIdx(0);
-            setLineIdx((i) => i + 1);
-          }, LINE_GAP);
-          return () => clearTimeout(t);
-        }
+        const timeout = setTimeout(() => {
+          setIsDeleting(true);
+        }, PAUSE_TIME);
+        return () => clearTimeout(timeout);
+      }
+    } else {
+      if (displayText.length > 0) {
+        const timeout = setTimeout(() => {
+          setDisplayText(currentItem.slice(0, displayText.length - 1));
+        }, DELETING_SPEED);
+        return () => clearTimeout(timeout);
+      } else {
+        const timeout = setTimeout(() => {
+          setIsDeleting(false);
+          setItemIdx((prev) => (prev + 1) % items.length);
+        }, GAP_TIME);
+        return () => clearTimeout(timeout);
       }
     }
+  }, [displayText, isDeleting, itemIdx, items]);
 
-    if (phase === "erasing") {
-      // Erase cursor line first, then pop committed lines
-      if (cursor.length > 0) {
-        const t = setTimeout(() => {
-          setCursor((c) => c.slice(0, -1));
-        }, ERASE_SPEED);
-        return () => clearTimeout(t);
-      } else if (displayedLines.length > 0) {
-        const t = setTimeout(() => {
-          const last = displayedLines[displayedLines.length - 1];
-          setDisplayedLines((prev) => prev.slice(0, -1));
-          setCursor(last);
-        }, ERASE_SPEED);
-        return () => clearTimeout(t);
-      } else {
-        // Everything erased — restart
-        const t = setTimeout(() => {
-          setPhase("typing");
-          setLineIdx(0);
-          setCharIdx(0);
-        }, LINE_GAP);
-        return () => clearTimeout(t);
-      }
-    }
-  }, [phase, lineIdx, charIdx, cursor, displayedLines, lines]);
+  if (!items.length) return null;
 
   return (
-    <div className="w-full max-w-2xl mx-auto font-mono text-sm">
-      {/* Terminal chrome */}
-      <div className="rounded-xl overflow-hidden border border-slate-700 dark:border-slate-600 shadow-2xl">
-        {/* Title bar */}
-        <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 dark:bg-slate-900 border-b border-slate-700">
-          <span className="w-3 h-3 rounded-full bg-red-500/80" />
-          <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
-          <span className="w-3 h-3 rounded-full bg-green-500/80" />
-          <span className="ml-3 text-xs text-slate-400 select-none">portfolio ~ bash</span>
-        </div>
-        {/* Terminal body */}
-        <div className="bg-slate-900 dark:bg-slate-950 px-5 py-4 min-h-[90px]">
-          {/* Committed lines */}
-          {displayedLines.map((line, i) => (
-            <p key={i} className="text-green-400 leading-relaxed whitespace-pre-wrap">
-              <span className="text-indigo-400 select-none">▶&nbsp;</span>
-              {line}
-            </p>
-          ))}
-          {/* Current line with animated cursor */}
-          <p className="text-green-400 leading-relaxed whitespace-pre-wrap">
-            <span className="text-indigo-400 select-none">▶&nbsp;</span>
-            {cursor}
-            <span className="inline-block w-[2px] h-[1em] align-middle bg-green-400 ml-[1px] animate-pulse" />
-          </p>
-        </div>
-      </div>
+    <div className="w-full flex items-center justify-center min-h-[1.75rem] md:min-h-[2rem] my-1">
+      <p className="text-base sm:text-lg md:text-xl font-medium text-slate-700 dark:text-slate-300 text-center tracking-normal max-w-3xl leading-relaxed">
+        <span>{displayText}</span>
+        <span className="inline-block w-[2px] h-[1.1em] align-middle bg-indigo-600 dark:bg-indigo-400 ml-1 animate-pulse" />
+      </p>
     </div>
   );
 }
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -516,6 +468,19 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 text-center text-slate-900 dark:text-white">
               {lang === 'VN' ? profileData.name_vn : profileData.name_en}
             </h2>
+
+            {profileData.dob && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 mb-1">
+                <svg className="h-4 w-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>{lang === "VN" ? `Ngày sinh: ${formatDate(profileData.dob)}` : `Born: ${formatDate(profileData.dob)}`}</span>
+              </p>
+            )}
+
             <TerminalTyping
               role={lang === "VN" ? profileData.role_vn : profileData.role_en}
               bio={lang === "VN" ? profileData.bio_vn : profileData.bio_en}
