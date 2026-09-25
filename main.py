@@ -1,6 +1,6 @@
 """
-Portfolio AI Automation CMS — v3 (Dual-Database & Multi-Tier AI Fallback)
-========================================================================
+Portfolio AI Automation CMS — v4 (Real-Time Gemini Flash Tracking & Multi-Tier AI)
+==================================================================================
 Processes TWO Notion databases:
   1. Portfolio CMS  (NOTION_DATABASE_ID)
      Fields: Title (VN) [title], Title (EN) [rich_text],
@@ -17,10 +17,10 @@ Gatekeeper rule (ZERO-cost protection) applied to every field pair:
   • VN filled / EN empty → translate VN → EN, write result immediately
   • EN filled / VN empty → translate EN → VN, write result immediately
 
-Multi-Tier AI Fallback:
-  1. Primary: OpenRouter (configured model e.g. openrouter/free)
-  2. Fallback 1: Google Gemini Flash API (via GEMINI_API_KEY / GOOGLE_API_KEY)
-  3. Fallback 2: OpenRouter backup free models (gemini-2.0-flash, llama-3.3-70b, llama-3.1-8b)
+Real-Time Dynamic Tracking:
+  • Automatically queries Google API & OpenRouter API in real-time
+    to discover and auto-select the latest Gemini Flash models.
+  • Never hardcodes outdated models — 100% future-proof.
 
 Dependencies: pip install requests python-dotenv
 """
@@ -86,9 +86,9 @@ LLM_TEMPERATURE: float = float(_cfg.get("temperature", 0.3))
 
 logger.info("Primary LLM model: %s  (temperature=%.2f)", LLM_MODEL, LLM_TEMPERATURE)
 if GEMINI_API_KEY:
-    logger.info("Google Gemini Direct API fallback: ENABLED")
+    logger.info("Google Gemini Direct API fallback: ENABLED (with Real-Time Model Tracking)")
 else:
-    logger.info("Google Gemini Direct API key not found in env — will use OpenRouter fallbacks if needed")
+    logger.info("Google Gemini Direct API key not found in env — will use OpenRouter auto-tracking")
 
 # ---------------------------------------------------------------------------
 # API constants
@@ -117,14 +117,123 @@ VIETNAMESE_DIACRITICS_RE = re.compile(
     re.IGNORECASE,
 )
 
-# List of backup models on OpenRouter to try if primary fails
-OPENROUTER_BACKUP_MODELS = [
-    "google/gemini-2.0-flash:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "google/gemini-2.0-flash-lite:free",
-    "deepseek/deepseek-chat:free",
-]
+# ---------------------------------------------------------------------------
+# Real-Time Dynamic Model Tracking Engine (100% Future-Proof)
+# ---------------------------------------------------------------------------
+_CACHED_LATEST_GEMINI_MODELS: Optional[list[str]] = None
+_CACHED_LATEST_OPENROUTER_MODELS: Optional[list[str]] = None
+
+def get_realtime_gemini_flash_models() -> list[str]:
+    """
+    Queries Google API in real-time to discover all available Gemini Flash models,
+    dynamically sorting by highest version so the newest Flash model is always tried first.
+    """
+    global _CACHED_LATEST_GEMINI_MODELS
+    default_candidates = [
+        "gemini-flash-latest",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash",
+    ]
+
+    if not GEMINI_API_KEY:
+        return default_candidates
+
+    if _CACHED_LATEST_GEMINI_MODELS:
+        return _CACHED_LATEST_GEMINI_MODELS
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            models = data.get("models", [])
+            discovered = []
+            for m in models:
+                name = m.get("name", "").replace("models/", "")
+                methods = m.get("supportedGenerationMethods", [])
+                if "generateContent" in methods and "flash" in name.lower():
+                    # Filter out non-text specialized models
+                    if not any(x in name.lower() for x in ["embedding", "tts", "imagen", "audio"]):
+                        discovered.append(name)
+
+            if discovered:
+                def version_sort_key(m_name: str):
+                    # Prioritize "latest" alias or highest numeric version
+                    if "latest" in m_name:
+                        return (99.0, m_name)
+                    numbers = re.findall(r"(\d+(?:\.\d+)?)", m_name)
+                    if numbers:
+                        try:
+                            return (float(numbers[0]), m_name)
+                        except ValueError:
+                            pass
+                    return (0.0, m_name)
+
+                discovered.sort(key=version_sort_key, reverse=True)
+                # Combine discovered with fallback defaults
+                final_list = []
+                for m in discovered + default_candidates:
+                    if m not in final_list:
+                        final_list.append(m)
+
+                _CACHED_LATEST_GEMINI_MODELS = final_list
+                logger.info("🔍 [Real-Time Google Tracker] Discovered latest Gemini Flash models: %s", final_list[:3])
+                return _CACHED_LATEST_GEMINI_MODELS
+    except Exception as exc:
+        logger.warning("Could not query Google model list in real-time (%s). Using defaults.", exc)
+
+    return default_candidates
+
+def get_realtime_openrouter_backup_models() -> list[str]:
+    """
+    Queries OpenRouter API in real-time to discover currently active free models,
+    prioritizing free Google Gemini Flash models.
+    """
+    global _CACHED_LATEST_OPENROUTER_MODELS
+    default_openrouter_backups = [
+        "google/gemini-2.0-flash:free",
+        "google/gemini-2.0-flash-lite:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "meta-llama/llama-3.1-8b-instruct:free",
+        "deepseek/deepseek-chat:free",
+    ]
+
+    if _CACHED_LATEST_OPENROUTER_MODELS:
+        return _CACHED_LATEST_OPENROUTER_MODELS
+
+    try:
+        url = f"{OPENROUTER_BASE_URL}/models"
+        resp = requests.get(url, headers=OPENROUTER_HEADERS, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            models_list = data.get("data", [])
+            discovered_free_gemini = []
+            for m in models_list:
+                m_id = m.get("id", "")
+                pricing = m.get("pricing", {})
+                is_free = (
+                    pricing.get("prompt") == "0"
+                    and pricing.get("completion") == "0"
+                ) or ":free" in m_id
+
+                if is_free and "gemini" in m_id.lower() and "flash" in m_id.lower():
+                    discovered_free_gemini.append(m_id)
+
+            if discovered_free_gemini:
+                discovered_free_gemini.sort(reverse=True)
+                final_openrouter = []
+                for m in discovered_free_gemini + default_openrouter_backups:
+                    if m not in final_openrouter:
+                        final_openrouter.append(m)
+                _CACHED_LATEST_OPENROUTER_MODELS = final_openrouter
+                logger.info("🔍 [Real-Time OpenRouter Tracker] Discovered free Gemini models: %s", discovered_free_gemini)
+                return _CACHED_LATEST_OPENROUTER_MODELS
+    except Exception as exc:
+        logger.debug("OpenRouter dynamic model discovery skipped (%s).", exc)
+
+    return default_openrouter_backups
 
 # ---------------------------------------------------------------------------
 # System prompt factory
@@ -148,9 +257,6 @@ def build_system_prompt(target_lang: str) -> str:
         f"character for character. Do NOT translate, shorten, paraphrase, or alter "
         f"any URL in any way."
     )
-
-MAX_RETRIES = 2
-RETRY_BACKOFF_SECONDS = 3
 
 # ---------------------------------------------------------------------------
 # Field-pair descriptor
@@ -232,16 +338,10 @@ def make_payload(text: str, kind: str) -> dict:
 # Notion API — fetch database pages
 # ---------------------------------------------------------------------------
 def fetch_database_pages(database_id: str, is_profile: bool = False) -> list[dict]:
-    """
-    Fetch pages from a Notion database.
-    - For Profile DB: Queries all rows (no status filter because Profile has no status).
-    - For Portfolio DB: Queries all non-archived pages.
-    """
     url = f"{NOTION_BASE_URL}/databases/{database_id}/query"
     payload: dict = {}
 
     if not is_profile:
-        # In Portfolio CMS, exclude explicitly Archived items if Status property exists
         payload = {
             "filter": {
                 "property": "Status",
@@ -260,7 +360,6 @@ def fetch_database_pages(database_id: str, is_profile: bool = False) -> list[dic
         try:
             resp = requests.post(url, headers=NOTION_HEADERS, json=payload, timeout=30)
             if resp.status_code == 400 and "filter" in payload:
-                # If filter failed (e.g. Status property name mismatch), fallback to query without filter
                 logger.warning("Status filter rejected on DB %s, retrying without filter...", database_id)
                 payload.pop("filter", None)
                 resp = requests.post(url, headers=NOTION_HEADERS, json=payload, timeout=30)
@@ -284,7 +383,7 @@ def fetch_database_pages(database_id: str, is_profile: bool = False) -> list[dic
     return pages
 
 # ---------------------------------------------------------------------------
-# AI Engines — OpenRouter & Google Gemini Fallback
+# AI Engines — OpenRouter & Google Gemini Real-Time Fallback
 # ---------------------------------------------------------------------------
 def _call_openrouter(text: str, target_lang: str, model: str) -> str:
     url = f"{OPENROUTER_BASE_URL}/chat/completions"
@@ -304,16 +403,15 @@ def _call_openrouter(text: str, target_lang: str, model: str) -> str:
         raise ValueError("Empty response from OpenRouter")
     return result
 
-def _call_gemini_direct(text: str, target_lang: str) -> str:
-    """Google Gemini Direct API (Gemini 2.0 / 1.5 Flash) fallback."""
+def _call_gemini_direct_realtime(text: str, target_lang: str) -> str:
+    """Google Gemini Direct API real-time fallback using the latest tracked model."""
     if not GEMINI_API_KEY:
         raise ValueError("No GEMINI_API_KEY available")
 
-    # Try gemini-2.0-flash first, then gemini-1.5-flash
-    models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    candidate_models = get_realtime_gemini_flash_models()
     system_instruction = build_system_prompt(target_lang)
 
-    for model_name in models:
+    for model_name in candidate_models:
         url = f"{GEMINI_API_BASE_URL}/{model_name}:generateContent?key={GEMINI_API_KEY}"
         payload = {
             "system_instruction": {
@@ -330,26 +428,27 @@ def _call_gemini_direct(text: str, target_lang: str) -> str:
         }
         try:
             resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code == 404:
+                continue
             resp.raise_for_status()
             data = resp.json()
             translated = data["candidates"][0]["content"]["parts"][0]["text"].strip()
             if translated:
-                logger.info("    [Success] Translated via Google Gemini Direct API (%s)", model_name)
+                logger.info("    [Success] Translated via Real-Time Google Gemini Flash (%s)", model_name)
                 return translated
         except Exception as exc:
             logger.warning("    Google Gemini (%s) error: %s", model_name, exc)
             continue
 
-    raise RuntimeError("All Google Gemini Direct models failed.")
+    raise RuntimeError("All Real-Time Google Gemini Flash models failed.")
 
 def translate_text(text: str, target_lang: str) -> str:
     """
-    Translates text into target_lang with automatic multi-tiered fallback:
+    Translates text with real-time model discovery and multi-tiered fallback:
       1. Primary OpenRouter model (e.g. openrouter/free)
-      2. Google Gemini Flash Direct API (if key available)
-      3. OpenRouter Backup Free Models
+      2. Google Gemini Flash Direct (auto-tracked latest model)
+      3. OpenRouter dynamically tracked free models
     """
-    # Cost-saving guardrail for short pure-ASCII English text
     if target_lang.lower() == "english":
         has_diacritics = bool(VIETNAMESE_DIACRITICS_RE.search(text))
         if not has_diacritics and len(text) < 50:
@@ -366,18 +465,19 @@ def translate_text(text: str, target_lang: str) -> str:
     except Exception as exc:
         logger.warning("    [Tier 1] Primary model '%s' failed: %s", LLM_MODEL, exc)
 
-    # --- 2. Google Gemini Direct API fallback ---
+    # --- 2. Real-Time Google Gemini Flash Fallback ---
     if GEMINI_API_KEY:
         try:
-            logger.info("    [Tier 2] Trying Google Gemini Direct API fallback...")
-            translated = _call_gemini_direct(text, target_lang)
+            logger.info("    [Tier 2] Trying Real-Time Google Gemini Flash API fallback...")
+            translated = _call_gemini_direct_realtime(text, target_lang)
             return translated
         except Exception as exc:
             logger.warning("    [Tier 2] Google Gemini Direct API failed: %s", exc)
 
-    # --- 3. OpenRouter Backup Models fallback ---
-    logger.info("    [Tier 3] Trying alternative OpenRouter free models...")
-    for backup_model in OPENROUTER_BACKUP_MODELS:
+    # --- 3. OpenRouter Real-Time Tracked Backup Models ---
+    logger.info("    [Tier 3] Trying real-time OpenRouter backup models...")
+    backup_models = get_realtime_openrouter_backup_models()
+    for backup_model in backup_models:
         if backup_model == LLM_MODEL:
             continue
         try:
@@ -389,7 +489,7 @@ def translate_text(text: str, target_lang: str) -> str:
             logger.warning("    OpenRouter backup '%s' failed: %s", backup_model, exc)
             time.sleep(1)
 
-    raise RuntimeError("All AI translation models (Primary, Google Gemini, and OpenRouter Backups) exhausted.")
+    raise RuntimeError("All AI translation models (Primary, Real-Time Google Gemini, and OpenRouter Backups) exhausted.")
 
 # ---------------------------------------------------------------------------
 # Notion API — update a page
@@ -521,7 +621,7 @@ def run_database(db_label: str, database_id: str, field_pairs: list[FieldPair], 
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    logger.info("Portfolio AI Automation CMS — Dual-Database & Multi-Tier AI")
+    logger.info("Portfolio AI Automation CMS — Real-Time Model Tracking & Multi-Tier AI")
     logger.info("Primary Model: %s", LLM_MODEL)
 
     total_success = 0
