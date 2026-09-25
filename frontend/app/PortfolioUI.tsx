@@ -76,10 +76,15 @@ const DELETING_SPEED = 20;  // ms per character erased
 const PAUSE_TIME    = 2000; // ms to pause after full sentence is typed
 const GAP_TIME      = 300;  // ms gap before typing next sentence
 
-function splitBioSentences(bio: string): string[] {
-  if (!bio) return [];
-  return bio
-    .split(/(?<=[.!?])\s+|\n+/)
+// Universal smart splitting for Role & Bio:
+// Splits on:
+//  1. Newline (\n / Shift+Enter in Notion)
+//  2. Pipe separator (|)
+//  3. Punctuation (. ! ?) followed by whitespace
+function splitPhrases(text: string): string[] {
+  if (!text) return [];
+  return text
+    .split(/\n+|\||(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -91,8 +96,9 @@ interface TerminalTypingProps {
 
 function TerminalTyping({ role, bio }: TerminalTypingProps) {
   const items = useMemo(() => {
-    const bioLines = bio ? splitBioSentences(bio) : [];
-    return [role, ...bioLines].filter(Boolean);
+    const roleItems = role ? splitPhrases(role) : [];
+    const bioItems = bio ? splitPhrases(bio) : [];
+    return [...roleItems, ...bioItems].filter(Boolean);
   }, [role, bio]);
 
   const [itemIdx, setItemIdx] = useState(0);
