@@ -1,21 +1,35 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
-import { Code, Briefcase, Camera, Mail } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Code,
+  Briefcase,
+  Camera,
+  Mail,
+  ExternalLink,
+  Github,
+  GraduationCap,
+  Sparkles,
+  Layers,
+  Cpu,
+  Award,
+  Calendar,
+  ChevronRight,
+  X,
+  Globe,
+  Terminal,
+  CheckCircle2,
+  ArrowUpRight,
+  User,
+  Wrench,
+  BookOpen,
+} from "lucide-react";
 
 // ── LinkifiedText ─────────────────────────────────────────────────────────────
-// Detects URLs (http/https/www) inside plain text and renders them as styled
-// anchor tags: dark-blue, bold, pointer cursor, opens in a new tab.
-//
-// Trailing punctuation fix: after matching, we strip characters like ) ] . , ; ! ?
-// that commonly wrap a URL in prose (e.g. "(see https://example.com)") but are
-// NOT part of the URL itself.  Stripped chars are rendered as plain text after
-// the <a> tag so the sentence still reads correctly.
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-// Characters that are never a valid URL ending when used as surrounding prose punctuation
 const TRAILING_PUNCT_RE = /[)\].,;!?'"]+$/;
 
 function LinkifiedText({
@@ -25,11 +39,11 @@ function LinkifiedText({
   text: string;
   className?: string;
 }) {
+  if (!text) return null;
   const parts = text.split(URL_REGEX);
   return (
     <span className={className}>
       {parts.map((part, i) => {
-        // Reset stateful regex before each test
         URL_REGEX.lastIndex = 0;
         if (!URL_REGEX.test(part)) {
           URL_REGEX.lastIndex = 0;
@@ -37,9 +51,8 @@ function LinkifiedText({
         }
         URL_REGEX.lastIndex = 0;
 
-        // Strip trailing punctuation that belongs to surrounding prose, not the URL
         const clean = part.replace(TRAILING_PUNCT_RE, "");
-        const trailing = part.slice(clean.length); // e.g. ")" or ")."
+        const trailing = part.slice(clean.length);
         const href = clean.startsWith("www.") ? `https://${clean}` : clean;
 
         return (
@@ -49,7 +62,7 @@ function LinkifiedText({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-150 break-all"
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 underline underline-offset-4 cursor-pointer transition-colors duration-150 break-all"
             >
               {clean}
             </a>
@@ -60,27 +73,13 @@ function LinkifiedText({
     </span>
   );
 }
-// ─────────────────────────────────────────────────────────────────────────────
-
 
 // ── TerminalTyping (Single-Line Typewriter) ────────────────────────────────────
-// Clean single-line typing animation that:
-//  1. Types Role character-by-character
-//  2. Pauses, then deletes Role character-by-character
-//  3. Types Bio sentence 1 -> deletes sentence 1
-//  4. Types Bio sentence 2 -> deletes sentence 2 ... -> types Bio sentence N -> deletes sentence N
-//  5. Loops back to Role infinitely
-// No terminal box, no leading arrows, strictly 1 single standard line.
-const TYPING_SPEED  = 45;   // ms per character typed
-const DELETING_SPEED = 20;  // ms per character erased
-const PAUSE_TIME    = 2000; // ms to pause after full sentence is typed
-const GAP_TIME      = 300;  // ms gap before typing next sentence
+const TYPING_SPEED = 45;
+const DELETING_SPEED = 20;
+const PAUSE_TIME = 2200;
+const GAP_TIME = 300;
 
-// Universal smart splitting for Role & Bio:
-// Splits on:
-//  1. Newline (\n / Shift+Enter in Notion)
-//  2. Pipe separator (|)
-//  3. Punctuation (. ! ?) followed by whitespace
 function splitPhrases(text: string): string[] {
   if (!text) return [];
   return text
@@ -105,7 +104,6 @@ function TerminalTyping({ role, bio }: TerminalTypingProps) {
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Reset when items change (e.g. language toggle)
   useEffect(() => {
     setItemIdx(0);
     setDisplayText("");
@@ -148,20 +146,19 @@ function TerminalTyping({ role, bio }: TerminalTypingProps) {
   if (!items.length) return null;
 
   return (
-    <div className="w-full flex items-center justify-center min-h-[1.75rem] md:min-h-[2rem] my-1">
+    <div className="w-full flex items-center justify-center min-h-[2rem] my-1">
       <p className="text-base sm:text-lg md:text-xl font-medium text-slate-700 dark:text-slate-300 text-center tracking-normal max-w-3xl leading-relaxed">
-        <span>{displayText}</span>
-        <span className="inline-block w-[2px] h-[1.1em] align-middle bg-indigo-600 dark:bg-indigo-400 ml-1 animate-pulse" />
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-300 dark:to-pink-400 font-semibold">
+          {displayText}
+        </span>
+        <span className="inline-block w-[2.5px] h-[1.15em] align-middle bg-indigo-600 dark:bg-indigo-400 ml-1.5 animate-pulse rounded-full" />
       </p>
     </div>
   );
 }
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
 
-
+// ── Types ─────────────────────────────────────────────────────────────────────
 export interface Project {
-
   id: string;
   status: string;
   title_vn: string;
@@ -172,10 +169,11 @@ export interface Project {
   links: string;
   images: string[];
   tags: string[];
+  last_edited_time?: string;
   project_date?: {
     start: string | null;
     end: string | null;
-  };
+  } | null;
 }
 
 export interface ProfileData {
@@ -197,13 +195,14 @@ interface PortfolioUIProps {
   profileData?: ProfileData | null;
 }
 
+// ── Tag Styling Helper ────────────────────────────────────────────────────────
 const tagThemes = [
-  'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
-  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  'bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20',
-  'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
-  'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
-  'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
+  "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+  "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+  "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+  "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
 ];
 
 const getTagStyle = (tagName: string): string => {
@@ -214,47 +213,38 @@ const getTagStyle = (tagName: string): string => {
   return tagThemes[hash % tagThemes.length];
 };
 
-const getVisitButtonText = (category: string | undefined, lang: "EN" | "VN") => {
-  const cleanCategory = (category || "Project").trim();
-  const lowerCategory = cleanCategory.toLowerCase();
-
-  const translations: Record<string, { en: string; vn: string }> = {
-    project: { en: "Project", vn: "Dự án" },
-    certificate: { en: "Certification", vn: "Chứng chỉ" },
-  };
-
-  if (lang === "EN") {
-    const displayCategory = translations[lowerCategory]?.en || cleanCategory;
-    return `Visit ${displayCategory}`;
-  } else {
-    const displayCategory = translations[lowerCategory]?.vn || cleanCategory;
-    return `Truy cập ${displayCategory}`;
-  }
-};
-
-
-export default function PortfolioUI({ projects = [], profileData = null }: PortfolioUIProps) {
-  const [activeTab, setActiveTab] = useState<string>("All");
+export default function PortfolioUI({
+  projects = [],
+  profileData = null,
+}: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  // Notion-style search / filter / sort states
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<string>("newest");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch for client-only state (theme)
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Separate Projects vs Certificates
+  const { featuredProjects, certificates } = useMemo(() => {
+    const feat: Project[] = [];
+    const cert: Project[] = [];
+
+    projects.forEach((item) => {
+      const cat = (item.category || "").toLowerCase();
+      if (cat.includes("certificate") || cat.includes("chứng chỉ")) {
+        cert.push(item);
+      } else {
+        feat.push(item);
+      }
+    });
+
+    return { featuredProjects: feat, certificates: cert };
+  }, [projects]);
+
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
-    
     const links = [];
     if (profileData.email) {
       links.push({
@@ -269,7 +259,7 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
         type: "github",
         label: "GitHub",
         href: profileData.github,
-        icon: Code,
+        icon: Github,
       });
     }
     if (profileData.linkedin) {
@@ -291,172 +281,219 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
     return links;
   }, [profileData]);
 
-  // Reset page to 1 when filters or sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, sortOrder, selectedTags]);
-
-  // 1. Helper function to format dates localized deterministically (no hydration errors)
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "";
-    
     const parts = dateString.split("-");
-    if (parts.length !== 3) {
-      return dateString;
-    }
-
-    const year = parts[0];
-    const monthIndex = parseInt(parts[1], 10);
-    const dayIndex = parseInt(parts[2], 10);
-
-    const day = String(dayIndex).padStart(2, "0");
-    const month = String(monthIndex).padStart(2, "0");
-
-    if (lang === "VN") {
-      return `${day}/${month}/${year}`;
-    } else {
-      const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-      ];
-      const monthName = months[monthIndex - 1] || "";
-      return `${monthName} ${dayIndex}, ${year}`;
-    }
+    if (parts.length !== 3) return dateString;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  // 2. Helper function to render formatted date range like Notion
-  const renderDateRange = (projectDate?: { start: string | null; end: string | null }) => {
-    if (!projectDate?.start) return null;
-    const startFormatted = formatDate(projectDate.start);
-    const endFormatted = projectDate.end ? formatDate(projectDate.end) : "";
-    
+  const renderDateRange = (dateRange: Project["project_date"]) => {
+    if (!dateRange || !dateRange.start) return null;
+    const startFormatted = formatDate(dateRange.start);
+    const endFormatted = dateRange.end ? formatDate(dateRange.end) : null;
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 mt-2">
-        <svg className="h-4 w-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        <span>
-          {startFormatted}
-          {endFormatted ? <> &rarr; {endFormatted}</> : null}
-        </span>
-      </p>
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+        <Calendar className="h-3.5 w-3.5 opacity-75" />
+        <span>{endFormatted ? `${startFormatted} – ${endFormatted}` : startFormatted}</span>
+      </span>
     );
   };
 
-  // 3. Dynamically extract unique categories
-  const categories = useMemo(() => {
-    const unique = new Set(
-      projects.map((p) => p.category).filter(Boolean)
-    );
-    return ["All", ...Array.from(unique)];
-  }, [projects]);
+  // Structured Skills Matrix (Categorized)
+  const skillsData = [
+    {
+      category: lang === "EN" ? "Languages" : "Ngôn ngữ",
+      icon: Code,
+      gradient: "from-blue-500/20 via-indigo-500/20 to-violet-500/20",
+      skills: ["TypeScript", "JavaScript", "Python", "C# (.NET)", "C", "SQL", "PHP"],
+    },
+    {
+      category: lang === "EN" ? "Frontend & Web" : "Giao diện & Web",
+      icon: Layers,
+      gradient: "from-cyan-500/20 via-teal-500/20 to-emerald-500/20",
+      skills: ["Next.js (App Router)", "ReactJS", "Tailwind CSS", "Framer Motion", "HTML5/CSS3"],
+    },
+    {
+      category: lang === "EN" ? "Backend & Cloud" : "Hệ thống & Cloud",
+      icon: Cpu,
+      gradient: "from-violet-500/20 via-purple-500/20 to-pink-500/20",
+      skills: ["Node.js", "Notion API", "RESTful APIs", "MySQL", "SQLite", "PostgreSQL", "Vercel", "GitHub Actions"],
+    },
+    {
+      category: lang === "EN" ? "AI & Automation" : "AI & Tự động hoá",
+      icon: Sparkles,
+      gradient: "from-amber-500/20 via-orange-500/20 to-rose-500/20",
+      skills: [
+        "Google Gemini API",
+        "OpenRouter",
+        "AI Agent Workflows",
+        "Prompt Engineering (T.C.R.E.I)",
+        "Antigravity",
+        "Claude Code",
+        "n8n",
+        "Make",
+      ],
+    },
+    {
+      category: lang === "EN" ? "Design & Tools" : "Thiết kế & Công cụ",
+      icon: Wrench,
+      gradient: "from-pink-500/20 via-rose-500/20 to-indigo-500/20",
+      skills: ["Figma", "Canva", "Adobe Photoshop", "Git", "GitHub", "Vercel Deployments"],
+    },
+  ];
 
-  // 4. Dynamically extract all unique tags
-  const uniqueTags = useMemo(() => {
-    const allTags = projects.flatMap((p) => p.tags || []);
-    return Array.from(new Set(allTags)).filter(Boolean);
-  }, [projects]);
-
-  // 5. Filter and sort projects based on dynamic controls
-  const filteredAndSortedProjects = useMemo(() => {
-    // ── Safety guard: only render fully Published items ──────────────────────
-    // This is a second layer of defence on top of the Notion API filter.
-    let result = projects.filter((p) => p.status === "Published");
-
-    // Category filter
-    if (activeTab !== "All") {
-      result = result.filter((p) => p.category === activeTab);
-    }
-
-    // Tag filter (project must match ALL selected tags)
-    if (selectedTags.length > 0) {
-      result = result.filter((p) =>
-        selectedTags.every((tag) => p.tags?.includes(tag))
-      );
-    }
-
-    // Sort order — always sort by actual start date so the order is deterministic
-    if (sortOrder === "newest" || sortOrder === "oldest") {
-      result.sort((a, b) => {
-        // Items with no date are pushed to the end regardless of sort direction
-        const dateA = a.project_date?.start ? new Date(a.project_date.start).getTime() : -Infinity;
-        const dateB = b.project_date?.start ? new Date(b.project_date.start).getTime() : -Infinity;
-        return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-      });
-    } else if (sortOrder === "a-z") {
-      result.sort((a, b) => {
-        const titleA = (lang === "EN" ? a.title_en : a.title_vn) || a.title_en || a.title_vn || "";
-        const titleB = (lang === "EN" ? b.title_en : b.title_vn) || b.title_en || b.title_vn || "";
-        return titleA.localeCompare(titleB, lang === "VN" ? "vi" : "en");
-      });
-    }
-
-    return result;
-  }, [projects, activeTab, selectedTags, sortOrder, lang]);
-
-  const ITEMS_PER_PAGE = 6;
-  const totalPages = Math.ceil(filteredAndSortedProjects.length / ITEMS_PER_PAGE);
-  const paginatedProjects = useMemo(() => {
-    return filteredAndSortedProjects.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  }, [filteredAndSortedProjects, currentPage]);
-
-  console.log("Raw Project Data:", projects);
+  // Experience Data
+  const experienceData = [
+    {
+      role_en: "Google Student Ambassador Trainer",
+      role_vn: "Trainer Đại sứ Sinh viên Google (GSA Trainer)",
+      org: "Google",
+      period: "2026 – PRESENT",
+      badge: "Google Internship Program",
+      desc_en: [
+        "Spearheaded GenAI and Prompt Engineering workshops across HCMC universities, driving AI adoption for 500+ diverse students.",
+        "Engineered specialized AI Agents and deployed n8n automation workflows to manage email communication and participant datasets.",
+        "Integrated AI tooling with Google Workspace / Office 365 to automate reporting pipelines and accelerate delivery.",
+      ],
+      desc_vn: [
+        "Chủ trì các buổi workshop về GenAI và Kỹ nghệ Prompt tại các trường Đại học ở TP.HCM cho hơn 500+ sinh viên.",
+        "Thiết kế và triển khai các AI Agent chuyên biệt kết hợp luồng tự động hóa n8n xử lý dữ liệu và hệ thống email tự động.",
+        "Tích hợp các công cụ AI vào Google Workspace / Office 365 để tự động hóa báo cáo và tối ưu hóa quy trình làm việc.",
+      ],
+    },
+    {
+      role_en: "Top 200 Hackathon AI Riser Vietnam (ZeroLLM)",
+      role_vn: "Top 200 Hackathon AI Riser Vietnam (Dự án ZeroLLM)",
+      org: "AI Riser Vietnam 2026",
+      period: "2026",
+      badge: "National Hackathon Finalist",
+      desc_en: [
+        "Architected ZeroLLM — a 100% free AI directory that automatically discovers and verifies zero-cost LLM providers in real-time.",
+        "Integrated Google Search Grounding with Gemini Flash to track and update active model endpoints dynamically.",
+      ],
+      desc_vn: [
+        "Kiến trúc nên ZeroLLM — nền tảng tổng hợp và tự động tìm kiếm các nhà cung cấp API LLM miễn phí 100% theo thời gian thực.",
+        "Ứng dụng Google Search Grounding kết hợp Gemini Flash để liên tục xác minh và cập nhật các model khả dụng.",
+      ],
+    },
+    {
+      role_en: "Frontend Development Intern",
+      role_vn: "Thực tập sinh Phát triển Frontend",
+      org: "Apps Cyclone",
+      period: "2025",
+      badge: "Frontend Engineering",
+      desc_en: [
+        "Translated Figma UI/UX designs into responsive, interactive website interfaces using ReactJS with pixel-perfect accuracy.",
+        "Developed fully functional modular React components with comprehensive state management and CRUD operations.",
+      ],
+      desc_vn: [
+        "Chuyển đổi thiết kế Figma UI/UX thành giao diện website tương tác mượt mà, chuẩn responsive bằng ReactJS.",
+        "Xây dựng các component React dạng module hóa hoàn chỉnh với các thao tác CRUD và quản lý state tối ưu.",
+      ],
+    },
+    {
+      role_en: "WordPress Development Intern",
+      role_vn: "Thực tập sinh Phát triển WordPress",
+      org: "TBay",
+      period: "2025",
+      badge: "E-Commerce",
+      desc_en: [
+        "Constructed functional e-commerce web applications using WordPress, configuring custom themes and checkout plugins.",
+      ],
+      desc_vn: [
+        "Xây dựng website thương mại điện tử hoàn chỉnh trên WordPress, tùy biến giao diện và tối ưu hóa luồng thanh toán.",
+      ],
+    },
+  ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-8 min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white pb-20 transition-colors duration-300">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-500 font-sans overflow-x-hidden">
       
-      {/* ── HEADER & NAVIGATION ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50/90 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-300">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-5 flex items-center justify-between w-full">
-          
-          <h1 className="text-2xl font-bold tracking-tight text-left text-slate-900 dark:text-white animate-fade-in">
-            Portfolio
-          </h1>
+      {/* ── 3D AMBIENT BACKGROUND GLOWS ──────────────────────────────────── */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/15 dark:bg-indigo-600/20 rounded-full blur-[120px] transform-gpu" />
+        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-purple-500/15 dark:bg-purple-600/15 rounded-full blur-[140px] transform-gpu" />
+        <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-cyan-500/10 dark:bg-cyan-600/10 rounded-full blur-[130px] transform-gpu" />
+      </div>
 
-          {/* Right Side: Theme & Language controllers */}
+      {/* ── STICKY GLASS HEADER & NAV ────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 dark:bg-[#0B0F17]/75 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          
+          {/* Brand Logo with 3D gradient ring */}
+          <a
+            href="#"
+            className="group flex items-center gap-2.5 transition-transform duration-300 hover:scale-105"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-[1.5px] shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
+              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-slate-900 text-white font-black text-sm">
+                Z
+              </div>
+            </div>
+            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+              Zero<span className="text-indigo-600 dark:text-indigo-400">Vault</span>
+            </span>
+          </a>
+
+          {/* Quick Nav Links (Desktop) */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <a href="#about" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {lang === "EN" ? "About" : "Giới thiệu"}
+            </a>
+            <a href="#skills" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {lang === "EN" ? "Skills" : "Kỹ năng"}
+            </a>
+            <a href="#experience" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {lang === "EN" ? "Experience" : "Kinh nghiệm"}
+            </a>
+            <a href="#projects" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {lang === "EN" ? "Projects" : "Dự án"}
+            </a>
+            <a href="#education" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {lang === "EN" ? "Education" : "Học vấn"}
+            </a>
+          </nav>
+
+          {/* Controls: Theme & Language */}
           <div className="flex items-center gap-3">
             {/* Theme Toggle Button */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all duration-200 cursor-pointer animate-fade-in"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-indigo-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
               aria-label="Toggle theme"
             >
               {mounted ? (
                 theme === "dark" ? (
-                  // Sun Icon
-                  <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.02.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.01c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z" />
+                  <svg className="h-4 w-4 fill-amber-400" viewBox="0 0 20 20">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
                   </svg>
                 ) : (
-                  // Moon Icon
-                  <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 fill-indigo-600" viewBox="0 0 24 24">
                     <path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10C2.2 6.8 6.5 2.5 11.9 2.2c.5 0 .9.3 1.1.8s-.1.9-.5 1.2C11 5.4 10 7.2 10 9.2c0 3.8 3.1 6.9 6.9 6.9 2 0 3.8-1 5-2.5.3-.4.8-.5 1.2-.3s.7.7.5 1.2c-.8 3.8-3.9 6.6-7.8 7.4-.5.1-1 .1-1.5.1z" />
                   </svg>
                 )
               ) : (
-                <div className="h-5 w-5 rounded-full bg-slate-300 dark:bg-slate-700 animate-pulse" />
+                <div className="h-4 w-4 rounded-full bg-slate-300 dark:bg-slate-700 animate-pulse" />
               )}
             </button>
 
-            {/* Language Toggle Switch */}
+            {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === "EN" ? "VN" : "EN")}
-              className="relative inline-flex h-8 w-24 cursor-pointer items-center rounded-full bg-slate-200 dark:bg-slate-800 p-1 transition-colors duration-300 focus:outline-none"
+              className="relative inline-flex h-9 w-22 cursor-pointer items-center rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-1 transition-all duration-300 shadow-sm"
               aria-label="Toggle language"
             >
               <span
                 className={`${
-                  lang === "VN" ? "translate-x-11" : "translate-x-0"
-                } absolute left-1 top-1 h-6 w-11 rounded-full bg-indigo-600 dark:bg-indigo-500 transition-transform duration-300`}
+                  lang === "VN" ? "translate-x-10" : "translate-x-0"
+                } absolute left-1 top-1 h-7 w-10 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-transform duration-300`}
               />
-              <span className="relative z-10 flex w-full justify-between px-2 text-[10px] font-semibold uppercase tracking-wider antialiased select-none pointer-events-none">
-                <span className={`w-11 text-center transition-colors duration-300 ${lang === "EN" ? "text-white" : "text-slate-500 dark:text-slate-400"}`}>
+              <span className="relative z-10 flex w-full justify-between px-1 text-[11px] font-bold uppercase tracking-wider select-none pointer-events-none">
+                <span className={`w-10 text-center transition-colors duration-300 ${lang === "EN" ? "text-white" : "text-slate-500"}`}>
                   EN
                 </span>
-                <span className={`w-11 text-center transition-colors duration-300 ${lang === "VN" ? "text-white" : "text-slate-500 dark:text-slate-400"}`}>
+                <span className={`w-10 text-center transition-colors duration-300 ${lang === "VN" ? "text-white" : "text-slate-500"}`}>
                   VN
                 </span>
               </span>
@@ -465,36 +502,60 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
         </div>
       </header>
 
-      {/* ── PROFILE BIO SECTION ────────────────────────────────────────── */}
-      {profileData && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 animate-fade-in">
-          <div className="flex flex-col items-center text-center w-full max-w-4xl mx-auto p-6 md:p-8 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-2xl gap-4">
-            
-            {/* Top Section (Personal Info) */}
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 text-center text-slate-900 dark:text-white">
-              {lang === 'VN' ? profileData.name_vn : profileData.name_en}
-            </h2>
+      {/* ── 1. HERO SECTION ──────────────────────────────────────────────── */}
+      <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
+        {profileData && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex flex-col items-center"
+          >
+            {/* Positioning Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold tracking-wide uppercase mb-5 shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-spin-slow" />
+              <span>
+                {lang === "EN"
+                  ? "AI Application Engineer • Solo Product Builder"
+                  : "Kỹ sư Ứng dụng AI • Xây dựng Sản phẩm Độc lập"}
+              </span>
+            </div>
 
-            {profileData.dob && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 mb-1">
-                <svg className="h-4 w-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                <span>{lang === "VN" ? `Ngày sinh: ${formatDate(profileData.dob)}` : `Born: ${formatDate(profileData.dob)}`}</span>
-              </p>
-            )}
+            {/* Name with 3D-feeling text shadow */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 dark:from-white dark:via-slate-100 dark:to-indigo-200">
+                {lang === "VN" ? profileData.name_vn : profileData.name_en}
+              </span>
+            </h1>
 
+            {/* Single-Line Typewriter Animation */}
             <TerminalTyping
               role={lang === "VN" ? profileData.role_vn : profileData.role_en}
               bio={lang === "VN" ? profileData.bio_vn : profileData.bio_en}
             />
 
-            {/* Bottom Section (Social/Contact Links) */}
+            {/* Positioning Headline (Value Proposition) */}
+            <p className="mt-3 text-sm sm:text-base md:text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl leading-relaxed">
+              {lang === "EN"
+                ? "Building & shipping production-ready AI applications from concept to deployment with full ownership."
+                : "Xây dựng và đưa các sản phẩm ứng dụng AI từ ý tưởng vào thực tế với tư duy làm chủ hệ thống trọn vẹn."}
+            </p>
+
+            {/* Date of Birth if configured */}
+            {profileData.dob && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 mt-2">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>
+                  {lang === "VN"
+                    ? `Ngày sinh: ${formatDate(profileData.dob)}`
+                    : `Born: ${formatDate(profileData.dob)}`}
+                </span>
+              </p>
+            )}
+
+            {/* Social & Contact Buttons (Accessible in <10s) */}
             {socialLinks.length > 0 && (
-              <div className="mt-4 md:mt-6 w-full flex flex-row flex-wrap justify-center items-center gap-3 md:gap-6">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 {socialLinks.map((link) => {
                   const Icon = link.icon;
                   return (
@@ -503,398 +564,486 @@ export default function PortfolioUI({ projects = [], profileData = null }: Portf
                       href={link.href}
                       target={link.type === "email" ? undefined : "_blank"}
                       rel={link.type === "email" ? undefined : "noopener noreferrer"}
-                      className={`flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-600 dark:hover:text-indigo-300 hover:border-indigo-300 dark:hover:border-indigo-500/50 rounded-full transition-all text-sm md:text-base ${
-                        link.type === "email" ? "h-auto py-2" : ""
-                      }`}
+                      className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold shadow-sm hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                     >
-                      <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-                      <span className={
-                        link.type === "email"
-                          ? "break-all whitespace-normal text-center"
-                          : "truncate max-w-[150px] sm:max-w-none"
-                      }>
-                        {link.label}
-                      </span>
+                      <Icon className="h-4 w-4 text-slate-500 group-hover:text-indigo-500 transition-colors" />
+                      <span>{link.label}</span>
                     </a>
                   );
                 })}
               </div>
             )}
+          </motion.div>
+        )}
+      </section>
+
+      {/* ── 2. ABOUT SECTION ────────────────────────────────────────────── */}
+      <section id="about" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.5 }}
+          className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-none relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <User className="h-5 w-5" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {lang === "EN" ? "About Me" : "Về Tôi"}
+            </h2>
+          </div>
+
+          <div className="space-y-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+            <p>
+              {lang === "EN"
+                ? "I am an Information Technology student and AI Application Engineer with a passion for architecting practical, modern software. Operating with a solo-builder mindset, I orchestrate AI agents and engineering workflows to transform complex concepts into production-ready software with speed and precision."
+                : "Tôi là sinh viên ngành Công nghệ Thông tin và Kỹ sư Ứng dụng AI, đam mê hiện thực hoá các ý tưởng công nghệ thành sản phẩm thực tế. Với tư duy solo builder và phương pháp chỉ đạo AI agent, tôi tập trung vào việc biến ý tưởng thành phần mềm hoàn chỉnh chạy trên production với tốc độ cao và tính ổn định."}
+            </p>
+            <p>
+              {lang === "EN"
+                ? "As a Google Student Ambassador Trainer, I actively deliver GenAI and prompt engineering workshops to hundreds of university students across Ho Chi Minh City. I believe in true engineering mastery: deeply understanding codebases, debugging edge cases, and owning every architectural decision from API design to serverless deployments."
+                : "Với vai trò Trainer Đại sứ Sinh viên Google (GSA Trainer), tôi trực tiếp chia sẻ kiến thức về GenAI và kỹ nghệ Prompt cho hàng trăm sinh viên đại học tại TP.HCM. Tôi theo đuổi phong cách làm chủ kỹ thuật thực thụ: thấu hiểu từng dòng code, tự tay debug các trường hợp biên và nắm trọn vẹn kiến trúc hệ thống."}
+            </p>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── 3. SKILLS SECTION ────────────────────────────────────────────── */}
+      <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <Cpu className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {lang === "EN" ? "Technical Skills" : "Kỹ Năng Công Nghệ"}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên sâu"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {skillsData.map((group, idx) => {
+            const Icon = group.icon;
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-indigo-500/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+              >
+                <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${group.gradient} rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500`} />
+                <div className="flex items-center gap-2.5 mb-3.5">
+                  <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-200">
+                    {group.category}
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.skills.map((skill, sIdx) => (
+                    <span
+                      key={sIdx}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-indigo-400/40 transition-colors"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── 4. EXPERIENCE & HIGHLIGHTS ──────────────────────────────────── */}
+      <section id="experience" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+            <Briefcase className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {lang === "EN" ? "Experience & Highlights" : "Kinh Nghiệm & Thành Tựu"}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              {lang === "EN" ? "Key industry engagements and leadership roles" : "Các vai trò thực tế và hoạt động nổi bật"}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {experienceData.map((exp, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: idx * 0.1 }}
+              className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-indigo-500/40 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                      {lang === "VN" ? exp.role_vn : exp.role_en}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      {exp.badge}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
+                    {exp.org}
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 shrink-0">
+                  {exp.period}
+                </span>
+              </div>
+
+              <ul className="space-y-1.5 mt-3">
+                {(lang === "VN" ? exp.desc_vn : exp.desc_en).map((bullet, bIdx) => (
+                  <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 5. EDUCATION SECTION ────────────────────────────────────────── */}
+      <section id="education" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {lang === "EN" ? "Education" : "Học Vấn"}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              {lang === "EN" ? "Academic background & foundational studies" : "Nền tảng học thuật và đào tạo chính quy"}
+            </p>
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45 }}
+          className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                {lang === "EN"
+                  ? "Ly Tu Trong College of Ho Chi Minh City"
+                  : "Trường Cao Đẳng Lý Tự Trọng TP.HCM"}
+              </h3>
+              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {lang === "EN"
+                  ? "Information Technology (Class 25C2-LTM1)"
+                  : "Chuyên ngành Công Nghệ Thông Tin (Lớp 25C2-LTM1)"}
+              </p>
+            </div>
+            <div className="text-left sm:text-right">
+              <span className="inline-block px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                GPA: 3.5 / 4.0
+              </span>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                {lang === "EN" ? "Expected Graduation: 2027" : "Dự kiến tốt nghiệp: 2027"}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── 6. FEATURED PROJECTS (CASE STUDY GRID) ──────────────────────── */}
+      <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Code className="h-5 w-5" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "Featured Case Studies" : "Dự Án Nổi Bật (Case Studies)"}
+              </h2>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+              {lang === "EN"
+                ? "In-depth engineering breakdowns showcasing architectural decisions, AI orchestration, and production outcomes."
+                : "Phân tích kỹ thuật chuyên sâu thể hiện quyết định kiến trúc, khả năng làm chủ AI agent và kết quả thực tế."}
+            </p>
+          </div>
+        </div>
+
+        {/* Project 3D-feeling Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredProjects.map((project, index) => {
+            const title =
+              (lang === "EN" ? project.title_en : project.title_vn) ||
+              project.title_en ||
+              project.title_vn ||
+              "Untitled Project";
+
+            const desc =
+              (lang === "EN" ? project.desc_en || project.desc_vn : project.desc_vn || project.desc_en) || "";
+
+            const hasImage = project.images && project.images[0];
+
+            return (
+              <motion.div
+                key={project.id}
+                onClick={() => setSelectedProject(project)}
+                initial={{ opacity: 0, y: 35 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-indigo-500/50 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
+              >
+                {/* Image Cover */}
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  {hasImage ? (
+                    <Image
+                      src={project.images[0]}
+                      alt={title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                      priority={index < 3}
+                      quality={85}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10">
+                      <Code className="h-10 w-10 text-indigo-500/50" />
+                    </div>
+                  )}
+
+                  {/* Category Tag Overlay */}
+                  {project.category && (
+                    <div className="absolute top-3 left-3">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-white border border-white/10 shadow-sm">
+                        {project.category}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Content */}
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    {renderDateRange(project.project_date)}
+                    {project.links && (
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
+                        <span>{lang === "EN" ? "View Case Study" : "Xem Chi Tiết"}</span>
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                    {title}
+                  </h3>
+
+                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
+                    <LinkifiedText text={desc} />
+                  </div>
+
+                  {/* Tags */}
+                  {project.tags && project.tags.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                      {project.tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={tag}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {project.tags.length > 4 && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
+                          +{project.tags.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── 7. CERTIFICATES & AWARDS (COMPACT LIST) ────────────────────── */}
+      {certificates.length > 0 && (
+        <section id="certificates" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Award className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "Certificates & Accreditations" : "Chứng Chỉ & Thành Tựu Khác"}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                {lang === "EN" ? "Verified courses and technical completions" : "Các khóa đào tạo và chứng nhận đã hoàn thành"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {certificates.map((cert) => {
+              const title =
+                (lang === "EN" ? cert.title_en : cert.title_vn) ||
+                cert.title_en ||
+                cert.title_vn;
+
+              return (
+                <div
+                  key={cert.id}
+                  onClick={() => setSelectedProject(cert)}
+                  className="group flex items-center justify-between p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/50 hover:border-amber-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-200 cursor-pointer shadow-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 shrink-0">
+                      <Award className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
+                        {title}
+                      </h4>
+                      {cert.project_date?.start && (
+                        <p className="text-[11px] text-slate-400 font-mono">
+                          {formatDate(cert.project_date.start)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 group-hover:text-amber-500 transition-all" />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      {/* ── CATEGORY TABS ──────────────────────────────────────────────── */}
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 mt-6">
-        <div 
-          className="flex overflow-x-auto flex-nowrap gap-3 pb-2 border-b border-slate-200 dark:border-slate-800 snap-x snap-mandatory hide-scrollbar transition-colors duration-300"
-        >
-          {categories.map((cat) => {
-            const isActive = activeTab === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => {
-                  setActiveTab(cat);
-                  setSelectedTags([]); // Reset tag filters when switching main categories
-                }}
-                className={`cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 shrink-0 snap-start ${
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                    : "bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+      <footer className="relative z-10 border-t border-slate-200/80 dark:border-slate-800/80 mt-16 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>
+          © {new Date().getFullYear()} Nguyen Chi Thang • Built with Next.js 16, Notion CMS & Google Gemini AI.
+        </p>
+      </footer>
 
-      {/* ── CONTROL BAR FOR MOBILE ────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-4 flex md:hidden items-center justify-between">
-        <button
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-all duration-200 cursor-pointer"
-        >
-          <span>{lang === "EN" ? "Filter & Sort ⚙️" : "Bộ lọc & Sắp xếp ⚙️"}</span>
-          <svg
-            className={`h-4 w-4 transform transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {/* Clear Filters (Reset button) visible on mobile control bar if filters active */}
-        {(selectedTags.length > 0 || activeTab !== "All") && (
-          <button
-            onClick={() => {
-              setActiveTab("All");
-              setSelectedTags([]);
-            }}
-            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-          >
-            {lang === "EN" ? "Clear Filters" : "Xoá bộ lọc"}
-          </button>
-        )}
-      </div>
-
-      {/* ── FILTER & SORT CONTROLS ────────────────────────────────────── */}
-      <section 
-        className={`mx-auto max-w-7xl px-4 sm:px-6 mt-4 flex-col gap-4 md:flex ${
-          isFilterOpen ? "flex" : "hidden md:flex"
-        }`}
-      >
-        {/* Sort select & reset panel */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-900 pb-4 transition-colors duration-300">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Sort By" : "Sắp xếp"}
-            </span>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 outline-none hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-750"
-            >
-              <option value="newest">{lang === "EN" ? "Newest" : "Mới nhất"}</option>
-              <option value="oldest">{lang === "EN" ? "Oldest" : "Cũ nhất"}</option>
-              <option value="a-z">A - Z</option>
-            </select>
-          </div>
-
-          {/* Reset Filters button - hidden on mobile drawer since we have it on the mobile control bar */}
-          {(selectedTags.length > 0 || activeTab !== "All") && (
-            <button
-              onClick={() => {
-                setActiveTab("All");
-                setSelectedTags([]);
-              }}
-              className="hidden md:block text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer self-start sm:self-center"
-            >
-              {lang === "EN" ? "Clear Filters" : "Xoá bộ lọc"}
-            </button>
-          )}
-        </div>
-
-        {/* Dynamic Tag Filters — wraps naturally on all screen sizes */}
-        {uniqueTags.length > 0 && (
-          <div className="flex flex-wrap gap-x-3 gap-y-2">
-            {uniqueTags.map((tag) => {
-              const isSelected = selectedTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedTags(selectedTags.filter((t) => t !== tag));
-                    } else {
-                      setSelectedTags([...selectedTags, tag]);
-                    }
-                  }}
-                  className={`cursor-pointer px-3 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border ${
-                    isSelected
-                      ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100 shadow-sm border-2"
-                      : `${getTagStyle(tag)} hover:opacity-85`
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ── PROJECTS GRID ──────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 mt-8">
-        {filteredAndSortedProjects.length === 0 ? (
-          <div className="text-center py-20 bg-slate-50 dark:bg-slate-950/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
-            <span className="text-4xl">🔎</span>
-            <h3 className="mt-4 text-lg font-bold text-slate-700 dark:text-slate-300">
-              {lang === "EN" ? "No projects found" : "Không tìm thấy dự án nào"}
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">
-              {lang === "EN" ? "Try adjusting filter/sort options." : "Hãy thử thay đổi tùy chọn bộ lọc/sắp xếp."}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full min-w-[200px]">
-              {paginatedProjects.map((project, index) => {
-                const title =
-                  (lang === "EN" ? project.title_en : project.title_vn) ||
-                  project.title_en ||
-                  project.title_vn ||
-                  "Untitled Project";
-
-                const hasImage = project.images && project.images[0];
-
-                return (
-                  <motion.div
-                    key={project.id}
-                    onClick={() => setSelectedProject(project)}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-xl dark:shadow-none hover:border-indigo-300 hover:shadow-2xl dark:border-slate-800 dark:bg-slate-900/60 transition-all duration-300 hover:-translate-y-1.5 dark:hover:border-slate-700 dark:hover:shadow-indigo-505/5 cursor-pointer"
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
-                  >
-                    {/* Card Image */}
-                    <div className="relative w-full overflow-hidden transition-colors duration-300">
-                      {hasImage ? (
-                        <div className="relative w-full aspect-[16/10] overflow-hidden">
-                          <Image
-                            src={project.images[0]}
-                            alt={title}
-                            fill
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                            priority={index < 3}
-                            quality={80}
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex aspect-[16/10] w-full items-center justify-center bg-gradient-to-br from-indigo-50 via-slate-100 to-purple-55 dark:from-indigo-950 dark:via-slate-900 dark:to-purple-950">
-                          <span className="text-3xl opacity-50 dark:opacity-40">💻</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Card Details */}
-                    <div className="flex flex-1 flex-col p-6">
-                      {project.category && (
-                        <span className="mb-2 w-fit rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors duration-300">
-                          {project.category}
-                        </span>
-                      )}
-
-                      <h3 className="text-lg font-bold text-slate-905 dark:text-white">
-                        {title}
-                      </h3>
-
-                      {/* Date display below Title */}
-                      {renderDateRange(project.project_date)}
-                      
-                      <LinkifiedText
-                        className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1 block"
-                        text={
-                          lang === "EN"
-                            ? project.desc_en || project.desc_vn
-                            : project.desc_vn || project.desc_en
-                        }
-                      />
-
-                      {/* Tags (Deterministic colors) */}
-                      {project.tags && project.tags.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-1.5">
-                          {project.tags.slice(0, 3).map((tag, idx) => {
-                            return (
-                              <span
-                                key={idx}
-                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${getTagStyle(tag)}`}
-                              >
-                                {tag}
-                              </span>
-                            );
-                          })}
-                          {project.tags.length > 3 && (
-                            <span className="text-[10px] text-slate-505 dark:text-slate-500 self-center font-bold">
-                              +{project.tags.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {"<-"}
-                </button>
-                <span className="text-sm font-medium">
-                  Page {currentPage} of {totalPages || 1}
-                </span>
-                <button
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 bg-slate-200/65 text-slate-600 hover:bg-slate-300 hover:text-slate-900 dark:bg-slate-800/65 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {"->"}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* ── DETAIL MODAL OVERLAY ───────────────────────────────────────── */}
-      {selectedProject && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/85 backdrop-blur-sm animate-fade-in"
-          onClick={() => setSelectedProject(null)}
-        >
+      {/* ── CASE STUDY DETAILS MODAL ────────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedProject && (
           <div
-            className="w-full max-w-2xl flex flex-col bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md overflow-y-auto"
+            onClick={() => setSelectedProject(null)}
           >
-            {/* Close Button (X) - always visible top-right */}
-            <button
-              onClick={() => setSelectedProject(null)}
-              className="absolute right-4 top-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-950/80 hover:bg-slate-950 text-slate-300 hover:text-white transition-colors duration-200 border border-slate-800/50 shadow-sm"
-              aria-label="Close modal"
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl"
             >
-              ✕
-            </button>
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedProject(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-            {/* Inner Content Wrapper — vertical on ALL screen sizes */}
-            <div className="flex flex-col max-h-[80vh] overflow-y-auto">
-              
-              {/* Top Section: Media/Image */}
-              <div className="w-full shrink-0 relative bg-black/50 h-[40vw] min-h-[200px] max-h-[300px]">
-                {selectedProject.images && selectedProject.images[0] ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={selectedProject.images[0]}
-                      alt={selectedProject.title_en}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 80vw"
-                      className="object-contain"
-                      priority
-                      quality={90}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex w-full h-full absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950">
-                    <span className="text-5xl opacity-50 dark:opacity-40">💻</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Section: Info & Actions */}
-              <div className="w-full p-6 flex flex-col gap-1 text-white">
-                <div>
-                  {selectedProject.category && (
-                    <span className="mb-3 inline-block rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-3.5 py-1 text-[10px] font-extrabold tracking-widest uppercase text-white shadow-lg shadow-indigo-500/25 border border-indigo-400/20">
-                      {selectedProject.category}
-                    </span>
-                  )}
-
-                  <h3 className="text-2xl font-extrabold text-white">
-                    {lang === "EN"
-                      ? selectedProject.title_en || selectedProject.title_vn
-                      : selectedProject.title_vn || selectedProject.title_en}
-                  </h3>
-
-                  {/* Date display below Title in Modal */}
-                  {renderDateRange(selectedProject.project_date)}
-
-                  {/* Tags Directly */}
-                  {selectedProject.tags && selectedProject.tags.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {selectedProject.tags.map((tag, idx) => {
-                        return (
-                          <span
-                            key={idx}
-                            className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-semibold ${getTagStyle(tag)}`}
-                          >
-                            {tag}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div className="mt-4 text-slate-300">
-                  <LinkifiedText
-                    className="leading-relaxed text-sm block"
-                    text={
-                      lang === "EN"
-                        ? selectedProject.desc_en || selectedProject.desc_vn
-                        : selectedProject.desc_vn || selectedProject.desc_en
-                    }
+              {/* Modal Header Image */}
+              {selectedProject.images && selectedProject.images[0] && (
+                <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-6 bg-slate-100 dark:bg-slate-800">
+                  <Image
+                    src={selectedProject.images[0]}
+                    alt={selectedProject.title_en || selectedProject.title_vn}
+                    fill
+                    priority
+                    quality={90}
+                    className="object-cover"
                   />
                 </div>
+              )}
 
-                {/* Actions footer */}
-                <div className="mt-6 pt-4 flex justify-end gap-4 border-t border-slate-800">
-                  <button
-                    onClick={() => setSelectedProject(null)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors duration-200"
-                  >
-                    {lang === "EN" ? "Close" : "Đóng"}
-                  </button>
-                  {selectedProject.links && (
-                    <a
-                      href={selectedProject.links}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all duration-200"
-                    >
-                      {getVisitButtonText(selectedProject.category, lang)} ↗
-                    </a>
-                  )}
-                </div>
-
+              {/* Title & Metadata */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {selectedProject.category && (
+                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    {selectedProject.category}
+                  </span>
+                )}
+                {renderDateRange(selectedProject.project_date)}
               </div>
 
-            </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-4">
+                {(lang === "EN" ? selectedProject.title_en : selectedProject.title_vn) ||
+                  selectedProject.title_en ||
+                  selectedProject.title_vn}
+              </h2>
+
+              {/* Description & Links */}
+              <div className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4 mb-6">
+                <LinkifiedText
+                  text={
+                    (lang === "EN"
+                      ? selectedProject.desc_en || selectedProject.desc_vn
+                      : selectedProject.desc_vn || selectedProject.desc_en) || ""
+                  }
+                  className="block whitespace-pre-wrap"
+                />
+              </div>
+
+              {/* Tags */}
+              {selectedProject.tags && selectedProject.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  {selectedProject.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium border ${getTagStyle(tag)}`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {selectedProject.links && (
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a
+                    href={selectedProject.links}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 cursor-pointer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    <span>{lang === "EN" ? "Open Live Project" : "Xem Trực Tiếp"}</span>
+                  </a>
+                </div>
+              )}
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
