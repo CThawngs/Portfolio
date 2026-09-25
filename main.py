@@ -1,6 +1,6 @@
 """
-Portfolio AI Automation CMS — v4 (Real-Time Gemini Flash Tracking & Multi-Tier AI)
-==================================================================================
+Portfolio AI Automation CMS — v5 (Real-Time Gemini Flash & Intelligent Sanitizer)
+================================================================================
 Processes TWO Notion databases:
   1. Portfolio CMS  (NOTION_DATABASE_ID)
      Fields: Title (VN) [title], Title (EN) [rich_text],
@@ -11,16 +11,19 @@ Processes TWO Notion databases:
              Role (VN) [rich_text], Role (EN) [rich_text],
              Bio  (VN) [rich_text], Bio  (EN) [rich_text]
 
-Gatekeeper rule (ZERO-cost protection) applied to every field pair:
-  • BOTH empty  → skip (nothing to translate)
-  • BOTH filled → skip (already done; don't waste tokens)
-  • VN filled / EN empty → translate VN → EN, write result immediately
-  • EN filled / VN empty → translate EN → VN, write result immediately
+Execution Priority:
+  • If GEMINI_API_KEY is available:
+      Tier 1: Google Gemini Flash Direct (Real-Time Auto-Tracked latest model)
+      Tier 2: OpenRouter Primary (openrouter/free)
+      Tier 3: OpenRouter Dynamic Backup Free Models
+  • If only OPENROUTER_API_KEY is available:
+      Tier 1: OpenRouter Primary
+      Tier 2: OpenRouter Dynamic Backup Free Models
 
-Real-Time Dynamic Tracking:
-  • Automatically queries Google API & OpenRouter API in real-time
-    to discover and auto-select the latest Gemini Flash models.
-  • Never hardcodes outdated models — 100% future-proof.
+Intelligent Output Sanitizer:
+  • Automatically detects and cleans any AI preamble or safety meta headers
+    (e.g., 'User Safety: safe', 'Here is the translation:').
+  • Validates that the output is an actual translation, rejecting meta-labels.
 
 Dependencies: pip install requests python-dotenv
 """
@@ -62,7 +65,6 @@ PROFILE_DB_ID: str = os.environ.get("NOTION_PROFILE_DATABASE_ID", "")
 
 for var_name, var_value in [
     ("NOTION_API_KEY", NOTION_API_KEY),
-    ("OPENROUTER_API_KEY", OPENROUTER_API_KEY),
     ("NOTION_DATABASE_ID", PORTFOLIO_DB_ID),
     ("NOTION_PROFILE_DATABASE_ID", PROFILE_DB_ID),
 ]:
@@ -84,11 +86,11 @@ except json.JSONDecodeError as exc:
 LLM_MODEL: str = _cfg.get("model", "openrouter/free")
 LLM_TEMPERATURE: float = float(_cfg.get("temperature", 0.3))
 
-logger.info("Primary LLM model: %s  (temperature=%.2f)", LLM_MODEL, LLM_TEMPERATURE)
 if GEMINI_API_KEY:
-    logger.info("Google Gemini Direct API fallback: ENABLED (with Real-Time Model Tracking)")
+    logger.info("🤖 Primary Translation Engine: Google Gemini Flash Direct (Real-Time Tracking)")
+    logger.info("🔄 Secondary Fallback: OpenRouter (%s)", LLM_MODEL)
 else:
-    logger.info("Google Gemini Direct API key not found in env — will use OpenRouter auto-tracking")
+    logger.info("🤖 Primary Translation Engine: OpenRouter (%s)", LLM_MODEL)
 
 # ---------------------------------------------------------------------------
 # API constants
@@ -111,23 +113,18 @@ OPENROUTER_HEADERS = {
     "X-Title": "Portfolio",
 }
 
-# Regex to detect Vietnamese-specific diacritics (case-insensitive)
 VIETNAMESE_DIACRITICS_RE = re.compile(
     r"[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ]",
     re.IGNORECASE,
 )
 
 # ---------------------------------------------------------------------------
-# Real-Time Dynamic Model Tracking Engine (100% Future-Proof)
+# Real-Time Dynamic Model Tracking Engine
 # ---------------------------------------------------------------------------
 _CACHED_LATEST_GEMINI_MODELS: Optional[list[str]] = None
 _CACHED_LATEST_OPENROUTER_MODELS: Optional[list[str]] = None
 
 def get_realtime_gemini_flash_models() -> list[str]:
-    """
-    Queries Google API in real-time to discover all available Gemini Flash models,
-    dynamically sorting by highest version so the newest Flash model is always tried first.
-    """
     global _CACHED_LATEST_GEMINI_MODELS
     default_candidates = [
         "gemini-flash-latest",
@@ -154,13 +151,11 @@ def get_realtime_gemini_flash_models() -> list[str]:
                 name = m.get("name", "").replace("models/", "")
                 methods = m.get("supportedGenerationMethods", [])
                 if "generateContent" in methods and "flash" in name.lower():
-                    # Filter out non-text specialized models
                     if not any(x in name.lower() for x in ["embedding", "tts", "imagen", "audio"]):
                         discovered.append(name)
 
             if discovered:
                 def version_sort_key(m_name: str):
-                    # Prioritize "latest" alias or highest numeric version
                     if "latest" in m_name:
                         return (99.0, m_name)
                     numbers = re.findall(r"(\d+(?:\.\d+)?)", m_name)
@@ -172,7 +167,6 @@ def get_realtime_gemini_flash_models() -> list[str]:
                     return (0.0, m_name)
 
                 discovered.sort(key=version_sort_key, reverse=True)
-                # Combine discovered with fallback defaults
                 final_list = []
                 for m in discovered + default_candidates:
                     if m not in final_list:
@@ -187,10 +181,6 @@ def get_realtime_gemini_flash_models() -> list[str]:
     return default_candidates
 
 def get_realtime_openrouter_backup_models() -> list[str]:
-    """
-    Queries OpenRouter API in real-time to discover currently active free models,
-    prioritizing free Google Gemini Flash models.
-    """
     global _CACHED_LATEST_OPENROUTER_MODELS
     default_openrouter_backups = [
         "google/gemini-2.0-flash:free",
@@ -228,12 +218,40 @@ def get_realtime_openrouter_backup_models() -> list[str]:
                     if m not in final_openrouter:
                         final_openrouter.append(m)
                 _CACHED_LATEST_OPENROUTER_MODELS = final_openrouter
-                logger.info("🔍 [Real-Time OpenRouter Tracker] Discovered free Gemini models: %s", discovered_free_gemini)
                 return _CACHED_LATEST_OPENROUTER_MODELS
     except Exception as exc:
         logger.debug("OpenRouter dynamic model discovery skipped (%s).", exc)
 
     return default_openrouter_backups
+
+# ---------------------------------------------------------------------------
+# Output Sanitizer & Validator
+# ---------------------------------------------------------------------------
+def clean_and_validate_translation(raw_text: str, source_text: str) -> str:
+    """
+    Strips AI meta-comments, safety headers (e.g. 'User Safety: safe'),
+    preambles, and validates that output is actual translated content.
+    """
+    if not raw_text:
+        raise ValueError("Empty response received from AI")
+
+    cleaned = raw_text.strip()
+    
+    # Strip safety evaluation headers
+    cleaned = re.sub(r"^(User\s+Safety|Safety\s+Assessment|Safety|Rating|Content\s+Safety)\s*:\s*\w+\s*\n*", "", cleaned, flags=re.IGNORECASE)
+    # Strip preambles
+    cleaned = re.sub(r"^(Here(?:'s| is) the (?:translation|translated text)[^:\n]*:\s*)", "", cleaned, flags=re.IGNORECASE)
+    # Strip markdown code blocks / quotes
+    cleaned = cleaned.strip().strip("`").strip('"').strip("'").strip()
+
+    # Reject if output is purely a safety label
+    if cleaned.lower() in ["safe", "unsafe", "user safety: safe", "none", "n/a", "ok"] and len(source_text.strip()) > 8:
+        raise ValueError(f"AI returned meta safety tag '{cleaned}' instead of translation")
+
+    if not cleaned:
+        raise ValueError("Translation is empty after sanitization")
+
+    return cleaned
 
 # ---------------------------------------------------------------------------
 # System prompt factory
@@ -251,7 +269,7 @@ def build_system_prompt(target_lang: str) -> str:
         f"RULE 2: If the input text is already written in {target_lang}, return it "
         f"EXACTLY as-is. Do NOT translate it back into the other language.\n"
         f"RULE 3: Output ONLY the final translated string. "
-        f"No introductions, explanations, quotation marks, or conversational fillers.\n"
+        f"Do NOT include any safety labels, explanations, intros, quotation marks, or notes.\n"
         f"RULE 4: Any URL or hyperlink found in the source text (starting with "
         f"http://, https://, or www.) MUST be copied into the output EXACTLY as-is, "
         f"character for character. Do NOT translate, shorten, paraphrase, or alter "
@@ -383,28 +401,9 @@ def fetch_database_pages(database_id: str, is_profile: bool = False) -> list[dic
     return pages
 
 # ---------------------------------------------------------------------------
-# AI Engines — OpenRouter & Google Gemini Real-Time Fallback
+# AI Engines — Calling APIs
 # ---------------------------------------------------------------------------
-def _call_openrouter(text: str, target_lang: str, model: str) -> str:
-    url = f"{OPENROUTER_BASE_URL}/chat/completions"
-    payload = {
-        "model": model,
-        "temperature": LLM_TEMPERATURE,
-        "messages": [
-            {"role": "system", "content": build_system_prompt(target_lang)},
-            {"role": "user", "content": f"Translate this to {target_lang}:\n{text}"},
-        ],
-    }
-
-    resp = requests.post(url, headers=OPENROUTER_HEADERS, json=payload, timeout=60)
-    resp.raise_for_status()
-    result = resp.json()["choices"][0]["message"]["content"].strip()
-    if not result:
-        raise ValueError("Empty response from OpenRouter")
-    return result
-
-def _call_gemini_direct_realtime(text: str, target_lang: str) -> str:
-    """Google Gemini Direct API real-time fallback using the latest tracked model."""
+def _call_gemini_direct(text: str, target_lang: str) -> str:
     if not GEMINI_API_KEY:
         raise ValueError("No GEMINI_API_KEY available")
 
@@ -432,22 +431,39 @@ def _call_gemini_direct_realtime(text: str, target_lang: str) -> str:
                 continue
             resp.raise_for_status()
             data = resp.json()
-            translated = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if translated:
-                logger.info("    [Success] Translated via Real-Time Google Gemini Flash (%s)", model_name)
-                return translated
+            raw_output = data["candidates"][0]["content"]["parts"][0]["text"]
+            cleaned = clean_and_validate_translation(raw_output, text)
+            logger.info("    [Success] Translated via Google Gemini Direct (%s)", model_name)
+            return cleaned
         except Exception as exc:
             logger.warning("    Google Gemini (%s) error: %s", model_name, exc)
             continue
 
     raise RuntimeError("All Real-Time Google Gemini Flash models failed.")
 
+def _call_openrouter(text: str, target_lang: str, model: str) -> str:
+    url = f"{OPENROUTER_BASE_URL}/chat/completions"
+    payload = {
+        "model": model,
+        "temperature": LLM_TEMPERATURE,
+        "messages": [
+            {"role": "system", "content": build_system_prompt(target_lang)},
+            {"role": "user", "content": f"Translate this to {target_lang}:\n{text}"},
+        ],
+    }
+
+    resp = requests.post(url, headers=OPENROUTER_HEADERS, json=payload, timeout=60)
+    resp.raise_for_status()
+    raw_output = resp.json()["choices"][0]["message"]["content"]
+    cleaned = clean_and_validate_translation(raw_output, text)
+    return cleaned
+
 def translate_text(text: str, target_lang: str) -> str:
     """
-    Translates text with real-time model discovery and multi-tiered fallback:
-      1. Primary OpenRouter model (e.g. openrouter/free)
-      2. Google Gemini Flash Direct (auto-tracked latest model)
-      3. OpenRouter dynamically tracked free models
+    Translates text with prioritization:
+      1. Google Gemini Flash Direct (if GEMINI_API_KEY present)
+      2. OpenRouter Primary (openrouter/free)
+      3. OpenRouter Free Backup Models
     """
     if target_lang.lower() == "english":
         has_diacritics = bool(VIETNAMESE_DIACRITICS_RE.search(text))
@@ -458,38 +474,37 @@ def translate_text(text: str, target_lang: str) -> str:
             )
             return text
 
-    # --- 1. Primary OpenRouter attempt ---
-    try:
-        translated = _call_openrouter(text, target_lang, LLM_MODEL)
-        return translated
-    except Exception as exc:
-        logger.warning("    [Tier 1] Primary model '%s' failed: %s", LLM_MODEL, exc)
-
-    # --- 2. Real-Time Google Gemini Flash Fallback ---
+    # --- Option A: If GEMINI_API_KEY is available, use Google Gemini Direct as Primary ---
     if GEMINI_API_KEY:
         try:
-            logger.info("    [Tier 2] Trying Real-Time Google Gemini Flash API fallback...")
-            translated = _call_gemini_direct_realtime(text, target_lang)
+            translated = _call_gemini_direct(text, target_lang)
             return translated
         except Exception as exc:
-            logger.warning("    [Tier 2] Google Gemini Direct API failed: %s", exc)
+            logger.warning("    Google Gemini Direct failed (%s). Falling back to OpenRouter...", exc)
 
-    # --- 3. OpenRouter Real-Time Tracked Backup Models ---
-    logger.info("    [Tier 3] Trying real-time OpenRouter backup models...")
-    backup_models = get_realtime_openrouter_backup_models()
-    for backup_model in backup_models:
-        if backup_model == LLM_MODEL:
-            continue
+    # --- Option B: OpenRouter Primary ---
+    if OPENROUTER_API_KEY:
         try:
-            logger.info("    -> Trying OpenRouter backup: %s", backup_model)
-            translated = _call_openrouter(text, target_lang, backup_model)
-            logger.info("    [Success] Translated via OpenRouter backup: %s", backup_model)
+            translated = _call_openrouter(text, target_lang, LLM_MODEL)
             return translated
         except Exception as exc:
-            logger.warning("    OpenRouter backup '%s' failed: %s", backup_model, exc)
-            time.sleep(1)
+            logger.warning("    OpenRouter primary model '%s' failed: %s", LLM_MODEL, exc)
 
-    raise RuntimeError("All AI translation models (Primary, Real-Time Google Gemini, and OpenRouter Backups) exhausted.")
+        # --- Option C: OpenRouter Backup Models ---
+        backup_models = get_realtime_openrouter_backup_models()
+        for backup_model in backup_models:
+            if backup_model == LLM_MODEL:
+                continue
+            try:
+                logger.info("    -> Trying OpenRouter backup: %s", backup_model)
+                translated = _call_openrouter(text, target_lang, backup_model)
+                logger.info("    [Success] Translated via OpenRouter backup: %s", backup_model)
+                return translated
+            except Exception as exc:
+                logger.warning("    OpenRouter backup '%s' failed: %s", backup_model, exc)
+                time.sleep(1)
+
+    raise RuntimeError("All translation engines failed.")
 
 # ---------------------------------------------------------------------------
 # Notion API — update a page
@@ -525,9 +540,21 @@ def process_page(page: dict, field_pairs: list[FieldPair]) -> bool:
         vn_text = extract_text(props, fp.vn_key, fp.vn_type)
         en_text = extract_text(props, fp.en_key, fp.en_type)
 
+        # If existing text in Notion was accidentally polluted with 'User Safety: safe', clean it up
+        if vn_text.lower() in ["user safety: safe", "safe"] and not en_text:
+            vn_text = ""
+        if en_text.lower() in ["user safety: safe", "safe"] and not vn_text:
+            en_text = ""
+
         # ── Gatekeeper ──────────────────────────────────────────────────────
         if vn_text and en_text:
-            continue
+            # If one of the fields was polluted with 'User Safety: safe', overwrite it
+            if vn_text.lower() == "user safety: safe":
+                vn_text = ""
+            elif en_text.lower() == "user safety: safe":
+                en_text = ""
+            else:
+                continue
 
         if not vn_text and not en_text:
             continue
@@ -621,9 +648,7 @@ def run_database(db_label: str, database_id: str, field_pairs: list[FieldPair], 
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    logger.info("Portfolio AI Automation CMS — Real-Time Model Tracking & Multi-Tier AI")
-    logger.info("Primary Model: %s", LLM_MODEL)
-
+    logger.info("Portfolio AI Automation CMS — v5 (Real-Time Gemini Flash & Intelligent Sanitizer)")
     total_success = 0
     total_fail = 0
 
