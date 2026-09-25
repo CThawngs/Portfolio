@@ -16,7 +16,9 @@ import {
   Cpu,
   Award,
   Calendar,
+  ChevronLeft,
   ChevronRight,
+  ArrowUpDown,
   X,
   Globe,
   Terminal,
@@ -27,6 +29,7 @@ import {
   BookOpen,
 } from "lucide-react";
 
+// ── Custom SVG GitHub Icon ───────────────────────────────────────────────────
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -80,7 +83,7 @@ function LinkifiedText({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 underline underline-offset-4 cursor-pointer transition-colors duration-150 break-all"
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-4 cursor-pointer transition-colors duration-150 break-all"
             >
               {clean}
             </a>
@@ -166,10 +169,10 @@ function TerminalTyping({ role, bio }: TerminalTypingProps) {
   return (
     <div className="w-full flex items-center justify-center min-h-[2rem] my-1">
       <p className="text-base sm:text-lg md:text-xl font-medium text-slate-700 dark:text-slate-300 text-center tracking-normal max-w-3xl leading-relaxed">
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-300 dark:to-pink-400 font-semibold">
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 dark:from-emerald-400 dark:via-teal-300 dark:to-sky-400 font-semibold">
           {displayText}
         </span>
-        <span className="inline-block w-[2.5px] h-[1.15em] align-middle bg-indigo-600 dark:bg-indigo-400 ml-1.5 animate-pulse rounded-full" />
+        <span className="inline-block w-[2.5px] h-[1.15em] align-middle bg-emerald-600 dark:bg-emerald-400 ml-1.5 animate-pulse rounded-full" />
       </p>
     </div>
   );
@@ -213,14 +216,16 @@ interface PortfolioUIProps {
   profileData?: ProfileData | null;
 }
 
-// ── Tag Styling Helper ────────────────────────────────────────────────────────
+type SortOrder = "newest" | "oldest";
+
+// ── Tag Styling Helper (Soft Mint & Sky Palette) ──────────────────────────────
 const tagThemes = [
-  "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
-  "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
-  "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
-  "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
+  "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/25",
+  "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/25",
+  "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/25",
+  "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25",
+  "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/25",
 ];
 
 const getTagStyle = (tagName: string): string => {
@@ -229,6 +234,20 @@ const getTagStyle = (tagName: string): string => {
     hash += tagName.charCodeAt(i);
   }
   return tagThemes[hash % tagThemes.length];
+};
+
+const ITEMS_PER_PAGE = 6;
+
+const getTimeValue = (item: Project): number => {
+  if (item.project_date?.start) {
+    const time = new Date(item.project_date.start).getTime();
+    if (!isNaN(time)) return time;
+  }
+  if (item.last_edited_time) {
+    const time = new Date(item.last_edited_time).getTime();
+    if (!isNaN(time)) return time;
+  }
+  return 0;
 };
 
 export default function PortfolioUI({
@@ -240,12 +259,20 @@ export default function PortfolioUI({
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // Sorting States
+  const [projectSort, setProjectSort] = useState<SortOrder>("newest");
+  const [certSort, setCertSort] = useState<SortOrder>("newest");
+
+  // Pagination States
+  const [projectPage, setProjectPage] = useState<number>(1);
+  const [certPage, setCertPage] = useState<number>(1);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Separate Projects vs Certificates
-  const { featuredProjects, certificates } = useMemo(() => {
+  const { rawProjects, rawCertificates } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
 
@@ -258,8 +285,49 @@ export default function PortfolioUI({
       }
     });
 
-    return { featuredProjects: feat, certificates: cert };
+    return { rawProjects: feat, rawCertificates: cert };
   }, [projects]);
+
+  // Sorted Lists
+  const sortedProjects = useMemo(() => {
+    return [...rawProjects].sort((a, b) => {
+      const timeA = getTimeValue(a);
+      const timeB = getTimeValue(b);
+      return projectSort === "newest" ? timeB - timeA : timeA - timeB;
+    });
+  }, [rawProjects, projectSort]);
+
+  const sortedCertificates = useMemo(() => {
+    return [...rawCertificates].sort((a, b) => {
+      const timeA = getTimeValue(a);
+      const timeB = getTimeValue(b);
+      return certSort === "newest" ? timeB - timeA : timeA - timeB;
+    });
+  }, [rawCertificates, certSort]);
+
+  // Paginated Slices
+  const totalProjectPages = Math.max(1, Math.ceil(sortedProjects.length / ITEMS_PER_PAGE));
+  const paginatedProjects = useMemo(() => {
+    const start = (projectPage - 1) * ITEMS_PER_PAGE;
+    return sortedProjects.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedProjects, projectPage]);
+
+  const totalCertPages = Math.max(1, Math.ceil(sortedCertificates.length / ITEMS_PER_PAGE));
+  const paginatedCertificates = useMemo(() => {
+    const start = (certPage - 1) * ITEMS_PER_PAGE;
+    return sortedCertificates.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedCertificates, certPage]);
+
+  // Reset page to 1 if sort changes
+  const handleProjectSortChange = (order: SortOrder) => {
+    setProjectSort(order);
+    setProjectPage(1);
+  };
+
+  const handleCertSortChange = (order: SortOrder) => {
+    setCertSort(order);
+    setCertPage(1);
+  };
 
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
@@ -318,30 +386,30 @@ export default function PortfolioUI({
     );
   };
 
-  // Structured Skills Matrix (Categorized)
+  // Structured Skills Matrix (Soft Green & Sky theme)
   const skillsData = [
     {
       category: lang === "EN" ? "Languages" : "Ngôn ngữ",
       icon: Code,
-      gradient: "from-blue-500/20 via-indigo-500/20 to-violet-500/20",
+      gradient: "from-emerald-500/20 via-teal-500/20 to-sky-500/20",
       skills: ["TypeScript", "JavaScript", "Python", "C# (.NET)", "C", "SQL", "PHP"],
     },
     {
       category: lang === "EN" ? "Frontend & Web" : "Giao diện & Web",
       icon: Layers,
-      gradient: "from-cyan-500/20 via-teal-500/20 to-emerald-500/20",
+      gradient: "from-teal-500/20 via-emerald-500/20 to-cyan-500/20",
       skills: ["Next.js (App Router)", "ReactJS", "Tailwind CSS", "Framer Motion", "HTML5/CSS3"],
     },
     {
       category: lang === "EN" ? "Backend & Cloud" : "Hệ thống & Cloud",
       icon: Cpu,
-      gradient: "from-violet-500/20 via-purple-500/20 to-pink-500/20",
+      gradient: "from-sky-500/20 via-teal-500/20 to-emerald-500/20",
       skills: ["Node.js", "Notion API", "RESTful APIs", "MySQL", "SQLite", "PostgreSQL", "Vercel", "GitHub Actions"],
     },
     {
       category: lang === "EN" ? "AI & Automation" : "AI & Tự động hoá",
       icon: Sparkles,
-      gradient: "from-amber-500/20 via-orange-500/20 to-rose-500/20",
+      gradient: "from-emerald-500/20 via-cyan-500/20 to-sky-500/20",
       skills: [
         "Google Gemini API",
         "OpenRouter",
@@ -356,7 +424,7 @@ export default function PortfolioUI({
     {
       category: lang === "EN" ? "Design & Tools" : "Thiết kế & Công cụ",
       icon: Wrench,
-      gradient: "from-pink-500/20 via-rose-500/20 to-indigo-500/20",
+      gradient: "from-teal-500/20 via-sky-500/20 to-blue-500/20",
       skills: ["Figma", "Canva", "Adobe Photoshop", "Git", "GitHub", "Vercel Deployments"],
     },
   ];
@@ -425,50 +493,105 @@ export default function PortfolioUI({
     },
   ];
 
+  // Helper Pagination Renderer
+  const renderPagination = (
+    currentPage: number,
+    totalPages: number,
+    onPageChange: (page: number) => void
+  ) => {
+    if (totalPages <= 1) return null;
+
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+        <button
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>{lang === "EN" ? "Prev" : "Trước"}</span>
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {pageNumbers.map((page) => (
+            <button
+              key={page}
+              onClick={() => onPageChange(page)}
+              className={`h-9 w-9 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                page === currentPage
+                  ? "bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20"
+                  : "border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+        >
+          <span>{lang === "EN" ? "Next" : "Sau"}</span>
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-500 font-sans overflow-x-hidden">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-[#090D14] text-slate-900 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-500 font-sans overflow-x-hidden">
       
-      {/* ── 3D AMBIENT BACKGROUND GLOWS ──────────────────────────────────── */}
+      {/* ── SOFT MINT & SKY AMBIENT GLOWS ─────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/15 dark:bg-indigo-600/20 rounded-full blur-[120px] transform-gpu" />
-        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-purple-500/15 dark:bg-purple-600/15 rounded-full blur-[140px] transform-gpu" />
-        <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-cyan-500/10 dark:bg-cyan-600/10 rounded-full blur-[130px] transform-gpu" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-[130px] transform-gpu" />
+        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-sky-500/10 dark:bg-sky-500/15 rounded-full blur-[140px] transform-gpu" />
+        <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-teal-500/10 dark:bg-teal-500/10 rounded-full blur-[130px] transform-gpu" />
       </div>
 
       {/* ── STICKY GLASS HEADER & NAV ────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 dark:bg-[#0B0F17]/75 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 dark:bg-[#090D14]/75 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           
-          {/* Brand Logo with 3D gradient ring */}
+          {/* Brand Logo with soft Emerald & Sky Ring */}
           <a
             href="#"
             className="group flex items-center gap-2.5 transition-transform duration-300 hover:scale-105"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-[1.5px] shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 p-[1.5px] shadow-md shadow-emerald-500/15 group-hover:shadow-emerald-500/30 transition-shadow">
               <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-slate-900 text-white font-black text-sm">
                 Z
               </div>
             </div>
             <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
-              Zero<span className="text-indigo-600 dark:text-indigo-400">Vault</span>
+              Zero<span className="text-emerald-600 dark:text-emerald-400">Vault</span>
             </span>
           </a>
 
           {/* Quick Nav Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-            <a href="#about" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <a href="#about" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "About" : "Giới thiệu"}
             </a>
-            <a href="#skills" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <a href="#skills" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Skills" : "Kỹ năng"}
             </a>
-            <a href="#experience" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <a href="#experience" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Experience" : "Kinh nghiệm"}
             </a>
-            <a href="#projects" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <a href="#projects" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Projects" : "Dự án"}
             </a>
-            <a href="#education" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <a href="#certificates" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              {lang === "EN" ? "Certificates" : "Chứng chỉ"}
+            </a>
+            <a href="#education" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Education" : "Học vấn"}
             </a>
           </nav>
@@ -478,7 +601,7 @@ export default function PortfolioUI({
             {/* Theme Toggle Button */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-indigo-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
               aria-label="Toggle theme"
             >
               {mounted ? (
@@ -487,7 +610,7 @@ export default function PortfolioUI({
                     <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
                   </svg>
                 ) : (
-                  <svg className="h-4 w-4 fill-indigo-600" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 fill-emerald-600" viewBox="0 0 24 24">
                     <path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10C2.2 6.8 6.5 2.5 11.9 2.2c.5 0 .9.3 1.1.8s-.1.9-.5 1.2C11 5.4 10 7.2 10 9.2c0 3.8 3.1 6.9 6.9 6.9 2 0 3.8-1 5-2.5.3-.4.8-.5 1.2-.3s.7.7.5 1.2c-.8 3.8-3.9 6.6-7.8 7.4-.5.1-1 .1-1.5.1z" />
                   </svg>
                 )
@@ -505,7 +628,7 @@ export default function PortfolioUI({
               <span
                 className={`${
                   lang === "VN" ? "translate-x-10" : "translate-x-0"
-                } absolute left-1 top-1 h-7 w-10 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-transform duration-300`}
+                } absolute left-1 top-1 h-7 w-10 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md transition-transform duration-300`}
               />
               <span className="relative z-10 flex w-full justify-between px-1 text-[11px] font-bold uppercase tracking-wider select-none pointer-events-none">
                 <span className={`w-10 text-center transition-colors duration-300 ${lang === "EN" ? "text-white" : "text-slate-500"}`}>
@@ -524,39 +647,29 @@ export default function PortfolioUI({
       <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
         {profileData && (
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
             className="flex flex-col items-center"
           >
-            {/* Positioning Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold tracking-wide uppercase mb-5 shadow-sm">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-spin-slow" />
-              <span>
-                {lang === "EN"
-                  ? "AI Application Engineer • Solo Product Builder"
-                  : "Kỹ sư Ứng dụng AI • Xây dựng Sản phẩm Độc lập"}
-              </span>
-            </div>
-
-            {/* Name with 3D-feeling text shadow */}
+            {/* Name with subtle Emerald/Sky depth */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 dark:from-white dark:via-slate-100 dark:to-indigo-200">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 dark:from-white dark:via-slate-100 dark:to-emerald-200">
                 {lang === "VN" ? profileData.name_vn : profileData.name_en}
               </span>
             </h1>
 
-            {/* Single-Line Typewriter Animation */}
+            {/* Single-Line Typewriter Animation (Emerald to Sky gradient) */}
             <TerminalTyping
               role={lang === "VN" ? profileData.role_vn : profileData.role_en}
               bio={lang === "VN" ? profileData.bio_vn : profileData.bio_en}
             />
 
-            {/* Positioning Headline (Value Proposition) */}
+            {/* Value Proposition */}
             <p className="mt-3 text-sm sm:text-base md:text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl leading-relaxed">
               {lang === "EN"
-                ? "Building & shipping production-ready AI applications from concept to deployment with full ownership."
-                : "Xây dựng và đưa các sản phẩm ứng dụng AI từ ý tưởng vào thực tế với tư duy làm chủ hệ thống trọn vẹn."}
+                ? "Building & shipping production-ready software solutions from concept to deployment with full ownership."
+                : "Xây dựng và phát triển các giải pháp phần mềm hoàn chỉnh từ ý tưởng đến thực tế với tư duy làm chủ hệ thống."}
             </p>
 
             {/* Date of Birth if configured */}
@@ -571,7 +684,7 @@ export default function PortfolioUI({
               </p>
             )}
 
-            {/* Social & Contact Buttons (Accessible in <10s) */}
+            {/* Social & Contact Buttons */}
             {socialLinks.length > 0 && (
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 {socialLinks.map((link) => {
@@ -582,9 +695,9 @@ export default function PortfolioUI({
                       href={link.href}
                       target={link.type === "email" ? undefined : "_blank"}
                       rel={link.type === "email" ? undefined : "noopener noreferrer"}
-                      className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold shadow-sm hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                      className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                     >
-                      <Icon className="h-4 w-4 text-slate-500 group-hover:text-indigo-500 transition-colors" />
+                      <Icon className="h-4 w-4 text-slate-500 group-hover:text-emerald-500 transition-colors" />
                       <span>{link.label}</span>
                     </a>
                   );
@@ -598,16 +711,16 @@ export default function PortfolioUI({
       {/* ── 2. ABOUT SECTION ────────────────────────────────────────────── */}
       <section id="about" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 25 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.45 }}
           className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-none relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <User className="h-5 w-5" />
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -618,13 +731,13 @@ export default function PortfolioUI({
           <div className="space-y-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
             <p>
               {lang === "EN"
-                ? "I am an Information Technology student and AI Application Engineer with a passion for architecting practical, modern software. Operating with a solo-builder mindset, I orchestrate AI agents and engineering workflows to transform complex concepts into production-ready software with speed and precision."
-                : "Tôi là sinh viên ngành Công nghệ Thông tin và Kỹ sư Ứng dụng AI, đam mê hiện thực hoá các ý tưởng công nghệ thành sản phẩm thực tế. Với tư duy solo builder và phương pháp chỉ đạo AI agent, tôi tập trung vào việc biến ý tưởng thành phần mềm hoàn chỉnh chạy trên production với tốc độ cao và tính ổn định."}
+                ? "I am an Information Technology student and software builder with a deep interest in crafting practical, high-performance web applications. Operating with a builder mindset, I leverage modern engineering workflows to turn ideas into robust, production-ready software."
+                : "Tôi là sinh viên ngành Công nghệ Thông tin đam mê xây dựng các sản phẩm thực tế, hoàn chỉnh và có tính ứng dụng cao. Với tư duy của một người làm sản phẩm độc lập, tôi chú trọng vào việc biến ý tưởng thành phần mềm hoạt động trơn tru trên production."}
             </p>
             <p>
               {lang === "EN"
-                ? "As a Google Student Ambassador Trainer, I actively deliver GenAI and prompt engineering workshops to hundreds of university students across Ho Chi Minh City. I believe in true engineering mastery: deeply understanding codebases, debugging edge cases, and owning every architectural decision from API design to serverless deployments."
-                : "Với vai trò Trainer Đại sứ Sinh viên Google (GSA Trainer), tôi trực tiếp chia sẻ kiến thức về GenAI và kỹ nghệ Prompt cho hàng trăm sinh viên đại học tại TP.HCM. Tôi theo đuổi phong cách làm chủ kỹ thuật thực thụ: thấu hiểu từng dòng code, tự tay debug các trường hợp biên và nắm trọn vẹn kiến trúc hệ thống."}
+                ? "As a Google Student Ambassador Trainer, I actively share technological insights through workshops for university students across Ho Chi Minh City. I value solid engineering foundations: writing maintainable code, optimizing user experience, and owning solutions from UI to deployment."
+                : "Với vai trò Trainer Đại sứ Sinh viên Google (GSA Trainer), tôi tích cực chia sẻ kiến thức công nghệ qua các buổi workshop cho sinh viên tại TP.HCM. Tôi luôn đề cao nền tảng kỹ thuật vững chắc: viết mã nguồn rõ ràng, tối ưu trải nghiệm người dùng và làm chủ toàn bộ chu trình phát triển."}
             </p>
           </div>
         </motion.div>
@@ -633,7 +746,7 @@ export default function PortfolioUI({
       {/* ── 3. SKILLS SECTION ────────────────────────────────────────────── */}
       <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
             <Cpu className="h-5 w-5" />
           </div>
           <div>
@@ -641,7 +754,7 @@ export default function PortfolioUI({
               {lang === "EN" ? "Technical Skills" : "Kỹ Năng Công Nghệ"}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên sâu"}
+              {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên môn"}
             </p>
           </div>
         </div>
@@ -656,11 +769,11 @@ export default function PortfolioUI({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: idx * 0.08 }}
-                className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-indigo-500/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
               >
                 <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${group.gradient} rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500`} />
                 <div className="flex items-center gap-2.5 mb-3.5">
-                  <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   <h3 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-200">
                     {group.category}
                   </h3>
@@ -669,7 +782,7 @@ export default function PortfolioUI({
                   {group.skills.map((skill, sIdx) => (
                     <span
                       key={sIdx}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-indigo-400/40 transition-colors"
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-emerald-400/40 transition-colors"
                     >
                       {skill}
                     </span>
@@ -684,7 +797,7 @@ export default function PortfolioUI({
       {/* ── 4. EXPERIENCE & HIGHLIGHTS ──────────────────────────────────── */}
       <section id="experience" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
             <Briefcase className="h-5 w-5" />
           </div>
           <div>
@@ -692,7 +805,7 @@ export default function PortfolioUI({
               {lang === "EN" ? "Experience & Highlights" : "Kinh Nghiệm & Thành Tựu"}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Key industry engagements and leadership roles" : "Các vai trò thực tế và hoạt động nổi bật"}
+              {lang === "EN" ? "Key industry engagements and project activities" : "Các vai trò thực tế và hoạt động nổi bật"}
             </p>
           </div>
         </div>
@@ -701,11 +814,11 @@ export default function PortfolioUI({
           {experienceData.map((exp, idx) => (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, y: 25 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: idx * 0.1 }}
-              className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-indigo-500/40 hover:shadow-xl transition-all duration-300"
+              className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <div>
@@ -713,7 +826,7 @@ export default function PortfolioUI({
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                       {lang === "VN" ? exp.role_vn : exp.role_en}
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                       {exp.badge}
                     </span>
                   </div>
@@ -729,7 +842,7 @@ export default function PortfolioUI({
               <ul className="space-y-1.5 mt-3">
                 {(lang === "VN" ? exp.desc_vn : exp.desc_en).map((bullet, bIdx) => (
                   <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <span>{bullet}</span>
                   </li>
                 ))}
@@ -756,7 +869,7 @@ export default function PortfolioUI({
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 25 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
@@ -787,29 +900,59 @@ export default function PortfolioUI({
         </motion.div>
       </section>
 
-      {/* ── 6. FEATURED PROJECTS (CASE STUDY GRID) ──────────────────────── */}
+      {/* ── 6. FEATURED PROJECTS (PAGINATED & SORTABLE) ──────────────────── */}
       <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <Code className="h-5 w-5" />
               </div>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Featured Case Studies" : "Dự Án Nổi Bật (Case Studies)"}
+                {lang === "EN" ? "Projects" : "Dự Án"}
               </h2>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
               {lang === "EN"
-                ? "In-depth engineering breakdowns showcasing architectural decisions, AI orchestration, and production outcomes."
-                : "Phân tích kỹ thuật chuyên sâu thể hiện quyết định kiến trúc, khả năng làm chủ AI agent và kết quả thực tế."}
+                ? `Showing ${paginatedProjects.length} of ${sortedProjects.length} projects (${ITEMS_PER_PAGE} per page)`
+                : `Hiển thị ${paginatedProjects.length} trên tổng số ${sortedProjects.length} dự án (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
             </p>
+          </div>
+
+          {/* Sort Controls for Projects */}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span>{lang === "EN" ? "Sort:" : "Sắp xếp:"}</span>
+            </span>
+            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
+              <button
+                onClick={() => handleProjectSortChange("newest")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  projectSort === "newest"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                {lang === "EN" ? "Newest" : "Mới nhất"}
+              </button>
+              <button
+                onClick={() => handleProjectSortChange("oldest")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  projectSort === "oldest"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                {lang === "EN" ? "Oldest" : "Cũ nhất"}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Project 3D-feeling Grid */}
+        {/* Project Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredProjects.map((project, index) => {
+          {paginatedProjects.map((project, index) => {
             const title =
               (lang === "EN" ? project.title_en : project.title_vn) ||
               project.title_en ||
@@ -825,11 +968,11 @@ export default function PortfolioUI({
               <motion.div
                 key={project.id}
                 onClick={() => setSelectedProject(project)}
-                initial={{ opacity: 0, y: 35 }}
+                initial={{ opacity: 0, y: 25 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-indigo-500/50 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
+                transition={{ duration: 0.45, delay: index * 0.06 }}
+                className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-emerald-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
               >
                 {/* Image Cover */}
                 <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
@@ -844,8 +987,8 @@ export default function PortfolioUI({
                       quality={85}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10">
-                      <Code className="h-10 w-10 text-indigo-500/50" />
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-sky-500/10">
+                      <Code className="h-10 w-10 text-emerald-500/40" />
                     </div>
                   )}
 
@@ -860,22 +1003,22 @@ export default function PortfolioUI({
                 </div>
 
                 {/* Card Content */}
-                <div className="flex flex-1 flex-col p-6">
+                <div className="flex flex-1 flex-col p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     {renderDateRange(project.project_date)}
                     {project.links && (
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
-                        <span>{lang === "EN" ? "View Case Study" : "Xem Chi Tiết"}</span>
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                        <span>{lang === "EN" ? "View Details" : "Xem Chi Tiết"}</span>
                         <ArrowUpRight className="h-3.5 w-3.5" />
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
                     {title}
                   </h3>
 
-                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
+                  <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
                     <LinkifiedText text={desc} />
                   </div>
 
@@ -902,58 +1045,158 @@ export default function PortfolioUI({
             );
           })}
         </div>
+
+        {/* Pagination Controls */}
+        {renderPagination(projectPage, totalProjectPages, setProjectPage)}
       </section>
 
-      {/* ── 7. CERTIFICATES & AWARDS (COMPACT LIST) ────────────────────── */}
-      {certificates.length > 0 && (
-        <section id="certificates" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <Award className="h-5 w-5" />
-            </div>
+      {/* ── 7. CERTIFICATES SECTION (CARD GALLERY & PAGINATED) ──────────── */}
+      {rawCertificates.length > 0 && (
+        <section id="certificates" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Certificates & Accreditations" : "Chứng Chỉ & Thành Tựu Khác"}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                {lang === "EN" ? "Verified courses and technical completions" : "Các khóa đào tạo và chứng nhận đã hoàn thành"}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                  <Award className="h-5 w-5" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                  {lang === "EN" ? "Certificates & Accreditations" : "Chứng Chỉ & Thành Tựu"}
+                </h2>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+                {lang === "EN"
+                  ? `Showing ${paginatedCertificates.length} of ${sortedCertificates.length} credentials (${ITEMS_PER_PAGE} per page)`
+                  : `Hiển thị ${paginatedCertificates.length} trên tổng số ${sortedCertificates.length} chứng chỉ (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
               </p>
+            </div>
+
+            {/* Sort Controls for Certificates */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <span>{lang === "EN" ? "Sort:" : "Sắp xếp:"}</span>
+              </span>
+              <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
+                <button
+                  onClick={() => handleCertSortChange("newest")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    certSort === "newest"
+                      ? "bg-teal-600 text-white shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {lang === "EN" ? "Newest" : "Mới nhất"}
+                </button>
+                <button
+                  onClick={() => handleCertSortChange("oldest")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    certSort === "oldest"
+                      ? "bg-teal-600 text-white shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {lang === "EN" ? "Oldest" : "Cũ nhất"}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {certificates.map((cert) => {
+          {/* Certificate Cards Gallery */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedCertificates.map((cert, index) => {
               const title =
                 (lang === "EN" ? cert.title_en : cert.title_vn) ||
                 cert.title_en ||
-                cert.title_vn;
+                cert.title_vn ||
+                "Certificate";
+
+              const desc =
+                (lang === "EN" ? cert.desc_en || cert.desc_vn : cert.desc_vn || cert.desc_en) || "";
+
+              const hasImage = cert.images && cert.images[0];
 
               return (
-                <div
+                <motion.div
                   key={cert.id}
                   onClick={() => setSelectedProject(cert)}
-                  className="group flex items-center justify-between p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/50 hover:border-amber-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-200 cursor-pointer shadow-xs"
+                  initial={{ opacity: 0, y: 25 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.45, delay: index * 0.06 }}
+                  className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-teal-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 shrink-0">
-                      <Award className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
-                        {title}
-                      </h4>
-                      {cert.project_date?.start && (
-                        <p className="text-[11px] text-slate-400 font-mono">
-                          {formatDate(cert.project_date.start)}
-                        </p>
-                      )}
-                    </div>
+                  {/* Certificate Image Cover Preview */}
+                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    {hasImage ? (
+                      <Image
+                        src={cert.images[0]}
+                        alt={title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        priority={index < 3}
+                        quality={85}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-sky-500/10">
+                        <Award className="h-12 w-12 text-teal-500/40" />
+                      </div>
+                    )}
+
+                    {/* Category Tag Overlay */}
+                    {cert.category && (
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-teal-300 border border-teal-500/20 shadow-sm">
+                          {cert.category}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 group-hover:text-amber-500 transition-all" />
-                </div>
+
+                  {/* Card Content */}
+                  <div className="flex flex-1 flex-col p-5 sm:p-6">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      {renderDateRange(cert.project_date)}
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform">
+                        <span>{lang === "EN" ? "View Certificate" : "Xem Chứng Chỉ"}</span>
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors line-clamp-1">
+                      {title}
+                    </h3>
+
+                    <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
+                      <LinkifiedText text={desc} />
+                    </div>
+
+                    {/* Tags */}
+                    {cert.tags && cert.tags.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        {cert.tags.slice(0, 4).map((tag) => (
+                          <span
+                            key={tag}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {cert.tags.length > 4 && (
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
+                            +{cert.tags.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               );
             })}
           </div>
+
+          {/* Pagination Controls */}
+          {renderPagination(certPage, totalCertPages, setCertPage)}
         </section>
       )}
 
@@ -964,7 +1207,7 @@ export default function PortfolioUI({
         </p>
       </footer>
 
-      {/* ── CASE STUDY DETAILS MODAL ────────────────────────────────────── */}
+      {/* ── CASE STUDY / CERTIFICATE DETAILS MODAL ───────────────────────── */}
       <AnimatePresence>
         {selectedProject && (
           <div
@@ -1005,7 +1248,7 @@ export default function PortfolioUI({
               {/* Title & Metadata */}
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 {selectedProject.category && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                     {selectedProject.category}
                   </span>
                 )}
@@ -1051,10 +1294,10 @@ export default function PortfolioUI({
                     href={selectedProject.links}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 cursor-pointer"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    <span>{lang === "EN" ? "Open Live Project" : "Xem Trực Tiếp"}</span>
+                    <span>{lang === "EN" ? "Open Live Link" : "Xem Trực Tiếp"}</span>
                   </a>
                 </div>
               )}
