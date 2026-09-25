@@ -7,26 +7,22 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@notionhq/client"],
 
   images: {
-    // Explicit hostname list — Next.js does NOT support multi-level wildcards
-    // like *.s3.*.amazonaws.com (that pattern caused the build crash).
-    // We enumerate the real hosts Notion uses instead.
     remotePatterns: [
       // Notion's own file hosting
       { protocol: "https", hostname: "file.notion.so", pathname: "/**" },
-      // Notion's primary S3 proxy (most file uploads go here)
-      { protocol: "https", hostname: "prod-files-secure.s3.us-west-2.amazonaws.com", pathname: "/**" },
-      // Notion CDN
+      // Notion's S3 proxy & AWS S3 buckets (using ** for multi-level subdomains)
+      { protocol: "https", hostname: "**.amazonaws.com", pathname: "/**" },
+      // Notion CDN & domains
       { protocol: "https", hostname: "www.notion.so", pathname: "/**" },
       { protocol: "https", hostname: "notion.so", pathname: "/**" },
-      // Google-hosted images (profile photos pasted from Google)
-      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
-      { protocol: "https", hostname: "lh4.googleusercontent.com", pathname: "/**" },
-      { protocol: "https", hostname: "lh5.googleusercontent.com", pathname: "/**" },
-      { protocol: "https", hostname: "lh6.googleusercontent.com", pathname: "/**" },
+      // Google-hosted images
+      { protocol: "https", hostname: "**.googleusercontent.com", pathname: "/**" },
       // Unsplash
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       // Imgur
       { protocol: "https", hostname: "i.imgur.com", pathname: "/**" },
+      // GitHub hosted assets / avatars
+      { protocol: "https", hostname: "**.githubusercontent.com", pathname: "/**" },
     ],
 
     // WebP gives ~30% smaller files vs JPEG with no visible quality loss
