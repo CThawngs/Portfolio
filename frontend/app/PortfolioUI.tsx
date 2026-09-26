@@ -24,7 +24,6 @@ import {
   User,
   Wrench,
   CheckCircle2,
-  BookOpen,
 } from "lucide-react";
 
 // ── Custom SVG GitHub Icon ───────────────────────────────────────────────────
@@ -444,7 +443,11 @@ export default function PortfolioUI({
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  // Dedicated Tag Filters for Projects & Certificates
+  const [selectedProjectTag, setSelectedProjectTag] = useState<string | null>(null);
+  const [selectedCertTag, setSelectedCertTag] = useState<string | null>(null);
+
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -461,28 +464,32 @@ export default function PortfolioUI({
   }, []);
 
   // Separate Projects vs Certificates dynamically from Notion DB
-  const { rawProjects, rawCertificates, allDynamicTags } = useMemo(() => {
+  const { rawProjects, rawCertificates, projectTags, certTags } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
-    const tagSet = new Set<string>();
+    const pTagSet = new Set<string>();
+    const cTagSet = new Set<string>();
 
     projects.forEach((item) => {
       const cat = (item.category || "").toLowerCase();
       if (cat.includes("certificate") || cat.includes("chứng chỉ")) {
         cert.push(item);
+        if (Array.isArray(item.tags)) {
+          item.tags.forEach((t) => cTagSet.add(t));
+        }
       } else {
         feat.push(item);
-      }
-
-      if (Array.isArray(item.tags)) {
-        item.tags.forEach((t) => tagSet.add(t));
+        if (Array.isArray(item.tags)) {
+          item.tags.forEach((t) => pTagSet.add(t));
+        }
       }
     });
 
     return {
       rawProjects: feat,
       rawCertificates: cert,
-      allDynamicTags: Array.from(tagSet),
+      projectTags: Array.from(pTagSet),
+      certTags: Array.from(cTagSet),
     };
   }, [projects]);
 
@@ -513,9 +520,9 @@ export default function PortfolioUI({
 
   // Filtered & Sorted Projects
   const filteredProjects = useMemo(() => {
-    if (!selectedTag) return rawProjects;
-    return rawProjects.filter((p) => p.tags && p.tags.includes(selectedTag));
-  }, [rawProjects, selectedTag]);
+    if (!selectedProjectTag) return rawProjects;
+    return rawProjects.filter((p) => p.tags && p.tags.includes(selectedProjectTag));
+  }, [rawProjects, selectedProjectTag]);
 
   const sortedProjects = useMemo(() => {
     return [...filteredProjects].sort((a, b) => {
@@ -525,14 +532,19 @@ export default function PortfolioUI({
     });
   }, [filteredProjects, projectSort]);
 
-  // Sorted Certificates
+  // Filtered & Sorted Certificates
+  const filteredCertificates = useMemo(() => {
+    if (!selectedCertTag) return rawCertificates;
+    return rawCertificates.filter((c) => c.tags && c.tags.includes(selectedCertTag));
+  }, [rawCertificates, selectedCertTag]);
+
   const sortedCertificates = useMemo(() => {
-    return [...rawCertificates].sort((a, b) => {
+    return [...filteredCertificates].sort((a, b) => {
       const timeA = getTimeValue(a);
       const timeB = getTimeValue(b);
       return certSort === "newest" ? timeB - timeA : timeA - timeB;
     });
-  }, [rawCertificates, certSort]);
+  }, [filteredCertificates, certSort]);
 
   // Paginated Slices (6 items max per page)
   const totalProjectPages = Math.max(1, Math.ceil(sortedProjects.length / ITEMS_PER_PAGE));
@@ -547,9 +559,14 @@ export default function PortfolioUI({
     return sortedCertificates.slice(start, start + ITEMS_PER_PAGE);
   }, [sortedCertificates, certPage]);
 
-  const handleTagClick = (tag: string | null) => {
-    setSelectedTag(tag);
+  const handleProjectTagClick = (tag: string | null) => {
+    setSelectedProjectTag(tag);
     setProjectPage(1);
+  };
+
+  const handleCertTagClick = (tag: string | null) => {
+    setSelectedCertTag(tag);
+    setCertPage(1);
   };
 
   const handleProjectSortChange = (order: SortOrder) => {
@@ -707,7 +724,7 @@ export default function PortfolioUI({
                 {lang === "EN" ? "About" : "Giới thiệu"}
               </a>
             )}
-            {(parsedSkills.length > 0 || allDynamicTags.length > 0) && (
+            {(parsedSkills.length > 0 || projectTags.length > 0) && (
               <a href="#skills" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                 {lang === "EN" ? "Skills" : "Kỹ năng"}
               </a>
@@ -870,7 +887,7 @@ export default function PortfolioUI({
       )}
 
       {/* ── 3. TECHNICAL SKILLS SECTION (DYNAMIC FROM NOTION PROFILE DB) ─── */}
-      {(parsedSkills.length > 0 || allDynamicTags.length > 0) && (
+      {(parsedSkills.length > 0 || projectTags.length > 0) && (
         <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
@@ -920,9 +937,9 @@ export default function PortfolioUI({
               })}
             </div>
           ) : (
-            // Fallback: Dynamic Tag Cloud from Notion Portfolio DB
+            // Fallback: Dynamic Tag Cloud from Notion Projects
             <div className="flex flex-wrap gap-2 p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60">
-              {allDynamicTags.map((tag) => (
+              {projectTags.map((tag) => (
                 <span
                   key={tag}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${getTagStyle(tag)}`}
@@ -1115,25 +1132,25 @@ export default function PortfolioUI({
           </div>
         </div>
 
-        {/* Dynamic Tags Filter bar */}
-        {allDynamicTags.length > 0 && (
+        {/* Dedicated Projects Tag Filter Bar */}
+        {projectTags.length > 0 && (
           <div className="mb-6 flex flex-wrap items-center gap-1.5">
             <button
-              onClick={() => handleTagClick(null)}
+              onClick={() => handleProjectTagClick(null)}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedTag === null
+                selectedProjectTag === null
                   ? "bg-emerald-600 text-white shadow-xs"
                   : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
               }`}
             >
-              {lang === "EN" ? "All Tags" : "Tất cả"}
+              {lang === "EN" ? "All" : "Tất cả"}
             </button>
-            {allDynamicTags.map((tag) => (
+            {projectTags.map((tag) => (
               <button
                 key={tag}
-                onClick={() => handleTagClick(selectedTag === tag ? null : tag)}
+                onClick={() => handleProjectTagClick(selectedProjectTag === tag ? null : tag)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                  selectedTag === tag
+                  selectedProjectTag === tag
                     ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
                     : `${getTagStyle(tag)} hover:opacity-80`
                 }`}
@@ -1300,6 +1317,35 @@ export default function PortfolioUI({
               </div>
             </div>
           </div>
+
+          {/* Dedicated Certificates Tag Filter Bar */}
+          {certTags.length > 0 && (
+            <div className="mb-6 flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={() => handleCertTagClick(null)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedCertTag === null
+                    ? "bg-teal-600 text-white shadow-xs"
+                    : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
+                }`}
+              >
+                {lang === "EN" ? "All" : "Tất cả"}
+              </button>
+              {certTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => handleCertTagClick(selectedCertTag === tag ? null : tag)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                    selectedCertTag === tag
+                      ? "bg-teal-600 text-white border-teal-600 shadow-xs"
+                      : `${getTagStyle(tag)} hover:opacity-80`
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Certificate Cards Gallery */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
