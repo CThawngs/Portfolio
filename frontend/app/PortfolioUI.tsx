@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
@@ -536,24 +536,57 @@ export default function PortfolioUI({
     return (parts[0]?.slice(0, 2) || "CT").toUpperCase();
   }, [profileData]);
 
+  // Navigation items for header and mobile nav
+  const navItems = useMemo(() => {
+    const items: { id: string; label: string }[] = [];
+    if (aboutParagraphs.length > 0) {
+      items.push({ id: "about", label: lang === "EN" ? "About" : "Giới thiệu" });
+    }
+    if (parsedSkills.length > 0 || projectTags.length > 0) {
+      items.push({ id: "skills", label: lang === "EN" ? "Skills" : "Kỹ năng" });
+    }
+    if (parsedExperiences.length > 0) {
+      items.push({ id: "experience", label: lang === "EN" ? "Experience" : "Kinh nghiệm" });
+    }
+    if (parsedEducations.length > 0) {
+      items.push({ id: "education", label: lang === "EN" ? "Education" : "Học vấn" });
+    }
+    items.push({ id: "projects", label: lang === "EN" ? "Projects" : "Dự án" });
+    if (rawCertificates.length > 0) {
+      items.push({ id: "certificates", label: lang === "EN" ? "Certificates" : "Chứng chỉ" });
+    }
+    return items;
+  }, [aboutParagraphs, parsedSkills, projectTags, parsedExperiences, parsedEducations, rawCertificates, lang]);
+
   // Active section tracking for navbar scroll spy & smooth scrolling
   const [activeSection, setActiveSection] = useState<string>("hero");
+  const isManualScroll = useRef(false);
+  const manualScrollTimer = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
+    setActiveSection(id);
+    isManualScroll.current = true;
+    if (manualScrollTimer.current) clearTimeout(manualScrollTimer.current);
+
     const element = document.getElementById(id);
     if (element) {
-      const yOffset = -75; // sticky header height offset
+      const yOffset = -75; // fixed header height offset
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
-      setActiveSection(id);
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     }
+
+    manualScrollTimer.current = setTimeout(() => {
+      isManualScroll.current = false;
+    }, 850);
   };
 
   useEffect(() => {
     const sectionIds = ["hero", "about", "skills", "experience", "education", "projects", "certificates"];
     
     const handleScroll = () => {
+      if (isManualScroll.current) return;
+
       const scrollPosition = window.scrollY + 140;
       for (let i = sectionIds.length - 1; i >= 0; i--) {
         const id = sectionIds[i];
@@ -567,7 +600,10 @@ export default function PortfolioUI({
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (manualScrollTimer.current) clearTimeout(manualScrollTimer.current);
+    };
   }, [aboutParagraphs, parsedSkills, parsedExperiences, parsedEducations, rawCertificates]);
 
   // Filtered & Sorted Projects
@@ -767,82 +803,30 @@ export default function PortfolioUI({
 
           {/* Quick Nav Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-1 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md text-xs font-semibold tracking-wider">
-            {aboutParagraphs.length > 0 && (
-              <a
-                href="#about"
-                onClick={(e) => scrollToSection(e, "about")}
-                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  activeSection === "about"
-                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                {lang === "EN" ? "About" : "Giới thiệu"}
-              </a>
-            )}
-            {(parsedSkills.length > 0 || projectTags.length > 0) && (
-              <a
-                href="#skills"
-                onClick={(e) => scrollToSection(e, "skills")}
-                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  activeSection === "skills"
-                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                {lang === "EN" ? "Skills" : "Kỹ năng"}
-              </a>
-            )}
-            {parsedExperiences.length > 0 && (
-              <a
-                href="#experience"
-                onClick={(e) => scrollToSection(e, "experience")}
-                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  activeSection === "experience"
-                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                {lang === "EN" ? "Experience" : "Kinh nghiệm"}
-              </a>
-            )}
-            {parsedEducations.length > 0 && (
-              <a
-                href="#education"
-                onClick={(e) => scrollToSection(e, "education")}
-                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  activeSection === "education"
-                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                {lang === "EN" ? "Education" : "Học vấn"}
-              </a>
-            )}
-            <a
-              href="#projects"
-              onClick={(e) => scrollToSection(e, "projects")}
-              className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                activeSection === "projects"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                  : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-              }`}
-            >
-              {lang === "EN" ? "Projects" : "Dự án"}
-            </a>
-            {rawCertificates.length > 0 && (
-              <a
-                href="#certificates"
-                onClick={(e) => scrollToSection(e, "certificates")}
-                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  activeSection === "certificates"
-                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                {lang === "EN" ? "Certificates" : "Chứng chỉ"}
-              </a>
-            )}
+            {navItems.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={(e) => scrollToSection(e, item.id)}
+                  className={`relative px-3.5 py-1.5 rounded-xl transition-colors duration-200 cursor-pointer ${
+                    isActive
+                      ? "text-white font-bold"
+                      : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/40"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="activeDesktopNavPill"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25 z-0"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">{item.label}</span>
+                </a>
+              );
+            })}
           </nav>
 
           {/* Controls: Theme & Language */}
@@ -893,84 +877,32 @@ export default function PortfolioUI({
       </header>
 
       {/* ── MOBILE HORIZONTAL QUICK NAVIGATION STRIP ─────────────────────── */}
-      <div className="md:hidden fixed top-16 left-0 right-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#090D14]/90 border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 overflow-x-auto hide-scrollbar shadow-xs">
+      <div className="md:hidden fixed top-16 left-0 right-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#090D14]/90 border-b border-slate-200/80 dark:border-slate-800/80 py-2 px-4 overflow-x-auto hide-scrollbar shadow-xs">
         <div className="flex items-center gap-1.5 w-max mx-auto">
-          {aboutParagraphs.length > 0 && (
-            <a
-              href="#about"
-              onClick={(e) => scrollToSection(e, "about")}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-                activeSection === "about"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              {lang === "EN" ? "About" : "Giới thiệu"}
-            </a>
-          )}
-          {(parsedSkills.length > 0 || projectTags.length > 0) && (
-            <a
-              href="#skills"
-              onClick={(e) => scrollToSection(e, "skills")}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-                activeSection === "skills"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              {lang === "EN" ? "Skills" : "Kỹ năng"}
-            </a>
-          )}
-          {parsedExperiences.length > 0 && (
-            <a
-              href="#experience"
-              onClick={(e) => scrollToSection(e, "experience")}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-                activeSection === "experience"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              {lang === "EN" ? "Experience" : "Kinh nghiệm"}
-            </a>
-          )}
-          {parsedEducations.length > 0 && (
-            <a
-              href="#education"
-              onClick={(e) => scrollToSection(e, "education")}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-                activeSection === "education"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              {lang === "EN" ? "Education" : "Học vấn"}
-            </a>
-          )}
-          <a
-            href="#projects"
-            onClick={(e) => scrollToSection(e, "projects")}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-              activeSection === "projects"
-                ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            {lang === "EN" ? "Projects" : "Dự án"}
-          </a>
-          {rawCertificates.length > 0 && (
-            <a
-              href="#certificates"
-              onClick={(e) => scrollToSection(e, "certificates")}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
-                activeSection === "certificates"
-                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              {lang === "EN" ? "Certificates" : "Chứng chỉ"}
-            </a>
-          )}
+          {navItems.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                onClick={(e) => scrollToSection(e, item.id)}
+                className={`relative px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors duration-200 cursor-pointer ${
+                  isActive
+                    ? "text-white font-bold"
+                    : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="activeMobileNavPill"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm z-0"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{item.label}</span>
+              </a>
+            );
+          })}
         </div>
       </div>
 
