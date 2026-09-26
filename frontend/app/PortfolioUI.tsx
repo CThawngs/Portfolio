@@ -518,6 +518,58 @@ export default function PortfolioUI({
     return parseEducation(raw || "");
   }, [profileData, lang]);
 
+  const profileName = useMemo(() => {
+    return (
+      (lang === "VN" ? profileData?.name_vn : profileData?.name_en) ||
+      profileData?.name_vn ||
+      profileData?.name_en ||
+      "Nguyen Chi Thang"
+    );
+  }, [profileData, lang]);
+
+  const brandInitials = useMemo(() => {
+    const raw = profileData?.name_en || profileData?.name_vn || "Chi Thang";
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return (parts[0]?.slice(0, 2) || "CT").toUpperCase();
+  }, [profileData]);
+
+  // Active section tracking for navbar scroll spy & smooth scrolling
+  const [activeSection, setActiveSection] = useState<string>("hero");
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      const yOffset = -75; // sticky header height offset
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      setActiveSection(id);
+    }
+  };
+
+  useEffect(() => {
+    const sectionIds = ["hero", "about", "skills", "experience", "education", "projects", "certificates"];
+    
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 140;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const id = sectionIds[i];
+        const el = document.getElementById(id);
+        if (el && el.offsetTop <= scrollPosition) {
+          setActiveSection(id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [aboutParagraphs, parsedSkills, parsedExperiences, parsedEducations, rawCertificates]);
+
   // Filtered & Sorted Projects
   const filteredProjects = useMemo(() => {
     if (!selectedProjectTag) return rawProjects;
@@ -704,46 +756,95 @@ export default function PortfolioUI({
           
           {/* Brand Logo with soft Emerald & Sky Ring */}
           <a
-            href="#"
-            className="group flex items-center gap-2.5 transition-transform duration-300 hover:scale-105"
+            href="#hero"
+            onClick={(e) => scrollToSection(e, "hero")}
+            className="group flex items-center gap-2.5 transition-transform duration-300 hover:scale-105 cursor-pointer"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 p-[1.5px] shadow-md shadow-emerald-500/15 group-hover:shadow-emerald-500/30 transition-shadow">
-              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-slate-900 text-white font-black text-sm">
-                Z
+              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                {brandInitials}
               </div>
             </div>
             <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
-              Zero<span className="text-emerald-600 dark:text-emerald-400">Vault</span>
+              {profileName}
             </span>
           </a>
 
           {/* Quick Nav Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+          <nav className="hidden md:flex items-center gap-1 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md text-xs font-semibold tracking-wider">
             {aboutParagraphs.length > 0 && (
-              <a href="#about" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <a
+                href="#about"
+                onClick={(e) => scrollToSection(e, "about")}
+                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                  activeSection === "about"
+                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+                }`}
+              >
                 {lang === "EN" ? "About" : "Giới thiệu"}
               </a>
             )}
             {(parsedSkills.length > 0 || projectTags.length > 0) && (
-              <a href="#skills" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <a
+                href="#skills"
+                onClick={(e) => scrollToSection(e, "skills")}
+                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                  activeSection === "skills"
+                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+                }`}
+              >
                 {lang === "EN" ? "Skills" : "Kỹ năng"}
               </a>
             )}
             {parsedExperiences.length > 0 && (
-              <a href="#experience" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <a
+                href="#experience"
+                onClick={(e) => scrollToSection(e, "experience")}
+                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                  activeSection === "experience"
+                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+                }`}
+              >
                 {lang === "EN" ? "Experience" : "Kinh nghiệm"}
               </a>
             )}
             {parsedEducations.length > 0 && (
-              <a href="#education" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <a
+                href="#education"
+                onClick={(e) => scrollToSection(e, "education")}
+                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                  activeSection === "education"
+                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+                }`}
+              >
                 {lang === "EN" ? "Education" : "Học vấn"}
               </a>
             )}
-            <a href="#projects" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+            <a
+              href="#projects"
+              onClick={(e) => scrollToSection(e, "projects")}
+              className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                activeSection === "projects"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                  : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+              }`}
+            >
               {lang === "EN" ? "Projects" : "Dự án"}
             </a>
             {rawCertificates.length > 0 && (
-              <a href="#certificates" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <a
+                href="#certificates"
+                onClick={(e) => scrollToSection(e, "certificates")}
+                className={`relative px-3.5 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
+                  activeSection === "certificates"
+                    ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50"
+                }`}
+              >
                 {lang === "EN" ? "Certificates" : "Chứng chỉ"}
               </a>
             )}
@@ -796,8 +897,90 @@ export default function PortfolioUI({
         </div>
       </header>
 
+      {/* ── MOBILE HORIZONTAL QUICK NAVIGATION STRIP ─────────────────────── */}
+      <div className="md:hidden sticky top-16 z-40 w-full backdrop-blur-xl bg-white/80 dark:bg-[#090D14]/85 border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 overflow-x-auto hide-scrollbar shadow-xs">
+        <div className="flex items-center gap-1.5 w-max mx-auto">
+          {aboutParagraphs.length > 0 && (
+            <a
+              href="#about"
+              onClick={(e) => scrollToSection(e, "about")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                activeSection === "about"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {lang === "EN" ? "About" : "Giới thiệu"}
+            </a>
+          )}
+          {(parsedSkills.length > 0 || projectTags.length > 0) && (
+            <a
+              href="#skills"
+              onClick={(e) => scrollToSection(e, "skills")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                activeSection === "skills"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {lang === "EN" ? "Skills" : "Kỹ năng"}
+            </a>
+          )}
+          {parsedExperiences.length > 0 && (
+            <a
+              href="#experience"
+              onClick={(e) => scrollToSection(e, "experience")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                activeSection === "experience"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {lang === "EN" ? "Experience" : "Kinh nghiệm"}
+            </a>
+          )}
+          {parsedEducations.length > 0 && (
+            <a
+              href="#education"
+              onClick={(e) => scrollToSection(e, "education")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                activeSection === "education"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {lang === "EN" ? "Education" : "Học vấn"}
+            </a>
+          )}
+          <a
+            href="#projects"
+            onClick={(e) => scrollToSection(e, "projects")}
+            className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+              activeSection === "projects"
+                ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            {lang === "EN" ? "Projects" : "Dự án"}
+          </a>
+          {rawCertificates.length > 0 && (
+            <a
+              href="#certificates"
+              onClick={(e) => scrollToSection(e, "certificates")}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                activeSection === "certificates"
+                  ? "text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              {lang === "EN" ? "Certificates" : "Chứng chỉ"}
+            </a>
+          )}
+        </div>
+      </div>
+
       {/* ── 1. HERO SECTION (100% DYNAMIC FROM NOTION PROFILE DB) ────────── */}
-      <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
+      <section id="hero" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
         {profileData && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1207,15 +1390,6 @@ export default function PortfolioUI({
                         <Code className="h-10 w-10 text-emerald-500/40" />
                       </div>
                     )}
-
-                    {/* Category Tag Overlay */}
-                    {project.category && (
-                      <div className="absolute top-3 left-3">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-white border border-white/10 shadow-sm">
-                          {project.category}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Card Content */}
@@ -1386,15 +1560,6 @@ export default function PortfolioUI({
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-sky-500/10">
                         <Award className="h-12 w-12 text-teal-500/40" />
-                      </div>
-                    )}
-
-                    {/* Category Tag Overlay */}
-                    {cert.category && (
-                      <div className="absolute top-3 left-3">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-teal-300 border border-teal-500/20 shadow-sm">
-                          {cert.category}
-                        </span>
                       </div>
                     )}
                   </div>
