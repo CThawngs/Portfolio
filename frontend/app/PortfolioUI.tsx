@@ -750,22 +750,17 @@ export default function PortfolioUI({
         <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-teal-500/10 dark:bg-teal-500/10 rounded-full blur-[130px] transform-gpu" />
       </div>
 
-      {/* ── STICKY GLASS HEADER ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 dark:bg-[#090D14]/75 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
+      {/* ── FIXED GLASS HEADER ──────────────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-xl bg-white/80 dark:bg-[#090D14]/80 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300 shadow-xs">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           
-          {/* Brand Logo with soft Emerald & Sky Ring */}
+          {/* Brand Name (Only user's name, no logo icon) */}
           <a
             href="#hero"
             onClick={(e) => scrollToSection(e, "hero")}
-            className="group flex items-center gap-2.5 transition-transform duration-300 hover:scale-105 cursor-pointer"
+            className="group flex items-center transition-transform duration-300 hover:scale-105 cursor-pointer select-none"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 p-[1.5px] shadow-md shadow-emerald-500/15 group-hover:shadow-emerald-500/30 transition-shadow">
-              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 font-black text-xs">
-                {brandInitials}
-              </div>
-            </div>
-            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+            <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
               {profileName}
             </span>
           </a>
@@ -898,7 +893,7 @@ export default function PortfolioUI({
       </header>
 
       {/* ── MOBILE HORIZONTAL QUICK NAVIGATION STRIP ─────────────────────── */}
-      <div className="md:hidden sticky top-16 z-40 w-full backdrop-blur-xl bg-white/80 dark:bg-[#090D14]/85 border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 overflow-x-auto hide-scrollbar shadow-xs">
+      <div className="md:hidden fixed top-16 left-0 right-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#090D14]/90 border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 overflow-x-auto hide-scrollbar shadow-xs">
         <div className="flex items-center gap-1.5 w-max mx-auto">
           {aboutParagraphs.length > 0 && (
             <a
@@ -980,7 +975,7 @@ export default function PortfolioUI({
       </div>
 
       {/* ── 1. HERO SECTION (100% DYNAMIC FROM NOTION PROFILE DB) ────────── */}
-      <section id="hero" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
+      <section id="hero" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-28 sm:pt-28 md:pt-24 pb-8 text-center">
         {profileData && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
