@@ -1107,10 +1107,10 @@ export default function PortfolioUI({
             </div>
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Experience & Highlights" : "Kinh Nghiệm & Hoạt Động"}
+                {lang === "EN" ? "Experience" : "Kinh Nghiệm"}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                {lang === "EN" ? "Key industry engagements and project activities" : "Các vai trò thực tế và hoạt động nổi bật"}
+                {lang === "EN" ? "Work experience & professional background" : "Quá trình làm việc và kinh nghiệm chuyên môn"}
               </p>
             </div>
           </div>
