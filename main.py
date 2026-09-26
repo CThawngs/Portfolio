@@ -326,6 +326,34 @@ PROFILE_FIELDS: list[FieldPair] = [
         vn_type="rich_text",
         en_type="rich_text",
     ),
+    FieldPair(
+        label="About",
+        vn_key="About (VN)",
+        en_key="About (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+    FieldPair(
+        label="Skills",
+        vn_key="Skills (VN)",
+        en_key="Skills (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+    FieldPair(
+        label="Experience",
+        vn_key="Experience (VN)",
+        en_key="Experience (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
+    FieldPair(
+        label="Education",
+        vn_key="Education (VN)",
+        en_key="Education (EN)",
+        vn_type="rich_text",
+        en_type="rich_text",
+    ),
 ]
 
 # ---------------------------------------------------------------------------

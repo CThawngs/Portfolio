@@ -124,19 +124,27 @@ export async function getProfileData() {
   const properties = page.properties ?? {};
 
   return {
-    name_vn:   richText(properties['Name (VN)']?.title)     || "Untitled",
-    name_en:   richText(properties['Name (EN)']?.rich_text) || "Untitled",
-    role_vn:   richText(properties['Role (VN)']?.rich_text),
-    role_en:   richText(properties['Role (EN)']?.rich_text),
-    bio_vn:    richText(properties['Bio (VN)']?.rich_text),
-    bio_en:    richText(properties['Bio (EN)']?.rich_text),
-    dob:       properties['Dob']?.date?.start
-               ?? properties['DOB']?.date?.start
-               ?? properties['Date of Birth']?.date?.start
-               ?? null,
-    email:     properties['Email']?.email     ?? "",
-    github:    properties['Github']?.url      ?? properties['GitHub']?.url    ?? "",
-    linkedin:  properties['Linkedin']?.url    ?? properties['LinkedIn']?.url  ?? "",
-    instagram: properties['Instagram']?.url   ?? ""
+    name_vn:       richText(properties['Name (VN)']?.title)     || "Untitled",
+    name_en:       richText(properties['Name (EN)']?.rich_text) || "Untitled",
+    role_vn:       richText(properties['Role (VN)']?.rich_text),
+    role_en:       richText(properties['Role (EN)']?.rich_text),
+    bio_vn:        richText(properties['Bio (VN)']?.rich_text),
+    bio_en:        richText(properties['Bio (EN)']?.rich_text),
+    about_vn:      richText(properties['About (VN)']?.rich_text) || richText(properties['About']?.rich_text),
+    about_en:      richText(properties['About (EN)']?.rich_text) || richText(properties['About']?.rich_text),
+    skills_vn:     richText(properties['Skills (VN)']?.rich_text) || richText(properties['Skills']?.rich_text),
+    skills_en:     richText(properties['Skills (EN)']?.rich_text) || richText(properties['Skills']?.rich_text),
+    experience_vn: richText(properties['Experience (VN)']?.rich_text),
+    experience_en: richText(properties['Experience (EN)']?.rich_text),
+    education_vn:  richText(properties['Education (VN)']?.rich_text),
+    education_en:  richText(properties['Education (EN)']?.rich_text),
+    dob:           properties['Dob']?.date?.start
+                   ?? properties['DOB']?.date?.start
+                   ?? properties['Date of Birth']?.date?.start
+                   ?? null,
+    email:         properties['Email']?.email     ?? "",
+    github:        properties['Github']?.url      ?? properties['GitHub']?.url    ?? "",
+    linkedin:      properties['Linkedin']?.url    ?? properties['LinkedIn']?.url  ?? "",
+    instagram:     properties['Instagram']?.url   ?? ""
   };
 }

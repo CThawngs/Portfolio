@@ -10,6 +10,10 @@ import {
   Camera,
   Mail,
   ExternalLink,
+  GraduationCap,
+  Sparkles,
+  Layers,
+  Cpu,
   Award,
   Calendar,
   ChevronLeft,
@@ -17,7 +21,10 @@ import {
   ArrowUpDown,
   X,
   ArrowUpRight,
-  Filter,
+  User,
+  Wrench,
+  CheckCircle2,
+  BookOpen,
 } from "lucide-react";
 
 // ── Custom SVG GitHub Icon ───────────────────────────────────────────────────
@@ -195,6 +202,14 @@ export interface ProfileData {
   role_en: string;
   bio_vn: string;
   bio_en: string;
+  about_vn?: string;
+  about_en?: string;
+  skills_vn?: string;
+  skills_en?: string;
+  experience_vn?: string;
+  experience_en?: string;
+  education_vn?: string;
+  education_en?: string;
   dob: string | null;
   email: string;
   github: string;
@@ -208,6 +223,188 @@ interface PortfolioUIProps {
 }
 
 type SortOrder = "newest" | "oldest";
+
+// ── Smart Dynamic Parsers for Notion Profile Config ───────────────────────────
+
+interface SkillGroup {
+  category: string;
+  skills: string[];
+}
+
+function parseSkills(text: string): SkillGroup[] {
+  if (!text) return [];
+  const lines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const groups: SkillGroup[] = [];
+
+  for (const line of lines) {
+    if (line.includes(":")) {
+      const parts = line.split(/:\s*(.+)/);
+      const cat = parts[0] ? parts[0].trim() : "Skills";
+      const items = parts[1] || "";
+      const skills = items
+        .split(/[,|•·\n]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (cat && skills.length > 0) {
+        groups.push({ category: cat, skills });
+      }
+    } else {
+      const items = line
+        .split(/[,|•·]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (items.length > 0) {
+        groups.push({ category: "Skills", skills: items });
+      }
+    }
+  }
+
+  return groups;
+}
+
+function getCategoryIcon(catName: string) {
+  const lower = catName.toLowerCase();
+  if (lower.includes("lang") || lower.includes("ngôn ngữ") || lower.includes("code")) return Code;
+  if (lower.includes("front") || lower.includes("web") || lower.includes("giao diện")) return Layers;
+  if (lower.includes("back") || lower.includes("cloud") || lower.includes("hệ thống") || lower.includes("database")) return Cpu;
+  if (lower.includes("ai") || lower.includes("auto") || lower.includes("tự động")) return Sparkles;
+  if (lower.includes("tool") || lower.includes("design") || lower.includes("thiết kế") || lower.includes("công cụ")) return Wrench;
+  return Sparkles;
+}
+
+interface ExperienceItem {
+  role: string;
+  org?: string;
+  period?: string;
+  badge?: string;
+  bullets: string[];
+}
+
+function parseExperiences(text: string): ExperienceItem[] {
+  if (!text) return [];
+  const blocks = text
+    .split(/\n\s*\n+|\|\|+|---+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const items: ExperienceItem[] = [];
+
+  for (const block of blocks) {
+    const lines = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+
+    const headerLine = lines[0];
+    const bulletLines = lines.slice(1);
+
+    const headerParts = headerLine.split(/\s*\|\s*/);
+    let rolePart = headerParts[0] || "";
+    const period = headerParts[1] || "";
+    const badge = headerParts[2] || "";
+
+    let org = "";
+    if (rolePart.includes("@")) {
+      const [r, o] = rolePart.split(/\s*@\s*/);
+      rolePart = r;
+      org = o;
+    } else if (rolePart.includes("(") && rolePart.includes(")")) {
+      const match = rolePart.match(/^(.*?)\s*\((.*?)\)$/);
+      if (match) {
+        rolePart = match[1];
+        org = match[2];
+      }
+    }
+
+    const bullets: string[] = [];
+    for (const bLine of bulletLines) {
+      const cleaned = bLine.replace(/^[-*•·–—]\s*/, "").trim();
+      if (cleaned) bullets.push(cleaned);
+    }
+
+    if (bullets.length === 0 && headerParts.length > 2 && !badge) {
+      bullets.push(headerParts.slice(2).join(" | "));
+    }
+
+    items.push({
+      role: rolePart.trim(),
+      org: org.trim(),
+      period: period.trim(),
+      badge: badge.trim(),
+      bullets,
+    });
+  }
+
+  return items;
+}
+
+interface EducationItem {
+  school: string;
+  major?: string;
+  gpa?: string;
+  period?: string;
+  notes?: string;
+}
+
+function parseEducation(text: string): EducationItem[] {
+  if (!text) return [];
+  const blocks = text
+    .split(/\n\s*\n+|\|\|+|---+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const items: EducationItem[] = [];
+
+  for (const block of blocks) {
+    let parts: string[] = [];
+    if (block.includes("\n")) {
+      parts = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    } else {
+      parts = block.split(/\s*\|\s*/).map((l) => l.trim()).filter(Boolean);
+    }
+
+    if (!parts.length) continue;
+
+    const school = parts[0] || "";
+    let major = "";
+    let gpa = "";
+    let period = "";
+    const extraNotes: string[] = [];
+
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (/gpa/i.test(p)) {
+        gpa = p;
+      } else if (/\b(20\d\d|19\d\d|graduat|tốt nghiệp|present|hiện tại)\b/i.test(p)) {
+        period = p;
+      } else if (!major) {
+        major = p;
+      } else {
+        extraNotes.push(p);
+      }
+    }
+
+    items.push({
+      school,
+      major,
+      gpa,
+      period,
+      notes: extraNotes.join(" • "),
+    });
+  }
+
+  return items;
+}
+
+function parseParagraphs(text: string): string[] {
+  if (!text) return [];
+  return text
+    .split(/\n\s*\n+|\|\|+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
 
 // ── Tag Styling Helper ────────────────────────────────────────────────────────
 const tagThemes = [
@@ -263,7 +460,7 @@ export default function PortfolioUI({
     setMounted(true);
   }, []);
 
-  // Separate Projects vs Certificates dynamically based on Category
+  // Separate Projects vs Certificates dynamically from Notion DB
   const { rawProjects, rawCertificates, allDynamicTags } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
@@ -288,6 +485,31 @@ export default function PortfolioUI({
       allDynamicTags: Array.from(tagSet),
     };
   }, [projects]);
+
+  // Parse Notion Profile Config Dynamic Sections
+  const aboutParagraphs = useMemo(() => {
+    if (!profileData) return [];
+    const raw = lang === "VN" ? profileData.about_vn : profileData.about_en;
+    return parseParagraphs(raw || "");
+  }, [profileData, lang]);
+
+  const parsedSkills = useMemo(() => {
+    if (!profileData) return [];
+    const raw = lang === "VN" ? profileData.skills_vn : profileData.skills_en;
+    return parseSkills(raw || "");
+  }, [profileData, lang]);
+
+  const parsedExperiences = useMemo(() => {
+    if (!profileData) return [];
+    const raw = lang === "VN" ? profileData.experience_vn : profileData.experience_en;
+    return parseExperiences(raw || "");
+  }, [profileData, lang]);
+
+  const parsedEducations = useMemo(() => {
+    if (!profileData) return [];
+    const raw = lang === "VN" ? profileData.education_vn : profileData.education_en;
+    return parseEducation(raw || "");
+  }, [profileData, lang]);
 
   // Filtered & Sorted Projects
   const filteredProjects = useMemo(() => {
@@ -325,7 +547,6 @@ export default function PortfolioUI({
     return sortedCertificates.slice(start, start + ITEMS_PER_PAGE);
   }, [sortedCertificates, certPage]);
 
-  // Reset page when filter/sort changes
   const handleTagClick = (tag: string | null) => {
     setSelectedTag(tag);
     setProjectPage(1);
@@ -341,7 +562,6 @@ export default function PortfolioUI({
     setCertPage(1);
   };
 
-  // Social Links mapped from Notion Profile DB
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
     const links = [];
@@ -417,7 +637,7 @@ export default function PortfolioUI({
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
         >
           <ChevronLeft className="h-4 w-4" />
           <span>{lang === "EN" ? "Prev" : "Trước"}</span>
@@ -428,7 +648,7 @@ export default function PortfolioUI({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`h-9 w-9 rounded-xl text-xs font-bold transition-all shadow-xs ${
+              className={`h-9 w-9 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
                 page === currentPage
                   ? "bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20"
                   : "border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400"
@@ -442,7 +662,7 @@ export default function PortfolioUI({
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
         >
           <span>{lang === "EN" ? "Next" : "Sau"}</span>
           <ChevronRight className="h-4 w-4" />
@@ -480,8 +700,28 @@ export default function PortfolioUI({
             </span>
           </a>
 
-          {/* Quick Nav Links */}
+          {/* Quick Nav Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            {aboutParagraphs.length > 0 && (
+              <a href="#about" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {lang === "EN" ? "About" : "Giới thiệu"}
+              </a>
+            )}
+            {(parsedSkills.length > 0 || allDynamicTags.length > 0) && (
+              <a href="#skills" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {lang === "EN" ? "Skills" : "Kỹ năng"}
+              </a>
+            )}
+            {parsedExperiences.length > 0 && (
+              <a href="#experience" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {lang === "EN" ? "Experience" : "Kinh nghiệm"}
+              </a>
+            )}
+            {parsedEducations.length > 0 && (
+              <a href="#education" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {lang === "EN" ? "Education" : "Học vấn"}
+              </a>
+            )}
             <a href="#projects" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Projects" : "Dự án"}
             </a>
@@ -497,7 +737,7 @@ export default function PortfolioUI({
             {/* Theme Toggle Button */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm cursor-pointer"
               aria-label="Toggle theme"
             >
               {mounted ? (
@@ -595,38 +835,237 @@ export default function PortfolioUI({
             )}
           </motion.div>
         )}
-
-        {/* Dynamic Tags Filter (Extracted dynamically from Notion Items) */}
-        {allDynamicTags.length > 0 && (
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 max-w-3xl mx-auto">
-            <button
-              onClick={() => handleTagClick(null)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedTag === null
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
-              }`}
-            >
-              {lang === "EN" ? "All Tags" : "Tất cả"}
-            </button>
-            {allDynamicTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleTagClick(selectedTag === tag ? null : tag)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                  selectedTag === tag
-                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                    : `${getTagStyle(tag)} hover:opacity-80`
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* ── 2. PROJECTS SECTION (100% DYNAMIC FROM NOTION CMS) ──────────── */}
+      {/* ── 2. ABOUT ME SECTION (DYNAMIC FROM NOTION PROFILE DB) ─────────── */}
+      {aboutParagraphs.length > 0 && (
+        <section id="about" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.45 }}
+            className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-none relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <User className="h-5 w-5" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "About Me" : "Về Tôi"}
+              </h2>
+            </div>
+
+            <div className="space-y-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+              {aboutParagraphs.map((para, idx) => (
+                <p key={idx}>
+                  <LinkifiedText text={para} />
+                </p>
+              ))}
+            </div>
+          </motion.div>
+        </section>
+      )}
+
+      {/* ── 3. TECHNICAL SKILLS SECTION (DYNAMIC FROM NOTION PROFILE DB) ─── */}
+      {(parsedSkills.length > 0 || allDynamicTags.length > 0) && (
+        <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+              <Cpu className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "Technical Skills" : "Kỹ Năng Công Nghệ"}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên môn"}
+              </p>
+            </div>
+          </div>
+
+          {parsedSkills.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {parsedSkills.map((group, idx) => {
+                const Icon = getCategoryIcon(group.category);
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: idx * 0.06 }}
+                    className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                  >
+                    <div className="flex items-center gap-2.5 mb-3.5">
+                      <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <h3 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-200">
+                        {group.category}
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.skills.map((skill, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-emerald-400/40 transition-colors"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            // Fallback: Dynamic Tag Cloud from Notion Portfolio DB
+            <div className="flex flex-wrap gap-2 p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60">
+              {allDynamicTags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${getTagStyle(tag)}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── 4. EXPERIENCE SECTION (DYNAMIC FROM NOTION PROFILE DB) ───────── */}
+      {parsedExperiences.length > 0 && (
+        <section id="experience" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "Experience & Highlights" : "Kinh Nghiệm & Hoạt Động"}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                {lang === "EN" ? "Key industry engagements and project activities" : "Các vai trò thực tế và hoạt động nổi bật"}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {parsedExperiences.map((exp, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: idx * 0.08 }}
+                className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                        {exp.role}
+                      </h3>
+                      {exp.badge && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                          {exp.badge}
+                        </span>
+                      )}
+                    </div>
+                    {exp.org && (
+                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
+                        {exp.org}
+                      </p>
+                    )}
+                  </div>
+                  {exp.period && (
+                    <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 shrink-0">
+                      {exp.period}
+                    </span>
+                  )}
+                </div>
+
+                {exp.bullets.length > 0 && (
+                  <ul className="space-y-1.5 mt-3">
+                    {exp.bullets.map((bullet, bIdx) => (
+                      <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span><LinkifiedText text={bullet} /></span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 5. EDUCATION SECTION (DYNAMIC FROM NOTION PROFILE DB) ────────── */}
+      {parsedEducations.length > 0 && (
+        <section id="education" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {lang === "EN" ? "Education" : "Học Vấn"}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                {lang === "EN" ? "Academic background & foundational studies" : "Nền tảng học thuật và đào tạo chính quy"}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {parsedEducations.map((edu, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: idx * 0.08 }}
+                className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                      {edu.school}
+                    </h3>
+                    {edu.major && (
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        {edu.major}
+                      </p>
+                    )}
+                    {edu.notes && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {edu.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-left sm:text-right">
+                    {edu.gpa && (
+                      <span className="inline-block px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        {edu.gpa}
+                      </span>
+                    )}
+                    {edu.period && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                        {edu.period}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 6. PROJECTS SECTION (100% DYNAMIC FROM NOTION PORTFOLIO DB) ──── */}
       <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
@@ -675,6 +1114,35 @@ export default function PortfolioUI({
             </div>
           </div>
         </div>
+
+        {/* Dynamic Tags Filter bar */}
+        {allDynamicTags.length > 0 && (
+          <div className="mb-6 flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => handleTagClick(null)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedTag === null
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
+              }`}
+            >
+              {lang === "EN" ? "All Tags" : "Tất cả"}
+            </button>
+            {allDynamicTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleTagClick(selectedTag === tag ? null : tag)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                  selectedTag === tag
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                    : `${getTagStyle(tag)} hover:opacity-80`
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Project Grid */}
         {sortedProjects.length === 0 ? (
@@ -782,7 +1250,7 @@ export default function PortfolioUI({
         {renderPagination(projectPage, totalProjectPages, setProjectPage)}
       </section>
 
-      {/* ── 3. CERTIFICATES SECTION (100% DYNAMIC CARD GALLERY FROM NOTION) ─ */}
+      {/* ── 7. CERTIFICATES SECTION (DYNAMIC CARD GALLERY FROM NOTION CMS) ─ */}
       {rawCertificates.length > 0 && (
         <section id="certificates" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
