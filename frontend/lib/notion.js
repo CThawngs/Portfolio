@@ -83,6 +83,20 @@ export async function getPublishedPortfolio() {
   return items;
 }
 
+function findRichText(properties, candidateKeys) {
+  for (const key of candidateKeys) {
+    if (properties[key]?.rich_text) {
+      const text = richText(properties[key].rich_text);
+      if (text) return text;
+    }
+    if (properties[key]?.title) {
+      const text = richText(properties[key].title);
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
 export async function getProfileData() {
   const databaseId = process.env.NOTION_PROFILE_DATABASE_ID;
   const apiKey = process.env.NOTION_API_KEY;
@@ -124,20 +138,20 @@ export async function getProfileData() {
   const properties = page.properties ?? {};
 
   return {
-    name_vn:       richText(properties['Name (VN)']?.title)     || "Untitled",
-    name_en:       richText(properties['Name (EN)']?.rich_text) || "Untitled",
-    role_vn:       richText(properties['Role (VN)']?.rich_text),
-    role_en:       richText(properties['Role (EN)']?.rich_text),
-    bio_vn:        richText(properties['Bio (VN)']?.rich_text),
-    bio_en:        richText(properties['Bio (EN)']?.rich_text),
-    about_vn:      richText(properties['About (VN)']?.rich_text) || richText(properties['About']?.rich_text),
-    about_en:      richText(properties['About (EN)']?.rich_text) || richText(properties['About']?.rich_text),
-    skills_vn:     richText(properties['Skills (VN)']?.rich_text) || richText(properties['Skills']?.rich_text),
-    skills_en:     richText(properties['Skills (EN)']?.rich_text) || richText(properties['Skills']?.rich_text),
-    experience_vn: richText(properties['Experience (VN)']?.rich_text),
-    experience_en: richText(properties['Experience (EN)']?.rich_text),
-    education_vn:  richText(properties['Education (VN)']?.rich_text),
-    education_en:  richText(properties['Education (EN)']?.rich_text),
+    name_vn:       findRichText(properties, ['Name (VN)', 'Name', 'Tên (VN)', 'Tên']),
+    name_en:       findRichText(properties, ['Name (EN)', 'Name', 'Tên (EN)']),
+    role_vn:       findRichText(properties, ['Role (VN)', 'Role', 'Vai trò (VN)', 'Vai trò']),
+    role_en:       findRichText(properties, ['Role (EN)', 'Role', 'Vai trò (EN)']),
+    bio_vn:        findRichText(properties, ['Bio (VN)', 'Bio', 'Tiểu sử (VN)', 'Tiểu sử']),
+    bio_en:        findRichText(properties, ['Bio (EN)', 'Bio', 'Tiểu sử (EN)']),
+    about_vn:      findRichText(properties, ['About (VN)', 'About Me (VN)', 'About', 'About Me', 'Giới thiệu (VN)', 'Giới thiệu', 'Về tôi']),
+    about_en:      findRichText(properties, ['About (EN)', 'About Me (EN)', 'About', 'About Me', 'Giới thiệu (EN)']),
+    skills_vn:     findRichText(properties, ['Skills (VN)', 'Technical Skills (VN)', 'Skills', 'Technical Skills', 'Kỹ năng (VN)', 'Kỹ năng']),
+    skills_en:     findRichText(properties, ['Skills (EN)', 'Technical Skills (EN)', 'Skills', 'Technical Skills', 'Kỹ năng (EN)']),
+    experience_vn: findRichText(properties, ['Experience (VN)', 'Experience & Highlights (VN)', 'Experience', 'Kinh nghiệm (VN)', 'Kinh nghiệm']),
+    experience_en: findRichText(properties, ['Experience (EN)', 'Experience & Highlights (EN)', 'Experience', 'Kinh nghiệm (EN)']),
+    education_vn:  findRichText(properties, ['Education (VN)', 'Education', 'Học vấn (VN)', 'Học vấn']),
+    education_en:  findRichText(properties, ['Education (EN)', 'Education', 'Học vấn (EN)']),
     dob:           properties['Dob']?.date?.start
                    ?? properties['DOB']?.date?.start
                    ?? properties['Date of Birth']?.date?.start

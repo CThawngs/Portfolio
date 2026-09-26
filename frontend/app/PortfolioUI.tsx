@@ -225,6 +225,15 @@ type SortOrder = "newest" | "oldest";
 
 // ── Smart Dynamic Parsers for Notion Profile Config ───────────────────────────
 
+function cleanText(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/^\[+(.*?)\]+$/g, "$1")
+    .replace(/\[(.*?)\]/g, "$1")
+    .replace(/\{(.*?)\}/g, "$1")
+    .trim();
+}
+
 interface SkillGroup {
   category: string;
   skills: string[];
@@ -242,11 +251,11 @@ function parseSkills(text: string): SkillGroup[] {
   for (const line of lines) {
     if (line.includes(":")) {
       const parts = line.split(/:\s*(.+)/);
-      const cat = parts[0] ? parts[0].trim() : "Skills";
+      const cat = cleanText(parts[0] || "Skills");
       const items = parts[1] || "";
       const skills = items
         .split(/[,|•·\n]+/)
-        .map((s) => s.trim())
+        .map((s) => cleanText(s))
         .filter(Boolean);
       if (cat && skills.length > 0) {
         groups.push({ category: cat, skills });
@@ -254,7 +263,7 @@ function parseSkills(text: string): SkillGroup[] {
     } else {
       const items = line
         .split(/[,|•·]+/)
-        .map((s) => s.trim())
+        .map((s) => cleanText(s))
         .filter(Boolean);
       if (items.length > 0) {
         groups.push({ category: "Skills", skills: items });
@@ -268,10 +277,10 @@ function parseSkills(text: string): SkillGroup[] {
 function getCategoryIcon(catName: string) {
   const lower = catName.toLowerCase();
   if (lower.includes("lang") || lower.includes("ngôn ngữ") || lower.includes("code")) return Code;
-  if (lower.includes("front") || lower.includes("web") || lower.includes("giao diện")) return Layers;
-  if (lower.includes("back") || lower.includes("cloud") || lower.includes("hệ thống") || lower.includes("database")) return Cpu;
-  if (lower.includes("ai") || lower.includes("auto") || lower.includes("tự động")) return Sparkles;
-  if (lower.includes("tool") || lower.includes("design") || lower.includes("thiết kế") || lower.includes("công cụ")) return Wrench;
+  if (lower.includes("front") || lower.includes("web") || lower.includes("giao diện") || lower.includes("ui")) return Layers;
+  if (lower.includes("back") || lower.includes("cloud") || lower.includes("hệ thống") || lower.includes("database") || lower.includes("devops")) return Cpu;
+  if (lower.includes("ai") || lower.includes("llm") || lower.includes("agent") || lower.includes("tự động")) return Sparkles;
+  if (lower.includes("tool") || lower.includes("design") || lower.includes("thiết kế") || lower.includes("công cụ") || lower.includes("protocol")) return Wrench;
   return Sparkles;
 }
 
@@ -285,55 +294,73 @@ interface ExperienceItem {
 
 function parseExperiences(text: string): ExperienceItem[] {
   if (!text) return [];
-  const blocks = text
-    .split(/\n\s*\n+|\|\|+|---+/)
-    .map((b) => b.trim())
+
+  const rawLines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
     .filter(Boolean);
 
   const items: ExperienceItem[] = [];
+  let currentItem: ExperienceItem | null = null;
 
-  for (const block of blocks) {
-    const lines = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    if (!lines.length) continue;
+  for (const line of rawLines) {
+    const isBullet = /^[-*•·+–—]\s*/.test(line);
 
-    const headerLine = lines[0];
-    const bulletLines = lines.slice(1);
+    // If it's not a bullet, check if it's a new Experience header
+    if (!isBullet) {
+      const parts = line.split(/\s*\|\s*/).map((p) => cleanText(p));
+      let rolePart = parts[0] || "";
+      const period = parts[1] || "";
+      const badge = parts[2] || (parts.length > 3 ? parts[3] : "");
 
-    const headerParts = headerLine.split(/\s*\|\s*/);
-    let rolePart = headerParts[0] || "";
-    const period = headerParts[1] || "";
-    const badge = headerParts[2] || "";
+      let org = "";
+      if (/\s+(?:tại|at|@)\s+/i.test(rolePart)) {
+        const splitByAt = rolePart.split(/\s+(?:tại|at|@)\s+/i);
+        rolePart = splitByAt[0];
+        org = splitByAt[1] || "";
+      } else if (rolePart.includes("@")) {
+        const [r, o] = rolePart.split(/\s*@\s*/);
+        rolePart = r;
+        org = o;
+      } else if (rolePart.includes("(") && rolePart.includes(")")) {
+        const match = rolePart.match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) {
+          rolePart = match[1];
+          org = match[2];
+        }
+      } else if (parts.length >= 3 && !period && !badge) {
+        rolePart = parts[0];
+        org = parts[1];
+      }
 
-    let org = "";
-    if (rolePart.includes("@")) {
-      const [r, o] = rolePart.split(/\s*@\s*/);
-      rolePart = r;
-      org = o;
-    } else if (rolePart.includes("(") && rolePart.includes(")")) {
-      const match = rolePart.match(/^(.*?)\s*\((.*?)\)$/);
-      if (match) {
-        rolePart = match[1];
-        org = match[2];
+      if (currentItem) {
+        items.push(currentItem);
+      }
+
+      currentItem = {
+        role: cleanText(rolePart),
+        org: cleanText(org),
+        period: cleanText(period),
+        badge: cleanText(badge),
+        bullets: [],
+      };
+    } else {
+      // It's a bullet point
+      const cleaned = cleanText(line.replace(/^[-*•·+–—]\s*/, ""));
+      if (cleaned) {
+        if (!currentItem) {
+          currentItem = {
+            role: "Experience",
+            bullets: [],
+          };
+        }
+        currentItem.bullets.push(cleaned);
       }
     }
+  }
 
-    const bullets: string[] = [];
-    for (const bLine of bulletLines) {
-      const cleaned = bLine.replace(/^[-*•·–—]\s*/, "").trim();
-      if (cleaned) bullets.push(cleaned);
-    }
-
-    if (bullets.length === 0 && headerParts.length > 2 && !badge) {
-      bullets.push(headerParts.slice(2).join(" | "));
-    }
-
-    items.push({
-      role: rolePart.trim(),
-      org: org.trim(),
-      period: period.trim(),
-      badge: badge.trim(),
-      bullets,
-    });
+  if (currentItem) {
+    items.push(currentItem);
   }
 
   return items;
@@ -359,21 +386,27 @@ function parseEducation(text: string): EducationItem[] {
   for (const block of blocks) {
     let parts: string[] = [];
     if (block.includes("\n")) {
-      parts = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+      parts = block
+        .split(/\n+/)
+        .map((l) => cleanText(l))
+        .filter(Boolean);
     } else {
-      parts = block.split(/\s*\|\s*/).map((l) => l.trim()).filter(Boolean);
+      parts = block
+        .split(/\s*\|\s*/)
+        .map((l) => cleanText(l))
+        .filter(Boolean);
     }
 
     if (!parts.length) continue;
 
-    const school = parts[0] || "";
+    const school = cleanText(parts[0] || "");
     let major = "";
     let gpa = "";
     let period = "";
     const extraNotes: string[] = [];
 
     for (let i = 1; i < parts.length; i++) {
-      const p = parts[i];
+      const p = cleanText(parts[i]);
       if (/gpa/i.test(p)) {
         gpa = p;
       } else if (/\b(20\d\d|19\d\d|graduat|tốt nghiệp|present|hiện tại)\b/i.test(p)) {
@@ -401,7 +434,7 @@ function parseParagraphs(text: string): string[] {
   if (!text) return [];
   return text
     .split(/\n\s*\n+|\|\|+/)
-    .map((p) => p.trim())
+    .map((p) => cleanText(p))
     .filter(Boolean);
 }
 
