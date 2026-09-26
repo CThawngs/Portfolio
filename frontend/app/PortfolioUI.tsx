@@ -1579,7 +1579,7 @@ export default function PortfolioUI({
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-slate-200/80 dark:border-slate-800/80 mt-16 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
         <p>
-          © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} • Built with Next.js 16, Notion CMS & Google Gemini AI.
+          © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
         </p>
       </footer>
 
