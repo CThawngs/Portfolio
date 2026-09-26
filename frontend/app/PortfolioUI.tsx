@@ -285,10 +285,10 @@ function getCategoryIcon(catName: string) {
 }
 
 interface ExperienceItem {
-  role: string;
-  org?: string;
-  period?: string;
-  badge?: string;
+  org: string;     // Tên công ty / Tên hoạt động
+  role: string;    // Vị trí (Position/Role)
+  period?: string; // Thời gian (Period)
+  badge?: string;  // Badge (tùy chọn)
   bullets: string[];
 }
 
@@ -306,31 +306,33 @@ function parseExperiences(text: string): ExperienceItem[] {
   for (const line of rawLines) {
     const isBullet = /^[-*•·+–—]\s*/.test(line);
 
-    // If it's not a bullet, check if it's a new Experience header
     if (!isBullet) {
+      // Header line: Company | Position | Period | Badge
       const parts = line.split(/\s*\|\s*/).map((p) => cleanText(p));
-      let rolePart = parts[0] || "";
-      const period = parts[1] || "";
-      const badge = parts[2] || (parts.length > 3 ? parts[3] : "");
 
       let org = "";
-      if (/\s+(?:tại|at|@)\s+/i.test(rolePart)) {
-        const splitByAt = rolePart.split(/\s+(?:tại|at|@)\s+/i);
-        rolePart = splitByAt[0];
-        org = splitByAt[1] || "";
-      } else if (rolePart.includes("@")) {
-        const [r, o] = rolePart.split(/\s*@\s*/);
-        rolePart = r;
-        org = o;
-      } else if (rolePart.includes("(") && rolePart.includes(")")) {
-        const match = rolePart.match(/^(.*?)\s*\((.*?)\)$/);
-        if (match) {
-          rolePart = match[1];
-          org = match[2];
+      let role = "";
+      let period = "";
+      let badge = "";
+
+      if (parts.length >= 4) {
+        org = parts[0];
+        role = parts[1];
+        period = parts[2];
+        badge = parts[3];
+      } else if (parts.length === 3) {
+        org = parts[0];
+        role = parts[1];
+        period = parts[2];
+      } else if (parts.length === 2) {
+        org = parts[0];
+        if (/\b(20\d\d|19\d\d|present|hiện tại)\b/i.test(parts[1])) {
+          period = parts[1];
+        } else {
+          role = parts[1];
         }
-      } else if (parts.length >= 3 && !period && !badge) {
-        rolePart = parts[0];
-        org = parts[1];
+      } else {
+        org = parts[0];
       }
 
       if (currentItem) {
@@ -338,19 +340,20 @@ function parseExperiences(text: string): ExperienceItem[] {
       }
 
       currentItem = {
-        role: cleanText(rolePart),
         org: cleanText(org),
+        role: cleanText(role),
         period: cleanText(period),
         badge: cleanText(badge),
         bullets: [],
       };
     } else {
-      // It's a bullet point
+      // Bullet point line
       const cleaned = cleanText(line.replace(/^[-*•·+–—]\s*/, ""));
       if (cleaned) {
         if (!currentItem) {
           currentItem = {
-            role: "Experience",
+            org: "Experience",
+            role: "",
             bullets: [],
           };
         }
@@ -1122,36 +1125,38 @@ export default function PortfolioUI({
                 transition={{ duration: 0.45, delay: idx * 0.08 }}
                 className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                        {exp.role}
-                      </h3>
-                      {exp.badge && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                          {exp.badge}
-                        </span>
-                      )}
-                    </div>
-                    {exp.org && (
-                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                        {exp.org}
-                      </p>
-                    )}
-                  </div>
-                  {exp.period && (
-                    <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 shrink-0">
-                      {exp.period}
+                {/* Top Header: Tên Công ty / Tên hoạt động (Lớn, đậm) & Badge */}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {exp.org || exp.role}
+                  </h3>
+                  {exp.badge && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      {exp.badge}
                     </span>
                   )}
                 </div>
 
+                {/* Sub-Header: Vị trí (Position/Role) bên trái & Thời gian hoạt động (Period) ngang hàng bên phải */}
+                {(exp.role || exp.period) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-1 text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      {exp.org ? exp.role : ""}
+                    </p>
+                    {exp.period && (
+                      <span className="text-xs sm:text-sm font-mono font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                        {exp.period}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Bullet Points */}
                 {exp.bullets.length > 0 && (
-                  <ul className="space-y-1.5 mt-3">
+                  <ul className="space-y-2 mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80">
                     {exp.bullets.map((bullet, bIdx) => (
-                      <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <li key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 mt-2" />
                         <span><LinkifiedText text={bullet} /></span>
                       </li>
                     ))}
