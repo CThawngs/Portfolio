@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,23 +10,14 @@ import {
   Camera,
   Mail,
   ExternalLink,
-  GraduationCap,
-  Sparkles,
-  Layers,
-  Cpu,
   Award,
   Calendar,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   X,
-  Globe,
-  Terminal,
-  CheckCircle2,
   ArrowUpRight,
-  User,
-  Wrench,
-  BookOpen,
+  Filter,
 } from "lucide-react";
 
 // ── Custom SVG GitHub Icon ───────────────────────────────────────────────────
@@ -95,7 +86,7 @@ function LinkifiedText({
   );
 }
 
-// ── TerminalTyping (Single-Line Typewriter) ────────────────────────────────────
+// ── TerminalTyping (Single-Line Typewriter from Notion Profile) ───────────────
 const TYPING_SPEED = 45;
 const DELETING_SPEED = 20;
 const PAUSE_TIME = 2200;
@@ -218,7 +209,7 @@ interface PortfolioUIProps {
 
 type SortOrder = "newest" | "oldest";
 
-// ── Tag Styling Helper (Soft Mint & Sky Palette) ──────────────────────────────
+// ── Tag Styling Helper ────────────────────────────────────────────────────────
 const tagThemes = [
   "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
   "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/25",
@@ -256,6 +247,7 @@ export default function PortfolioUI({
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -271,10 +263,11 @@ export default function PortfolioUI({
     setMounted(true);
   }, []);
 
-  // Separate Projects vs Certificates
-  const { rawProjects, rawCertificates } = useMemo(() => {
+  // Separate Projects vs Certificates dynamically based on Category
+  const { rawProjects, rawCertificates, allDynamicTags } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
+    const tagSet = new Set<string>();
 
     projects.forEach((item) => {
       const cat = (item.category || "").toLowerCase();
@@ -283,20 +276,34 @@ export default function PortfolioUI({
       } else {
         feat.push(item);
       }
+
+      if (Array.isArray(item.tags)) {
+        item.tags.forEach((t) => tagSet.add(t));
+      }
     });
 
-    return { rawProjects: feat, rawCertificates: cert };
+    return {
+      rawProjects: feat,
+      rawCertificates: cert,
+      allDynamicTags: Array.from(tagSet),
+    };
   }, [projects]);
 
-  // Sorted Lists
+  // Filtered & Sorted Projects
+  const filteredProjects = useMemo(() => {
+    if (!selectedTag) return rawProjects;
+    return rawProjects.filter((p) => p.tags && p.tags.includes(selectedTag));
+  }, [rawProjects, selectedTag]);
+
   const sortedProjects = useMemo(() => {
-    return [...rawProjects].sort((a, b) => {
+    return [...filteredProjects].sort((a, b) => {
       const timeA = getTimeValue(a);
       const timeB = getTimeValue(b);
       return projectSort === "newest" ? timeB - timeA : timeA - timeB;
     });
-  }, [rawProjects, projectSort]);
+  }, [filteredProjects, projectSort]);
 
+  // Sorted Certificates
   const sortedCertificates = useMemo(() => {
     return [...rawCertificates].sort((a, b) => {
       const timeA = getTimeValue(a);
@@ -305,7 +312,7 @@ export default function PortfolioUI({
     });
   }, [rawCertificates, certSort]);
 
-  // Paginated Slices
+  // Paginated Slices (6 items max per page)
   const totalProjectPages = Math.max(1, Math.ceil(sortedProjects.length / ITEMS_PER_PAGE));
   const paginatedProjects = useMemo(() => {
     const start = (projectPage - 1) * ITEMS_PER_PAGE;
@@ -318,7 +325,12 @@ export default function PortfolioUI({
     return sortedCertificates.slice(start, start + ITEMS_PER_PAGE);
   }, [sortedCertificates, certPage]);
 
-  // Reset page to 1 if sort changes
+  // Reset page when filter/sort changes
+  const handleTagClick = (tag: string | null) => {
+    setSelectedTag(tag);
+    setProjectPage(1);
+  };
+
   const handleProjectSortChange = (order: SortOrder) => {
     setProjectSort(order);
     setProjectPage(1);
@@ -329,6 +341,7 @@ export default function PortfolioUI({
     setCertPage(1);
   };
 
+  // Social Links mapped from Notion Profile DB
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
     const links = [];
@@ -386,114 +399,7 @@ export default function PortfolioUI({
     );
   };
 
-  // Structured Skills Matrix (Soft Green & Sky theme)
-  const skillsData = [
-    {
-      category: lang === "EN" ? "Languages" : "Ngôn ngữ",
-      icon: Code,
-      gradient: "from-emerald-500/20 via-teal-500/20 to-sky-500/20",
-      skills: ["TypeScript", "JavaScript", "Python", "C# (.NET)", "C", "SQL", "PHP"],
-    },
-    {
-      category: lang === "EN" ? "Frontend & Web" : "Giao diện & Web",
-      icon: Layers,
-      gradient: "from-teal-500/20 via-emerald-500/20 to-cyan-500/20",
-      skills: ["Next.js (App Router)", "ReactJS", "Tailwind CSS", "Framer Motion", "HTML5/CSS3"],
-    },
-    {
-      category: lang === "EN" ? "Backend & Cloud" : "Hệ thống & Cloud",
-      icon: Cpu,
-      gradient: "from-sky-500/20 via-teal-500/20 to-emerald-500/20",
-      skills: ["Node.js", "Notion API", "RESTful APIs", "MySQL", "SQLite", "PostgreSQL", "Vercel", "GitHub Actions"],
-    },
-    {
-      category: lang === "EN" ? "AI & Automation" : "AI & Tự động hoá",
-      icon: Sparkles,
-      gradient: "from-emerald-500/20 via-cyan-500/20 to-sky-500/20",
-      skills: [
-        "Google Gemini API",
-        "OpenRouter",
-        "AI Agent Workflows",
-        "Prompt Engineering (T.C.R.E.I)",
-        "Antigravity",
-        "Claude Code",
-        "n8n",
-        "Make",
-      ],
-    },
-    {
-      category: lang === "EN" ? "Design & Tools" : "Thiết kế & Công cụ",
-      icon: Wrench,
-      gradient: "from-teal-500/20 via-sky-500/20 to-blue-500/20",
-      skills: ["Figma", "Canva", "Adobe Photoshop", "Git", "GitHub", "Vercel Deployments"],
-    },
-  ];
-
-  // Experience Data
-  const experienceData = [
-    {
-      role_en: "Google Student Ambassador Trainer",
-      role_vn: "Trainer Đại sứ Sinh viên Google (GSA Trainer)",
-      org: "Google",
-      period: "2026 – PRESENT",
-      badge: "Google Internship Program",
-      desc_en: [
-        "Spearheaded GenAI and Prompt Engineering workshops across HCMC universities, driving AI adoption for 500+ diverse students.",
-        "Engineered specialized AI Agents and deployed n8n automation workflows to manage email communication and participant datasets.",
-        "Integrated AI tooling with Google Workspace / Office 365 to automate reporting pipelines and accelerate delivery.",
-      ],
-      desc_vn: [
-        "Chủ trì các buổi workshop về GenAI và Kỹ nghệ Prompt tại các trường Đại học ở TP.HCM cho hơn 500+ sinh viên.",
-        "Thiết kế và triển khai các AI Agent chuyên biệt kết hợp luồng tự động hóa n8n xử lý dữ liệu và hệ thống email tự động.",
-        "Tích hợp các công cụ AI vào Google Workspace / Office 365 để tự động hóa báo cáo và tối ưu hóa quy trình làm việc.",
-      ],
-    },
-    {
-      role_en: "Top 200 Hackathon AI Riser Vietnam (ZeroLLM)",
-      role_vn: "Top 200 Hackathon AI Riser Vietnam (Dự án ZeroLLM)",
-      org: "AI Riser Vietnam 2026",
-      period: "2026",
-      badge: "National Hackathon Finalist",
-      desc_en: [
-        "Architected ZeroLLM — a 100% free AI directory that automatically discovers and verifies zero-cost LLM providers in real-time.",
-        "Integrated Google Search Grounding with Gemini Flash to track and update active model endpoints dynamically.",
-      ],
-      desc_vn: [
-        "Kiến trúc nên ZeroLLM — nền tảng tổng hợp và tự động tìm kiếm các nhà cung cấp API LLM miễn phí 100% theo thời gian thực.",
-        "Ứng dụng Google Search Grounding kết hợp Gemini Flash để liên tục xác minh và cập nhật các model khả dụng.",
-      ],
-    },
-    {
-      role_en: "Frontend Development Intern",
-      role_vn: "Thực tập sinh Phát triển Frontend",
-      org: "Apps Cyclone",
-      period: "2025",
-      badge: "Frontend Engineering",
-      desc_en: [
-        "Translated Figma UI/UX designs into responsive, interactive website interfaces using ReactJS with pixel-perfect accuracy.",
-        "Developed fully functional modular React components with comprehensive state management and CRUD operations.",
-      ],
-      desc_vn: [
-        "Chuyển đổi thiết kế Figma UI/UX thành giao diện website tương tác mượt mà, chuẩn responsive bằng ReactJS.",
-        "Xây dựng các component React dạng module hóa hoàn chỉnh với các thao tác CRUD và quản lý state tối ưu.",
-      ],
-    },
-    {
-      role_en: "WordPress Development Intern",
-      role_vn: "Thực tập sinh Phát triển WordPress",
-      org: "TBay",
-      period: "2025",
-      badge: "E-Commerce",
-      desc_en: [
-        "Constructed functional e-commerce web applications using WordPress, configuring custom themes and checkout plugins.",
-      ],
-      desc_vn: [
-        "Xây dựng website thương mại điện tử hoàn chỉnh trên WordPress, tùy biến giao diện và tối ưu hóa luồng thanh toán.",
-      ],
-    },
-  ];
-
-  // Helper Pagination Renderer
+  // Helper Pagination Controls
   const renderPagination = (
     currentPage: number,
     totalPages: number,
@@ -555,7 +461,7 @@ export default function PortfolioUI({
         <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-teal-500/10 dark:bg-teal-500/10 rounded-full blur-[130px] transform-gpu" />
       </div>
 
-      {/* ── STICKY GLASS HEADER & NAV ────────────────────────────────────── */}
+      {/* ── STICKY GLASS HEADER ──────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 dark:bg-[#090D14]/75 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           
@@ -574,26 +480,16 @@ export default function PortfolioUI({
             </span>
           </a>
 
-          {/* Quick Nav Links (Desktop) */}
+          {/* Quick Nav Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-            <a href="#about" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              {lang === "EN" ? "About" : "Giới thiệu"}
-            </a>
-            <a href="#skills" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              {lang === "EN" ? "Skills" : "Kỹ năng"}
-            </a>
-            <a href="#experience" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              {lang === "EN" ? "Experience" : "Kinh nghiệm"}
-            </a>
             <a href="#projects" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
               {lang === "EN" ? "Projects" : "Dự án"}
             </a>
-            <a href="#certificates" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              {lang === "EN" ? "Certificates" : "Chứng chỉ"}
-            </a>
-            <a href="#education" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              {lang === "EN" ? "Education" : "Học vấn"}
-            </a>
+            {rawCertificates.length > 0 && (
+              <a href="#certificates" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {lang === "EN" ? "Certificates" : "Chứng chỉ"}
+              </a>
+            )}
           </nav>
 
           {/* Controls: Theme & Language */}
@@ -643,36 +539,29 @@ export default function PortfolioUI({
         </div>
       </header>
 
-      {/* ── 1. HERO SECTION ──────────────────────────────────────────────── */}
+      {/* ── 1. HERO SECTION (100% DYNAMIC FROM NOTION PROFILE DB) ────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-12 md:pt-16 pb-8 text-center">
         {profileData && (
           <motion.div
-            initial={{ opacity: 0, y: 25 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
             className="flex flex-col items-center"
           >
-            {/* Name with subtle Emerald/Sky depth */}
+            {/* Name from Notion Profile */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 dark:from-white dark:via-slate-100 dark:to-emerald-200">
                 {lang === "VN" ? profileData.name_vn : profileData.name_en}
               </span>
             </h1>
 
-            {/* Single-Line Typewriter Animation (Emerald to Sky gradient) */}
+            {/* Single-Line Typewriter Animation (Dynamic from Notion Role & Bio) */}
             <TerminalTyping
               role={lang === "VN" ? profileData.role_vn : profileData.role_en}
               bio={lang === "VN" ? profileData.bio_vn : profileData.bio_en}
             />
 
-            {/* Value Proposition */}
-            <p className="mt-3 text-sm sm:text-base md:text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl leading-relaxed">
-              {lang === "EN"
-                ? "Building & shipping production-ready software solutions from concept to deployment with full ownership."
-                : "Xây dựng và phát triển các giải pháp phần mềm hoàn chỉnh từ ý tưởng đến thực tế với tư duy làm chủ hệ thống."}
-            </p>
-
-            {/* Date of Birth if configured */}
+            {/* Date of Birth (from Notion Profile if configured) */}
             {profileData.dob && (
               <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 mt-2">
                 <Calendar className="h-3.5 w-3.5" />
@@ -684,7 +573,7 @@ export default function PortfolioUI({
               </p>
             )}
 
-            {/* Social & Contact Buttons */}
+            {/* Social & Contact Buttons (from Notion Profile) */}
             {socialLinks.length > 0 && (
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 {socialLinks.map((link) => {
@@ -706,202 +595,39 @@ export default function PortfolioUI({
             )}
           </motion.div>
         )}
-      </section>
 
-      {/* ── 2. ABOUT SECTION ────────────────────────────────────────────── */}
-      <section id="about" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.45 }}
-          className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-none relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <User className="h-5 w-5" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {lang === "EN" ? "About Me" : "Về Tôi"}
-            </h2>
-          </div>
-
-          <div className="space-y-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-            <p>
-              {lang === "EN"
-                ? "I am an Information Technology student and software builder with a deep interest in crafting practical, high-performance web applications. Operating with a builder mindset, I leverage modern engineering workflows to turn ideas into robust, production-ready software."
-                : "Tôi là sinh viên ngành Công nghệ Thông tin đam mê xây dựng các sản phẩm thực tế, hoàn chỉnh và có tính ứng dụng cao. Với tư duy của một người làm sản phẩm độc lập, tôi chú trọng vào việc biến ý tưởng thành phần mềm hoạt động trơn tru trên production."}
-            </p>
-            <p>
-              {lang === "EN"
-                ? "As a Google Student Ambassador Trainer, I actively share technological insights through workshops for university students across Ho Chi Minh City. I value solid engineering foundations: writing maintainable code, optimizing user experience, and owning solutions from UI to deployment."
-                : "Với vai trò Trainer Đại sứ Sinh viên Google (GSA Trainer), tôi tích cực chia sẻ kiến thức công nghệ qua các buổi workshop cho sinh viên tại TP.HCM. Tôi luôn đề cao nền tảng kỹ thuật vững chắc: viết mã nguồn rõ ràng, tối ưu trải nghiệm người dùng và làm chủ toàn bộ chu trình phát triển."}
-            </p>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── 3. SKILLS SECTION ────────────────────────────────────────────── */}
-      <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-            <Cpu className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {lang === "EN" ? "Technical Skills" : "Kỹ Năng Công Nghệ"}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên môn"}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {skillsData.map((group, idx) => {
-            const Icon = group.icon;
-            return (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: idx * 0.08 }}
-                className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-              >
-                <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${group.gradient} rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500`} />
-                <div className="flex items-center gap-2.5 mb-3.5">
-                  <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-200">
-                    {group.category}
-                  </h3>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.skills.map((skill, sIdx) => (
-                    <span
-                      key={sIdx}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-emerald-400/40 transition-colors"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── 4. EXPERIENCE & HIGHLIGHTS ──────────────────────────────────── */}
-      <section id="experience" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
-            <Briefcase className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {lang === "EN" ? "Experience & Highlights" : "Kinh Nghiệm & Thành Tựu"}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Key industry engagements and project activities" : "Các vai trò thực tế và hoạt động nổi bật"}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {experienceData.map((exp, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: idx * 0.1 }}
-              className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
+        {/* Dynamic Tags Filter (Extracted dynamically from Notion Items) */}
+        {allDynamicTags.length > 0 && (
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 max-w-3xl mx-auto">
+            <button
+              onClick={() => handleTagClick(null)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedTag === null
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
+              }`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                      {lang === "VN" ? exp.role_vn : exp.role_en}
-                    </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                      {exp.badge}
-                    </span>
-                  </div>
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                    {exp.org}
-                  </p>
-                </div>
-                <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 shrink-0">
-                  {exp.period}
-                </span>
-              </div>
-
-              <ul className="space-y-1.5 mt-3">
-                {(lang === "VN" ? exp.desc_vn : exp.desc_en).map((bullet, bIdx) => (
-                  <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{bullet}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
+              {lang === "EN" ? "All Tags" : "Tất cả"}
+            </button>
+            {allDynamicTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleTagClick(selectedTag === tag ? null : tag)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                  selectedTag === tag
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                    : `${getTagStyle(tag)} hover:opacity-80`
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* ── 5. EDUCATION SECTION ────────────────────────────────────────── */}
-      <section id="education" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <GraduationCap className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {lang === "EN" ? "Education" : "Học Vấn"}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {lang === "EN" ? "Academic background & foundational studies" : "Nền tảng học thuật và đào tạo chính quy"}
-            </p>
-          </div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45 }}
-          className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                {lang === "EN"
-                  ? "Ly Tu Trong College of Ho Chi Minh City"
-                  : "Trường Cao Đẳng Lý Tự Trọng TP.HCM"}
-              </h3>
-              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {lang === "EN"
-                  ? "Information Technology (Class 25C2-LTM1)"
-                  : "Chuyên ngành Công Nghệ Thông Tin (Lớp 25C2-LTM1)"}
-              </p>
-            </div>
-            <div className="text-left sm:text-right">
-              <span className="inline-block px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                GPA: 3.5 / 4.0
-              </span>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono">
-                {lang === "EN" ? "Expected Graduation: 2027" : "Dự kiến tốt nghiệp: 2027"}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── 6. FEATURED PROJECTS (PAGINATED & SORTABLE) ──────────────────── */}
-      <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-10">
+      {/* ── 2. PROJECTS SECTION (100% DYNAMIC FROM NOTION CMS) ──────────── */}
+      <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -914,8 +640,8 @@ export default function PortfolioUI({
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
               {lang === "EN"
-                ? `Showing ${paginatedProjects.length} of ${sortedProjects.length} projects (${ITEMS_PER_PAGE} per page)`
-                : `Hiển thị ${paginatedProjects.length} trên tổng số ${sortedProjects.length} dự án (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
+                ? `Showing ${paginatedProjects.length} of ${sortedProjects.length} items (${ITEMS_PER_PAGE} per page)`
+                : `Hiển thị ${paginatedProjects.length} trên tổng số ${sortedProjects.length} mục (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
             </p>
           </div>
 
@@ -928,7 +654,7 @@ export default function PortfolioUI({
             <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
               <button
                 onClick={() => handleProjectSortChange("newest")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   projectSort === "newest"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -938,7 +664,7 @@ export default function PortfolioUI({
               </button>
               <button
                 onClick={() => handleProjectSortChange("oldest")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   projectSort === "oldest"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -951,108 +677,114 @@ export default function PortfolioUI({
         </div>
 
         {/* Project Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedProjects.map((project, index) => {
-            const title =
-              (lang === "EN" ? project.title_en : project.title_vn) ||
-              project.title_en ||
-              project.title_vn ||
-              "Untitled Project";
+        {sortedProjects.length === 0 ? (
+          <div className="text-center py-16 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500">
+            {lang === "EN" ? "No projects found matching the criteria." : "Không tìm thấy dự án nào phù hợp."}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedProjects.map((project, index) => {
+              const title =
+                (lang === "EN" ? project.title_en : project.title_vn) ||
+                project.title_en ||
+                project.title_vn ||
+                "Untitled Project";
 
-            const desc =
-              (lang === "EN" ? project.desc_en || project.desc_vn : project.desc_vn || project.desc_en) || "";
+              const desc =
+                (lang === "EN" ? project.desc_en || project.desc_vn : project.desc_vn || project.desc_en) || "";
 
-            const hasImage = project.images && project.images[0];
+              const hasImage = project.images && project.images[0];
 
-            return (
-              <motion.div
-                key={project.id}
-                onClick={() => setSelectedProject(project)}
-                initial={{ opacity: 0, y: 25 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.45, delay: index * 0.06 }}
-                className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-emerald-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
-              >
-                {/* Image Cover */}
-                <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  {hasImage ? (
-                    <Image
-                      src={project.images[0]}
-                      alt={title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                      priority={index < 3}
-                      quality={85}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-sky-500/10">
-                      <Code className="h-10 w-10 text-emerald-500/40" />
-                    </div>
-                  )}
+              return (
+                <motion.div
+                  key={project.id}
+                  onClick={() => setSelectedProject(project)}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-emerald-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
+                >
+                  {/* Image Cover */}
+                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    {hasImage ? (
+                      <Image
+                        src={project.images[0]}
+                        alt={title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                        priority={index < 3}
+                        quality={85}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-sky-500/10">
+                        <Code className="h-10 w-10 text-emerald-500/40" />
+                      </div>
+                    )}
 
-                  {/* Category Tag Overlay */}
-                  {project.category && (
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-white border border-white/10 shadow-sm">
-                        {project.category}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Content */}
-                <div className="flex flex-1 flex-col p-5 sm:p-6">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    {renderDateRange(project.project_date)}
-                    {project.links && (
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                        <span>{lang === "EN" ? "View Details" : "Xem Chi Tiết"}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </span>
+                    {/* Category Tag Overlay */}
+                    {project.category && (
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-white border border-white/10 shadow-sm">
+                          {project.category}
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
-                    {title}
-                  </h3>
-
-                  <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
-                    <LinkifiedText text={desc} />
-                  </div>
-
-                  {/* Tags */}
-                  {project.tags && project.tags.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                      {project.tags.slice(0, 4).map((tag) => (
-                        <span
-                          key={tag}
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {project.tags.length > 4 && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
-                          +{project.tags.length - 4}
+                  {/* Card Content */}
+                  <div className="flex flex-1 flex-col p-5 sm:p-6">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      {renderDateRange(project.project_date)}
+                      {project.links && (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                          <span>{lang === "EN" ? "View Details" : "Xem Chi Tiết"}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5" />
                         </span>
                       )}
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
+                      {title}
+                    </h3>
+
+                    <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
+                      <LinkifiedText text={desc} />
+                    </div>
+
+                    {/* Tags */}
+                    {project.tags && project.tags.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        {project.tags.slice(0, 4).map((tag) => (
+                          <span
+                            key={tag}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {project.tags.length > 4 && (
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
+                            +{project.tags.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Pagination Controls */}
         {renderPagination(projectPage, totalProjectPages, setProjectPage)}
       </section>
 
-      {/* ── 7. CERTIFICATES SECTION (CARD GALLERY & PAGINATED) ──────────── */}
+      {/* ── 3. CERTIFICATES SECTION (100% DYNAMIC CARD GALLERY FROM NOTION) ─ */}
       {rawCertificates.length > 0 && (
-        <section id="certificates" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-10">
+        <section id="certificates" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -1079,7 +811,7 @@ export default function PortfolioUI({
               <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
                 <button
                   onClick={() => handleCertSortChange("newest")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     certSort === "newest"
                       ? "bg-teal-600 text-white shadow-xs"
                       : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -1089,7 +821,7 @@ export default function PortfolioUI({
                 </button>
                 <button
                   onClick={() => handleCertSortChange("oldest")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     certSort === "oldest"
                       ? "bg-teal-600 text-white shadow-xs"
                       : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -1119,10 +851,10 @@ export default function PortfolioUI({
                 <motion.div
                   key={cert.id}
                   onClick={() => setSelectedProject(cert)}
-                  initial={{ opacity: 0, y: 25 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.45, delay: index * 0.06 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-teal-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
                   {/* Certificate Image Cover Preview */}
@@ -1203,11 +935,11 @@ export default function PortfolioUI({
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-slate-200/80 dark:border-slate-800/80 mt-16 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
         <p>
-          © {new Date().getFullYear()} Nguyen Chi Thang • Built with Next.js 16, Notion CMS & Google Gemini AI.
+          © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} • Built with Next.js 16, Notion CMS & Google Gemini AI.
         </p>
       </footer>
 
-      {/* ── CASE STUDY / CERTIFICATE DETAILS MODAL ───────────────────────── */}
+      {/* ── DETAIL MODAL ─────────────────────────────────────────────────── */}
       <AnimatePresence>
         {selectedProject && (
           <div
