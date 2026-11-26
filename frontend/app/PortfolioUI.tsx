@@ -10,9 +10,7 @@ import React, {
 } from "react";
 import { useTheme } from "next-themes";
 import {
-  Briefcase,
   Calendar,
-  Camera,
   ExternalLink,
   FolderKanban,
   Mail,
@@ -37,6 +35,15 @@ import {
   useReducedMotionPreference,
 } from "./components/Scroll3D";
 import SafePortfolioImage from "./components/SafePortfolioImage";
+import {
+  preloadImagesPriority,
+  preloadImagesBackground,
+} from "./components/imagePreloader";
+import {
+  buildTagColorMap,
+  getTagColorScheme,
+  type TagColorScheme,
+} from "./components/tagPalette";
 import { useMagneticHandlers } from "./components/Magnetic";
 import ShowcaseCarousel from "./components/ShowcaseCarousel";
 import MoreInfoView from "./components/MoreInfoView";
@@ -48,10 +55,10 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="16"
-      height="16"
+      width="18"
+      height="18"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.9"
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -59,6 +66,46 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
     >
       <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
       <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
+
+function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect width="4" height="12" x="2" y="9" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  );
+}
+
+function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
     </svg>
   );
 }
@@ -106,27 +153,16 @@ function LinkifiedText({
   );
 }
 
-const TYPING_SPEED = 36;
-const DELETING_SPEED = 16;
-const PAUSE_TIME = 2600;
+// ── Classic Single-Phrase Typewriter Matching Original Notion Delimiter Conventions ──
+const TYPING_SPEED = 42;
+const DELETING_SPEED = 18;
+const PAUSE_TIME = 2200;
 const GAP_TIME = 280;
 
-/**
- * Splits multi-phrase subtitle text on explicit `|` or blank-line paragraph breaks
- * or sentence-ending punctuation, while normalizing soft single line-breaks (`\n`)
- * into spaces so multi-line Notion sentences are never chopped mid-clause.
- */
 function splitPhrases(text: string): string[] {
   if (!text) return [];
   return text
-    .split(/\r?\n\s*\r?\n+|\|/)
-    .flatMap((block) =>
-      block
-        .replace(/\s*\r?\n\s*/g, " ")
-        .replace(/\s{2,}/g, " ")
-        .trim()
-        .split(/(?<=[.!?])\s+/)
-    )
+    .split(/\r?\n+|\||(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -135,8 +171,7 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
   const items = useMemo(() => {
     const roleItems = role ? splitPhrases(role) : [];
     const bioItems = bio ? splitPhrases(bio) : [];
-    const merged = [...roleItems, ...bioItems].filter(Boolean);
-    return Array.from(new Set(merged));
+    return [...roleItems, ...bioItems].filter(Boolean);
   }, [role, bio]);
 
   const reducedMotion = useReducedMotionPreference();
@@ -156,10 +191,6 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
           setDisplayText(currentItem.slice(0, displayText.length + 1));
         }, TYPING_SPEED);
         return () => clearTimeout(timeout);
-      }
-      if (items.length <= 1) {
-        // Keep single phrase steady once fully typed instead of endlessly erasing and retyping
-        return;
       }
       const timeout = setTimeout(() => {
         setIsDeleting(true);
@@ -183,13 +214,13 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
   if (!items.length) return null;
 
   return (
-    <div className="w-full min-h-[1.8rem] py-[0.1em]">
-      <p className="text-[15px] sm:text-[18px] font-normal text-[var(--ink-meta)] leading-[1.55]">
+    <div className="w-full min-h-[1.85rem] py-[0.12em]">
+      <p className="text-[15.5px] sm:text-[18px] font-normal text-[var(--ink-secondary)] leading-[1.55]">
         <span>{reducedMotion ? items.join(" · ") : displayText}</span>
         {!reducedMotion && (
           <span
             aria-hidden="true"
-            className="inline-block w-[1.5px] h-[1.05em] align-middle bg-[var(--ink-meta)] ml-1 animate-pulse"
+            className="inline-block w-[1.8px] h-[1.08em] align-middle bg-[var(--ink-primary)] ml-1 animate-pulse rounded-full"
           />
         )}
       </p>
@@ -452,7 +483,7 @@ function parseParagraphs(text: string): string[] {
 }
 
 const ITEMS_PER_PAGE = 6;
-const INITIAL_VISIBLE_TAGS = 12;
+const INITIAL_VISIBLE_TAGS = 14;
 
 const getTimeValue = (item: Project): number => {
   if (item.project_date?.start) {
@@ -491,16 +522,14 @@ const DEMO_CERT_SVG =
 const DEV_DEMO_PROFILE: ProfileData = {
   name_en: "Nguyen Chi Thang",
   name_vn: "Nguyễn Chí Thắng",
-  role_en: "AI Application Engineer | Solo Builder & Product Architect",
-  role_vn: "Kỹ Sư Ứng Dụng AI | Kiến Trúc Sư Sản Phẩm Độc Lập",
-  bio_en:
-    "Designing intelligent LLM workflows, computer vision systems, and minimalist software.",
-  bio_vn:
-    "Thiết kế hệ thống tự động hóa LLM, thị giác máy tính và phần mềm tối giản chuẩn quốc tế.",
-  about_en:
-    "I build end-to-end AI applications, autonomous agent workflows, and crisp user interfaces that feel effortless to use.\n\nMy work bridges Notion CMS pipelines, multimodal LLMs, and high-craft web engineering—turning complex backend orchestration into calm, tactile product experiences.",
-  about_vn:
-    "Mình xây dựng các ứng dụng AI toàn trình, hệ thống tác tử tự hành và giao diện người dùng tối giản, mượt mà đến từng chuyển động.\n\nCác dự án kết hợp sức mạnh của Notion CMS, mô hình ngôn ngữ lớn đa phương thức và kỹ thuật web hiện đại để biến những luồng xử lý phức tạp thành trải nghiệm tinh gọn nhất.",
+  role_en:
+    "Hi, I am looking for an AI Application Engineer position,\nand a Full Stack AI Developer position,\nas well as an AI Software Engineer position.",
+  role_vn:
+    "Xin chào, tôi đang tìm kiếm vị trí Kỹ sư Ứng dụng AI,\nvà vị trí Lập trình viên AI Full-stack,\ncũng như vị trí Kỹ sư Phần mềm AI.",
+  bio_en: "Passionate about tinkering with AI :>",
+  bio_vn: "Đam mê vọc vạch về AI :>",
+  about_en: "",
+  about_vn: "",
   skills_en:
     "AI & Agents: LLMs, Computer Vision, OpenRouter, RAG, Prompt Engineering\nFrontend: Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion\nBackend & Ops: Python, Node.js, Notion API, GitHub Actions, Docker",
   skills_vn:
@@ -530,9 +559,9 @@ const DEV_DEMO_PROJECTS: Project[] = [
       "A Rust-based MCP (Model Context Protocol) server that gives AI agents — Hermes, Claude, Cursor, OpenClaw, Codex — the ability to scan, analyze, organize, and safely clean junk files on Windows, macOS, and Linux. https://github.com/CThawngs",
     desc_vn:
       "Máy chủ MCP viết bằng Rust giúp các tác tử AI quét, phân tích, sắp xếp và dọn dẹp tệp rác an toàn trên Windows, macOS và Linux. https://github.com/CThawngs",
-    category: "Developer Tools",
+    category: "Project",
     links: "https://github.com/CThawngs",
-    images: ["/Portfolio Publish One Click.gif", "/Portfolio Archive.gif"],
+    images: ["/Portfolio Publish One Click.gif"],
     tags: ["Artificial Intelligence", "Website", "Coding", "Git", "GitHub"],
     project_date: { start: "2026-07-01", end: "2026-09-25" },
   },
@@ -545,7 +574,7 @@ const DEV_DEMO_PROJECTS: Project[] = [
       "Serverless bridge between Notion CMS and OpenRouter LLMs with context-aware bilingual translation and instant ISR publishing. https://github.com/CThawngs/Portfolio",
     desc_vn:
       "Cầu nối serverless giữa Notion CMS và OpenRouter LLM giúp dịch thuật song ngữ tự động chuẩn ngữ cảnh kỹ thuật số. https://github.com/CThawngs/Portfolio",
-    category: "AI Systems",
+    category: "Project",
     links: "https://github.com/CThawngs/Portfolio",
     images: ["/Portfolio Translate Automation.gif"],
     tags: ["Next.js", "Notion API", "Python", "OpenRouter", "Tailwind CSS"],
@@ -560,7 +589,7 @@ const DEV_DEMO_PROJECTS: Project[] = [
       "High-craft workspace automation and instant edge cache revalidation for real-time publishing.",
     desc_vn:
       "Tự động hóa không gian làm việc và làm mới bộ nhớ đệm biên tức thì cho xuất bản thời gian thực.",
-    category: "AI Systems",
+    category: "Project",
     links: "https://github.com/CThawngs",
     images: ["/Portfolio Archive.gif"],
     tags: ["TypeScript", "MCP", "Edge ISR", "REST API"],
@@ -618,7 +647,7 @@ function NavPillButton({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className={`magnetic-target relative shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] sm:text-[13px] font-semibold transition-all cursor-pointer ${
+      className={`magnetic-target relative shrink-0 inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] sm:rounded-[9px] text-[12px] sm:text-[13px] font-semibold transition-all cursor-pointer ${
         active
           ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
           : "bg-transparent text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
@@ -627,7 +656,7 @@ function NavPillButton({
       <span>{children}</span>
       {typeof count === "number" && (
         <span
-          className={`px-1.5 py-0.2 rounded-full text-[10.5px] tabular-nums ${
+          className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-[10.5px] tabular-nums ${
             active
               ? "bg-[var(--pill-bg)] text-[var(--ink-primary)]"
               : "text-[var(--ink-muted)]"
@@ -666,6 +695,7 @@ interface ShowcaseSectionBlockProps {
   rawItems: Project[];
   categories: { name: string; count: number }[];
   tags: string[];
+  tagColorMap: Map<string, TagColorScheme>;
   layoutMode: ShowcaseLayout;
   onLayoutModeChange: (mode: ShowcaseLayout) => void;
   sortOrder: SortOrder;
@@ -691,6 +721,7 @@ function ShowcaseSectionBlock({
   rawItems,
   categories,
   tags,
+  tagColorMap,
   layoutMode,
   onLayoutModeChange,
   sortOrder,
@@ -740,6 +771,22 @@ function ShowcaseSectionBlock({
     return filteredItems.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredItems, currentPage]);
 
+  // High-priority preload of current, previous, and next 2 pagination pages for 0ms page transitions
+  useEffect(() => {
+    if (!filteredItems.length) return;
+    const windowStart = Math.max(0, (currentPage - 2) * ITEMS_PER_PAGE);
+    const windowEnd = Math.min(
+      filteredItems.length,
+      (currentPage + 2) * ITEMS_PER_PAGE
+    );
+    const priorityUrls: string[] = [];
+    for (let i = windowStart; i < windowEnd; i++) {
+      const imgs = filteredItems[i]?.images;
+      if (imgs && imgs[0]) priorityUrls.push(imgs[0]);
+    }
+    preloadImagesPriority(priorityUrls);
+  }, [filteredItems, currentPage]);
+
   const visibleTags = useMemo(() => {
     if (showAllTags || tags.length <= INITIAL_VISIBLE_TAGS) {
       return tags;
@@ -755,18 +802,17 @@ function ShowcaseSectionBlock({
     onPageChange(nextPage);
     if (sectionTopRef.current) {
       const y =
-        sectionTopRef.current.getBoundingClientRect().top + window.scrollY - 84;
+        sectionTopRef.current.getBoundingClientRect().top + window.scrollY - 76;
       window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     }
   };
 
-  // Show category filter bar only when there are 2+ distinct categories to filter between
   const showCategoryPills = categories.length > 1;
 
   return (
     <Scroll3DSection id={sectionId} className="apple-shell py-4 sm:py-6">
       <div ref={sectionTopRef} className="space-y-4 sm:space-y-5">
-        {/* Section Header + Default Grid / Stage Switch + Newest / Oldest Sort */}
+        {/* Section Header + Shared Grid / Stage Switch + Independent Newest / Oldest Sort */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -797,12 +843,13 @@ function ShowcaseSectionBlock({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Grid (Default, First) / Stage Switch */}
+            {/* Shared Global Grid / Stage Switch */}
             <div className="inline-flex h-9 sm:h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
               <button
                 type="button"
                 onClick={() => onLayoutModeChange("grid")}
                 data-cursor="magnetic"
+                aria-pressed={layoutMode === "grid"}
                 className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
                   layoutMode === "grid"
                     ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
@@ -816,6 +863,7 @@ function ShowcaseSectionBlock({
                 type="button"
                 onClick={() => onLayoutModeChange("stage")}
                 data-cursor="magnetic"
+                aria-pressed={layoutMode === "stage"}
                 className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
                   layoutMode === "stage"
                     ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
@@ -827,7 +875,7 @@ function ShowcaseSectionBlock({
               </button>
             </div>
 
-            {/* Sort Newest / Oldest */}
+            {/* Independent Section Sort: Newest / Oldest */}
             <div className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
               <span className="hidden sm:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
                 <ArrowUpDown className="h-3.5 w-3.5" />
@@ -860,7 +908,7 @@ function ShowcaseSectionBlock({
           </div>
         </div>
 
-        {/* Category Filter Pills */}
+        {/* Category Filter Pills (Only shown if 2+ distinct categories exist) */}
         {showCategoryPills && (
           <div className="w-full overflow-x-auto hide-scrollbar">
             <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
@@ -913,7 +961,7 @@ function ShowcaseSectionBlock({
           </div>
         )}
 
-        {/* Tag Filter Pills */}
+        {/* Diverse Non-Repeating Multi-Color Tag Filter Bar */}
         {tags.length > 0 && (
           <div className="w-full overflow-x-auto hide-scrollbar">
             <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
@@ -927,9 +975,9 @@ function ShowcaseSectionBlock({
                   onSelectTag(null);
                   onPageChange(1);
                 }}
-                className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`h-7 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   !selectedTag
-                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                    ? "bg-[var(--ink-primary)] text-[var(--background)] shadow-xs"
                     : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
                 }`}
               >
@@ -938,6 +986,7 @@ function ShowcaseSectionBlock({
 
               {visibleTags.map((tag) => {
                 const active = selectedTag === tag;
+                const scheme = getTagColorScheme(tag, tagColorMap);
                 return (
                   <button
                     key={tag}
@@ -946,10 +995,10 @@ function ShowcaseSectionBlock({
                       onSelectTag(active ? null : tag);
                       onPageChange(1);
                     }}
-                    className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                       active
-                        ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                        : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                        ? scheme.activePill
+                        : `${scheme.pill} hover:opacity-85`
                     }`}
                   >
                     {tag}
@@ -961,7 +1010,7 @@ function ShowcaseSectionBlock({
                 <button
                   type="button"
                   onClick={() => setShowAllTags((prev) => !prev)}
-                  className="h-7 px-2.5 rounded-full text-xs font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   {showAllTags
                     ? lang === "EN"
@@ -976,7 +1025,7 @@ function ShowcaseSectionBlock({
           </div>
         )}
 
-        {/* Active View: Grid (Default) with 3D Scroll & Specular Tilt OR Zero-Overlap 3-Column Stage */}
+        {/* Active View: Shared Grid OR Frameless 3-Column Stage */}
         {layoutMode === "stage" ? (
           <ShowcaseCarousel
             key={`${sectionId}-${activeCategory ?? "all"}-${
@@ -985,6 +1034,7 @@ function ShowcaseSectionBlock({
             items={filteredItems}
             lang={lang}
             isCertificateReel={isCertificateSection}
+            tagColorMap={tagColorMap}
             onSelectProject={onSelectProject}
             formatYearOrDate={formatYearOrDate}
             formatDateRange={formatDateRangeString}
@@ -1014,17 +1064,9 @@ function ShowcaseSectionBlock({
                   const dateStr =
                     formatDateRangeString(item.project_date) ||
                     formatYearOrDate(item);
-                  const badgeCategory =
-                    item.category && item.category !== "Uncategorized"
-                      ? item.category
-                      : isCertificateSection
-                      ? lang === "EN"
-                        ? "Certificate"
-                        : "Chứng chỉ"
-                      : "";
 
                   const cardFallback = (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--surface-elevated)] to-[var(--pill-bg)]">
+                    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-elevated)]">
                       {isCertificateSection ? (
                         <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
                       ) : (
@@ -1037,16 +1079,18 @@ function ShowcaseSectionBlock({
                     <Tilt3DCard
                       key={item.id}
                       index={idx}
-                      maxTilt={4.2}
+                      maxTilt={3.8}
                       onClick={() => onSelectProject(item)}
                       className="group flex flex-col rounded-[22px] sm:rounded-[24px] apple-surface-card hover:bg-[var(--surface-card-hover)] overflow-hidden cursor-pointer"
                     >
+                      {/* Clean Image Cover — Zero Category/Certificate/Project Badge Overlay */}
                       <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
                         {hasImage ? (
                           <SafePortfolioImage
                             src={item.images[0]}
                             alt={title}
                             fill
+                            priority={idx < 3}
                             fallback={cardFallback}
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className={`${
@@ -1057,18 +1101,6 @@ function ShowcaseSectionBlock({
                           />
                         ) : (
                           cardFallback
-                        )}
-
-                        {badgeCategory && (
-                          <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold text-[var(--ink-primary)]">
-                            {badgeCategory}
-                          </span>
-                        )}
-
-                        {item.images && item.images.length > 1 && (
-                          <span className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold tabular-nums text-[var(--ink-primary)]">
-                            1 / {item.images.length}
-                          </span>
                         )}
                       </div>
 
@@ -1111,14 +1143,20 @@ function ShowcaseSectionBlock({
                           <div className="mt-auto pt-3.5 border-t border-[var(--card-border)] space-y-2.5">
                             {item.tags && item.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
-                                {item.tags.map((t) => (
-                                  <span
-                                    key={t}
-                                    className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)]"
-                                  >
-                                    {t}
-                                  </span>
-                                ))}
+                                {item.tags.map((t) => {
+                                  const scheme = getTagColorScheme(
+                                    t,
+                                    tagColorMap
+                                  );
+                                  return (
+                                    <span
+                                      key={t}
+                                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border ${scheme.pill}`}
+                                    >
+                                      {t}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
 
@@ -1209,12 +1247,11 @@ export default function PortfolioUI({
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
 
-  // Default layout mode is "grid" for both Projects and Certificates
-  const [projectLayoutMode, setProjectLayoutMode] =
-    useState<ShowcaseLayout>("grid");
-  const [certLayoutMode, setCertLayoutMode] =
+  // Single unified layout state shared across BOTH Projects and Certificates
+  const [showcaseLayoutMode, setShowcaseLayoutMode] =
     useState<ShowcaseLayout>("grid");
 
+  // Independent filter, sort & pagination states per section
   const [selectedProjectCategory, setSelectedProjectCategory] = useState<
     string | null
   >(null);
@@ -1337,28 +1374,49 @@ export default function PortfolioUI({
     };
   }, [projects]);
 
-  const hasExplicitAbout = useMemo(() => {
-    if (!profileData) return false;
-    const raw =
-      lang === "VN"
-        ? profileData.about_vn || profileData.about_en
-        : profileData.about_en || profileData.about_vn;
-    return parseParagraphs(raw || "").length > 0;
-  }, [profileData, lang]);
+  // Collision-free multi-color palette map across all portfolio tags
+  const tagColorMap = useMemo(
+    () => buildTagColorMap([...projectTags, ...certTags]),
+    [projectTags, certTags]
+  );
 
+  // Warm & decode all portfolio images into browser memory so pagination & Stage switches are instant
+  useEffect(() => {
+    if (!projects.length) return;
+    const sortedProjImgs = [...rawProjects]
+      .sort((a, b) => getTimeValue(b) - getTimeValue(a))
+      .flatMap((p) => p.images || [])
+      .filter(Boolean);
+    const sortedCertImgs = [...rawCertificates]
+      .sort((a, b) => getTimeValue(b) - getTimeValue(a))
+      .flatMap((c) => c.images || [])
+      .filter(Boolean);
+
+    // Immediately warm first 2 pages of Projects & Certificates
+    preloadImagesPriority([
+      ...sortedProjImgs.slice(0, 12),
+      ...sortedCertImgs.slice(0, 12),
+    ]);
+
+    // Queue all remaining images in background right after initial paint
+    const timer = window.setTimeout(() => {
+      preloadImagesBackground([
+        ...sortedProjImgs.slice(12),
+        ...sortedCertImgs.slice(12),
+      ]);
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [projects.length, rawProjects, rawCertificates]);
+
+  // Only render explicit `about_vn` / `about_en` as static paragraphs; `bio` belongs in TerminalTyping
   const aboutParagraphs = useMemo(() => {
     if (!profileData) return [];
     const raw =
       lang === "VN"
         ? profileData.about_vn || profileData.about_en
         : profileData.about_en || profileData.about_vn;
-    const paras = parseParagraphs(raw || "");
-    if (paras.length > 0) return paras;
-    const fallbackBio =
-      lang === "VN"
-        ? profileData.bio_vn || profileData.bio_en
-        : profileData.bio_en || profileData.bio_vn;
-    return fallbackBio ? [cleanText(fallbackBio)] : [];
+    return parseParagraphs(raw || "");
   }, [profileData, lang]);
 
   const parsedSkills = useMemo(() => {
@@ -1397,17 +1455,10 @@ export default function PortfolioUI({
     );
   }, [profileData, lang]);
 
+  // Ordered strictly: GitHub, Email, LinkedIn, Instagram
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
     const links = [];
-    if (profileData.email) {
-      links.push({
-        type: "email",
-        label: profileData.email,
-        href: `mailto:${profileData.email}`,
-        icon: Mail,
-      });
-    }
     if (profileData.github) {
       links.push({
         type: "github",
@@ -1416,12 +1467,20 @@ export default function PortfolioUI({
         icon: GithubIcon,
       });
     }
+    if (profileData.email) {
+      links.push({
+        type: "email",
+        label: `Email (${profileData.email})`,
+        href: `mailto:${profileData.email}`,
+        icon: Mail,
+      });
+    }
     if (profileData.linkedin) {
       links.push({
         type: "linkedin",
         label: "LinkedIn",
         href: profileData.linkedin,
-        icon: Briefcase,
+        icon: LinkedinIcon,
       });
     }
     if (profileData.instagram) {
@@ -1429,7 +1488,7 @@ export default function PortfolioUI({
         type: "instagram",
         label: "Instagram",
         href: profileData.instagram,
-        icon: Camera,
+        icon: InstagramIcon,
       });
     }
     return links;
@@ -1490,7 +1549,7 @@ export default function PortfolioUI({
       rafId = window.requestAnimationFrame(() => {
         rafId = null;
         const y = window.scrollY;
-        setIsScrolled(y > 16);
+        setIsScrolled(y > 12);
 
         let current = navSections[0]?.id || "about";
         for (const sec of navSections) {
@@ -1522,7 +1581,7 @@ export default function PortfolioUI({
     }
     const el = document.getElementById(sectionId);
     if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 78;
+      const y = el.getBoundingClientRect().top + window.scrollY - 72;
       window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     }
   }, []);
@@ -1562,7 +1621,6 @@ export default function PortfolioUI({
     []
   );
 
-  const navLeftMagnetic = useMagneticHandlers(5);
   const footerEmailMagnetic = useMagneticHandlers(4);
 
   const activeTypingRole = profileData
@@ -1571,55 +1629,39 @@ export default function PortfolioUI({
       profileData.role_vn ||
       ""
     : "";
-  const rawTypingBio = profileData
+  const activeTypingBio = profileData
     ? (lang === "VN" ? profileData.bio_vn : profileData.bio_en) ||
       profileData.bio_en ||
       profileData.bio_vn ||
       ""
     : "";
-  // Avoid repeating `bio` in TerminalTyping when `about` is empty and `bio` is already shown as the Hero paragraph
-  const activeTypingBio =
-    hasExplicitAbout || !activeTypingRole ? rawTypingBio : "";
 
   return (
-    <div className="relative min-h-screen flex flex-col text-[var(--foreground)] selection:bg-[#FFD433] selection:text-black">
-      {/* Multi-Layered GPU Apple Studio Ambient Backdrop */}
+    <div className="relative min-h-screen flex flex-col text-[var(--foreground)]">
+      {/* Matte Editorial Backdrop */}
       <AmbientBackdrop />
       <CustomCursor />
 
       <div className="relative z-10 flex-1 flex flex-col">
-        {/* Sticky Floating Single-Page Apple Glass Header */}
+        {/* Borderless Minimalist Sticky Header (Clean Empty Left, Centered Nav, Dual EN|VN Toggle) */}
         <header
-          className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+          className={`sticky top-0 z-40 w-full border-0 shadow-none transition-[background-color,padding] duration-200 ${
             isScrolled
-              ? "py-2.5 apple-glass border-x-0 border-t-0"
-              : "pt-3.5 sm:pt-5 pb-2 bg-transparent"
+              ? "py-2 sm:py-2.5 apple-header-scrim"
+              : "pt-3 sm:pt-4 pb-2 bg-transparent"
           }`}
         >
           <div className="apple-shell">
-            <div className="flex items-center justify-between gap-2.5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
-              {/* Left Brand */}
-              <div className="flex items-center min-w-0 lg:justify-self-start">
-                <button
-                  type="button"
-                  onClick={() => jumpToSection("about")}
-                  onPointerMove={navLeftMagnetic.onPointerMove}
-                  onPointerLeave={navLeftMagnetic.onPointerLeave}
-                  data-cursor="magnetic"
-                  className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-2 text-left min-w-0 cursor-pointer group"
-                >
-                  <span className="text-[14.5px] sm:text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-primary)] group-hover:opacity-75 transition-opacity truncate">
-                    {profileName}
-                  </span>
-                </button>
-              </div>
+            <div className="flex items-center justify-between gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
+              {/* Intentionally Clean Empty Left Space on Desktop */}
+              <div aria-hidden="true" className="hidden lg:block" />
 
-              {/* Center Single-Page Jump-Link Bar (Desktop >= 1024px) */}
+              {/* Single-Page Jump-Link Bar (Centered on Desktop, Smooth Scrollable Strip on Mobile) */}
               <nav
                 aria-label={
                   lang === "EN" ? "Portfolio navigation" : "Điều hướng trang"
                 }
-                className="hidden lg:inline-flex lg:justify-self-center items-center gap-0.5 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
+                className="flex-1 min-w-0 lg:flex-initial lg:justify-self-center flex items-center gap-0.5 p-1 h-9 sm:h-10 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
               >
                 {navSections.map((sec) => (
                   <NavPillButton
@@ -1633,7 +1675,7 @@ export default function PortfolioUI({
                 ))}
               </nav>
 
-              {/* Right Utility Controls (Live Clock + Language + Theme) */}
+              {/* Right Utility Controls (Clock + Dual EN | VN Segmented Toggle + Theme) */}
               <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 lg:justify-self-end">
                 {mounted && vnTime && (
                   <span className="hidden xl:inline text-[12.5px] font-medium tabular-nums text-[var(--ink-muted)] mr-1">
@@ -1641,19 +1683,34 @@ export default function PortfolioUI({
                   </span>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setLang((prev) => (prev === "EN" ? "VN" : "EN"))}
-                  data-cursor="magnetic"
-                  className="inline-flex h-9 sm:h-10 min-w-[40px] sm:min-w-[44px] items-center justify-center px-2.5 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[11.5px] sm:text-[12px] font-bold tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
+                {/* Dual-Option Language Toggle Showing Both EN & VN */}
+                <div
+                  role="group"
                   aria-label={
-                    lang === "EN"
-                      ? "Switch to Vietnamese"
-                      : "Chuyển sang tiếng Anh"
+                    lang === "EN" ? "Select language" : "Chọn ngôn ngữ"
                   }
+                  className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline"
                 >
-                  {lang}
-                </button>
+                  {(["EN", "VN"] as const).map((code) => {
+                    const active = lang === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setLang(code)}
+                        aria-pressed={active}
+                        data-cursor="magnetic"
+                        className={`h-7 sm:h-8 min-w-[30px] sm:min-w-[34px] px-2 sm:px-2.5 rounded-[8px] text-[11px] sm:text-[11.5px] font-bold tracking-wider transition-all cursor-pointer ${
+                          active
+                            ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
+                        }`}
+                      >
+                        {code}
+                      </button>
+                    );
+                  })}
+                </div>
 
                 <button
                   type="button"
@@ -1680,33 +1737,12 @@ export default function PortfolioUI({
                 </button>
               </div>
             </div>
-
-            {/* Mobile & Tablet (< 1024px, safe horizontal scroll for 360px/375px iPhone mini/7/X) */}
-            <div className="lg:hidden mt-2 w-full overflow-x-auto hide-scrollbar">
-              <nav
-                aria-label={
-                  lang === "EN" ? "Portfolio navigation" : "Điều hướng trang"
-                }
-                className="flex w-max min-w-full sm:min-w-0 sm:mx-auto items-center gap-0.5 p-1 h-9 rounded-[11px] bg-[var(--pill-bg)] apple-hairline"
-              >
-                {navSections.map((sec) => (
-                  <NavPillButton
-                    key={sec.id}
-                    active={activeSection === sec.id}
-                    count={sec.count}
-                    onClick={() => jumpToSection(sec.id)}
-                  >
-                    {sec.label}
-                  </NavPillButton>
-                ))}
-              </nav>
-            </div>
           </div>
         </header>
 
         {/* UNIFIED SINGLE-PAGE FLOW: Profile Info -> Projects -> Certificates */}
         <main className="flex-1 flex flex-col pb-10">
-          {/* 1. Profile Hero, About, Experience, Technical Skills & Education */}
+          {/* 1. Profile Hero (with Bottom 4 Social Icons), Experience, Technical Skills & Education */}
           <MoreInfoView
             lang={lang}
             profileName={profileName}
@@ -1715,12 +1751,10 @@ export default function PortfolioUI({
             parsedExperiences={parsedExperiences}
             parsedSkills={parsedSkills}
             parsedEducations={parsedEducations}
-            projectCount={rawProjects.length}
-            certificateCount={rawCertificates.length}
             projectTags={projectTags}
+            tagColorMap={tagColorMap}
             socialLinks={socialLinks}
             formatDate={formatDate}
-            onJumpToSection={jumpToSection}
             renderLinkifiedText={renderLinkified}
             renderTypingSubtitle={() =>
               profileData ? (
@@ -1733,7 +1767,7 @@ export default function PortfolioUI({
             }
           />
 
-          {/* 2. Projects Showcase Section (Defaults to Grid, Toggleable to 3-Column Stage) */}
+          {/* 2. Projects Showcase Section (Shared Grid / Stage Mode) */}
           <ShowcaseSectionBlock
             sectionId="projects"
             headingEn="Projects"
@@ -1742,8 +1776,9 @@ export default function PortfolioUI({
             rawItems={rawProjects}
             categories={projectCategories}
             tags={projectTags}
-            layoutMode={projectLayoutMode}
-            onLayoutModeChange={setProjectLayoutMode}
+            tagColorMap={tagColorMap}
+            layoutMode={showcaseLayoutMode}
+            onLayoutModeChange={setShowcaseLayoutMode}
             sortOrder={projectSort}
             onSortOrderChange={setProjectSort}
             selectedCategory={selectedProjectCategory}
@@ -1758,7 +1793,7 @@ export default function PortfolioUI({
             renderLinkified={renderLinkified}
           />
 
-          {/* 3. Certificates & Accreditations Section (Defaults to Grid, Toggleable to 3-Column Stage) */}
+          {/* 3. Certificates & Accreditations Section (Shared Grid / Stage Mode) */}
           {rawCertificates.length > 0 && (
             <ShowcaseSectionBlock
               sectionId="certificates"
@@ -1769,8 +1804,9 @@ export default function PortfolioUI({
               rawItems={rawCertificates}
               categories={certCategories}
               tags={certTags}
-              layoutMode={certLayoutMode}
-              onLayoutModeChange={setCertLayoutMode}
+              tagColorMap={tagColorMap}
+              layoutMode={showcaseLayoutMode}
+              onLayoutModeChange={setShowcaseLayoutMode}
               sortOrder={certSort}
               onSortOrderChange={setCertSort}
               selectedCategory={selectedCertCategory}
@@ -1793,40 +1829,42 @@ export default function PortfolioUI({
             <div className="pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
               <nav
                 aria-label="Social links"
-                className="flex flex-wrap items-center justify-center md:justify-start gap-4"
+                className="flex flex-wrap items-center justify-center md:justify-start gap-3"
               >
-                {socialLinks
-                  .filter((s) => s.type !== "email")
-                  .map((s) => (
-                    <FooterMagneticLink key={s.type} href={s.href}>
-                      {s.label}
-                    </FooterMagneticLink>
-                  ))}
-                {profileData?.email && (
-                  <a
-                    href={`mailto:${profileData.email}`}
-                    className="md:hidden font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors"
-                  >
-                    E-mail
-                  </a>
-                )}
+                {socialLinks.map((s) => {
+                  const Icon = s.icon;
+                  const isMail =
+                    s.type === "email" || s.href.startsWith("mailto:");
+                  return (
+                    <a
+                      key={s.type}
+                      href={s.href}
+                      target={isMail ? undefined : "_blank"}
+                      rel={isMail ? undefined : "noopener noreferrer"}
+                      aria-label={s.label}
+                      title={s.label}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:bg-[var(--pill-bg)] transition-colors"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  );
+                })}
               </nav>
 
-              <p className="text-center font-semibold text-[var(--ink-muted)] md:justify-self-center">
-                &copy; {new Date().getFullYear()}{" "}
-                {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
+              <p className="text-[var(--ink-muted)] text-center">
+                © {new Date().getFullYear()} {profileName} Portfolio
               </p>
 
-              <div className="hidden md:flex items-center justify-end md:justify-self-end">
+              <div className="flex items-center justify-center md:justify-end">
                 {profileData?.email && (
                   <a
                     href={`mailto:${profileData.email}`}
                     onPointerMove={footerEmailMagnetic.onPointerMove}
                     onPointerLeave={footerEmailMagnetic.onPointerLeave}
                     data-cursor="magnetic"
-                    className="magnetic-target inline-flex items-center font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
+                    className="magnetic-target text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors break-all"
                   >
-                    E-mail
+                    {profileData.email}
                   </a>
                 )}
               </div>
@@ -1835,37 +1873,15 @@ export default function PortfolioUI({
         </footer>
       </div>
 
-      {/* Apple Studio Split-Inspector Detail Sheet */}
+      {/* Seamless Unified Apple Split-Inspector Modal */}
       <ProjectDetailModal
         project={selectedProject}
         lang={lang}
+        tagColorMap={tagColorMap}
         onClose={() => setSelectedProject(null)}
         formatDateRange={formatDateRangeString}
         renderLinkifiedText={renderLinkified}
       />
     </div>
-  );
-}
-
-function FooterMagneticLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(4);
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
-      data-cursor="magnetic"
-      className="magnetic-target inline-flex items-center font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
-    >
-      {children}
-    </a>
   );
 }

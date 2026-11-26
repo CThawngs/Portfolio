@@ -2,21 +2,13 @@
 
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import {
-  ArrowUpRight,
-  Award,
-  Briefcase,
-  Calendar,
-  ChevronDown,
-  Code2,
-  Cpu,
-} from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
 import { useMagneticHandlers } from "./Magnetic";
 import {
   Scroll3DSection,
-  Tilt3DCard,
   useReducedMotionPreference,
 } from "./Scroll3D";
+import { getTagColorScheme, type TagColorScheme } from "./tagPalette";
 import type { ProfileData } from "../PortfolioUI";
 
 export interface SkillGroupItem {
@@ -55,12 +47,10 @@ interface MoreInfoViewProps {
   parsedExperiences: ExperienceEntry[];
   parsedSkills: SkillGroupItem[];
   parsedEducations: EducationEntry[];
-  projectCount: number;
-  certificateCount: number;
   projectTags: string[];
+  tagColorMap?: Map<string, TagColorScheme>;
   socialLinks: SocialLinkEntry[];
   formatDate: (d: string | null) => string;
-  onJumpToSection: (sectionId: string) => void;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
   renderTypingSubtitle: () => React.ReactNode;
 }
@@ -105,6 +95,28 @@ function AppleHoverRow({
   );
 }
 
+function HeroSocialIconButton({ link }: { link: SocialLinkEntry }) {
+  const { onPointerMove, onPointerLeave } = useMagneticHandlers(5);
+  const Icon = link.icon;
+  const isMail = link.type === "email" || link.href.startsWith("mailto:");
+
+  return (
+    <a
+      href={link.href}
+      target={isMail ? undefined : "_blank"}
+      rel={isMail ? undefined : "noopener noreferrer"}
+      aria-label={link.label}
+      title={link.label}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      data-cursor="magnetic"
+      className="magnetic-target group relative inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[13px] sm:rounded-[14px] bg-[var(--pill-bg)] hover:bg-[var(--pill-active-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.06] transition-all cursor-pointer"
+    >
+      <Icon className="h-[18px] w-[18px] sm:h-[19px] sm:w-[19px]" />
+    </a>
+  );
+}
+
 export default function MoreInfoView({
   lang,
   profileName,
@@ -113,12 +125,10 @@ export default function MoreInfoView({
   parsedExperiences,
   parsedSkills,
   parsedEducations,
-  projectCount,
-  certificateCount,
   projectTags,
+  tagColorMap,
   socialLinks,
   formatDate,
-  onJumpToSection,
   renderLinkifiedText,
   renderTypingSubtitle,
 }: MoreInfoViewProps) {
@@ -126,23 +136,16 @@ export default function MoreInfoView({
   const [openExpIdx, setOpenExpIdx] = useState<number | null>(0);
   const heroRef = useRef<HTMLElement | null>(null);
 
-  const ctaMagnetic = useMagneticHandlers(5);
   const readMoreMagnetic = useMagneticHandlers(4);
-
   const reducedMotion = useReducedMotionPreference();
 
-  // Continuous GPU-only 3D Hero Parallax on scroll (target has explicit `relative` positioning)
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.968]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 22]);
-  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -3.2]);
-
-  const primaryEmailHref = profileData?.email
-    ? `mailto:${profileData.email}`
-    : socialLinks[0]?.href || "#";
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.975]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 18]);
+  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -2.5]);
 
   const firstAbout = aboutParagraphs[0] || "";
   const extraAbout = aboutParagraphs.slice(1);
@@ -150,49 +153,9 @@ export default function MoreInfoView({
     (e) => e.bullets && e.bullets.length > 0
   );
 
-  const skillGroupsCount =
-    parsedSkills.length > 0
-      ? parsedSkills.reduce((acc, g) => acc + g.skills.length, 0)
-      : projectTags.length;
-
-  const bentoStats = [
-    {
-      id: "projects",
-      label: lang === "EN" ? "Projects" : "Dự án",
-      value: projectCount,
-      sub: lang === "EN" ? "Shipped builds" : "Sản phẩm thực tế",
-      icon: Code2,
-      show: true,
-    },
-    {
-      id: "certificates",
-      label: lang === "EN" ? "Credentials" : "Chứng chỉ",
-      value: certificateCount,
-      sub: lang === "EN" ? "Verified awards" : "Chứng nhận quốc tế",
-      icon: Award,
-      show: certificateCount > 0,
-    },
-    {
-      id: "experience",
-      label: lang === "EN" ? "Experience" : "Kinh nghiệm",
-      value: parsedExperiences.length,
-      sub: lang === "EN" ? "Roles & teams" : "Vị trí đảm nhiệm",
-      icon: Briefcase,
-      show: parsedExperiences.length > 0,
-    },
-    {
-      id: "skills",
-      label: lang === "EN" ? "Tech Stack" : "Công nghệ",
-      value: skillGroupsCount,
-      sub: lang === "EN" ? "Tools & frameworks" : "Kỹ năng chuyên môn",
-      icon: Cpu,
-      show: skillGroupsCount > 0,
-    },
-  ].filter((s) => s.show);
-
   return (
-    <div className="apple-shell pt-3 sm:pt-6 pb-6 space-y-6 sm:space-y-9">
-      {/* 1. HERO & ABOUT 3D STUDIO CARD (#about) */}
+    <div className="apple-shell pt-2 sm:pt-5 pb-6 space-y-6 sm:space-y-9">
+      {/* 1. HERO & ABOUT CARD (#about) */}
       <section
         id="about"
         ref={heroRef}
@@ -210,36 +173,9 @@ export default function MoreInfoView({
                   transformOrigin: "50% 0%",
                 }
           }
-          className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[32px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
+          className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
         >
-          {/* Top Social & Contact Row */}
-          {socialLinks.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-6 sm:mb-7 border-b border-[var(--card-border)]">
-              <div className="flex flex-wrap items-center gap-x-3.5 sm:gap-x-5 gap-y-1.5">
-                {socialLinks
-                  .filter((s) => s.type !== "email")
-                  .map((link) => {
-                    const Icon = link.icon;
-                    return (
-                      <SocialStatLink key={link.type} link={link} Icon={Icon} />
-                    );
-                  })}
-              </div>
-
-              <a
-                href={primaryEmailHref}
-                onPointerMove={ctaMagnetic.onPointerMove}
-                onPointerLeave={ctaMagnetic.onPointerLeave}
-                data-cursor="magnetic"
-                className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3.5 sm:px-4 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs sm:text-[13px] font-semibold hover:opacity-85 hover:scale-[1.03] transition-all cursor-pointer"
-              >
-                <span>{lang === "EN" ? "Get in touch" : "Liên hệ ngay"}</span>
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          )}
-
-          {/* Editorial Headline & Bio */}
+          {/* Editorial Headline & Classic Single-Phrase Typing Loop */}
           <div className="max-w-3xl">
             <h1 className="apple-h1 text-[28px] sm:text-[40px] lg:text-[46px] font-semibold text-[var(--ink-primary)] mb-2 break-words">
               {profileName}
@@ -248,7 +184,7 @@ export default function MoreInfoView({
             {renderTypingSubtitle()}
 
             {profileData?.dob && (
-              <p className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[12px] sm:text-[12.5px] font-medium tabular-nums text-[var(--ink-meta)]">
+              <p className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[12px] sm:text-[12.5px] font-medium tabular-nums text-[var(--ink-meta)]">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>
                   {lang === "VN"
@@ -304,37 +240,12 @@ export default function MoreInfoView({
             )}
           </div>
 
-          {/* Interactive 3D Bento Quick-Jump Strip (Responsive 2x2 on iPhone mini/7/X, 4 cols on sm+) */}
-          {bentoStats.length > 0 && (
-            <div className="mt-6 sm:mt-8 pt-6 border-t border-[var(--card-border)] grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
-              {bentoStats.map((stat, idx) => {
-                const Icon = stat.icon;
-                return (
-                  <Tilt3DCard
-                    key={stat.id}
-                    index={idx}
-                    maxTilt={4}
-                    onClick={() => onJumpToSection(stat.id)}
-                    className="group rounded-[18px] sm:rounded-[20px] p-3.5 sm:p-4 bg-[var(--surface-elevated)]/85 hover:bg-[var(--surface-card-hover)] apple-hairline cursor-pointer text-left"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)]">
-                        <Icon className="h-4 w-4 opacity-85" />
-                      </span>
-                      <ArrowUpRight className="h-3.5 w-3.5 text-[var(--ink-muted)] group-hover:text-[var(--ink-primary)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                    </div>
-                    <p className="text-[20px] sm:text-[24px] font-semibold tabular-nums text-[var(--ink-primary)] leading-tight">
-                      {stat.value}
-                    </p>
-                    <p className="text-xs sm:text-[13px] font-semibold text-[var(--ink-primary)] mt-0.5">
-                      {stat.label}
-                    </p>
-                    <p className="text-[11px] text-[var(--ink-meta)] truncate">
-                      {stat.sub}
-                    </p>
-                  </Tilt3DCard>
-                );
-              })}
+          {/* Bottom Contact & Social Media Icon Links (GitHub, Email, LinkedIn, Instagram) */}
+          {socialLinks.length > 0 && (
+            <div className="mt-6 sm:mt-7 pt-5 border-t border-[var(--card-border)] flex flex-wrap items-center gap-2.5 sm:gap-3">
+              {socialLinks.map((link) => (
+                <HeroSocialIconButton key={link.type} link={link} />
+              ))}
             </div>
           )}
         </motion.div>
@@ -465,14 +376,17 @@ export default function MoreInfoView({
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-1">
-                {projectTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 rounded-xl text-[13px] font-medium bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {projectTags.map((tag) => {
+                  const scheme = getTagColorScheme(tag, tagColorMap);
+                  return (
+                    <span
+                      key={tag}
+                      className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold border ${scheme.pill}`}
+                    >
+                      {tag}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -529,29 +443,5 @@ export default function MoreInfoView({
         </Scroll3DSection>
       )}
     </div>
-  );
-}
-
-function SocialStatLink({
-  link,
-  Icon,
-}: {
-  link: SocialLinkEntry;
-  Icon: React.ComponentType<{ className?: string }>;
-}) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(4);
-  return (
-    <a
-      href={link.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
-      data-cursor="magnetic"
-      className="magnetic-target inline-flex min-h-[36px] items-center gap-1.5 text-[13px] sm:text-[13.5px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
-    >
-      <Icon className="h-4 w-4 opacity-80" />
-      <span>{link.label}</span>
-    </a>
   );
 }
