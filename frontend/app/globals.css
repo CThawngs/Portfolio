@@ -12,15 +12,16 @@
   --ink-muted: #75757a;
   --ink-decorative: #c7c7cc;
   --pill-bg: #f0f0f2;
-  --pill-active-bg: #ebebef;
-  --row-hover-bg: #efeff2;
+  --pill-active-bg: #ffffff;
+  --row-hover-bg: #f2f2f5;
   --glass-bg: rgba(255, 255, 255, 0.86);
   --glass-border: rgba(0, 0, 0, 0.08);
   --glass-sub-ink: #48484a;
   --glass-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --card-border: rgba(0, 0, 0, 0.1);
+  --card-border: rgba(0, 0, 0, 0.09);
   --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.07), 0 4px 14px rgba(0, 0, 0, 0.04);
   --focus-ring: #0071e3;
+  --page-gutter: clamp(16px, 4vw, 48px);
 }
 
 .dark {
@@ -39,7 +40,7 @@
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-sub-ink: #c7c7cc;
   --glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
-  --card-border: rgba(255, 255, 255, 0.14);
+  --card-border: rgba(255, 255, 255, 0.12);
   --card-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.35);
   --focus-ring: #2997ff;
 }
@@ -79,6 +80,14 @@ body.is-dragging {
 
 body.lock-scroll {
   overflow-y: hidden !important;
+}
+
+/* Unified Page Container & Margin Rails */
+.apple-shell {
+  width: 100%;
+  max-width: 1380px;
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
 }
 
 /* Accessibility Focus Ring (Apple HIG Blue) */
@@ -231,9 +240,10 @@ body.lock-scroll {
   flex: 0 0 auto;
   position: relative;
   overflow: hidden;
-  width: min(64vw, 760px);
-  height: min(52vh, 460px);
-  border-radius: 30px;
+  width: min(60vw, 760px);
+  aspect-ratio: 16 / 10;
+  max-height: min(48vh, 450px);
+  border-radius: 28px;
   opacity: 0.22;
   filter: blur(6px);
   transform: translateZ(0) scale(0.965);
@@ -254,10 +264,11 @@ body.lock-scroll {
 
 @media (max-width: 920px) {
   .apple-carousel-card {
-    width: 76vw;
-    height: min(58vw, 340px);
-    border-radius: 24px;
-    opacity: 0.16;
+    width: min(82vw, 540px);
+    aspect-ratio: 16 / 10;
+    max-height: 350px;
+    border-radius: 22px;
+    opacity: 0.2;
     filter: none;
     transform: translateZ(0) scale(0.96);
   }
@@ -271,35 +282,33 @@ body.lock-scroll {
   }
 }
 
-/* Apple Editorial List Row Hover Physics */
+@media (max-width: 420px) {
+  .apple-carousel-card {
+    border-radius: 20px;
+  }
+}
+
+/* Apple Editorial List Row Hover Physics (Zero Text Reflow) */
 .apple-list-row {
   position: relative;
-  border-radius: 18px;
+  border-radius: 14px;
   background-color: transparent;
   transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1);
   transition:
-    background-color 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    color 420ms ease;
+    background-color 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 240ms ease;
   will-change: transform, background-color;
-}
-.apple-list-row-inner {
-  padding-inline: 0px;
-  transition: padding-inline 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .apple-list-row:hover {
     background-color: var(--row-hover-bg);
-    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.022);
+    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.01);
     transition:
       background-color 150ms ease-out,
       transform 150ms ease-out,
       color 150ms ease-out;
-  }
-  .apple-list-row:hover .apple-list-row-inner {
-    padding-inline: 18px;
-    transition: padding-inline 150ms ease-out;
   }
 }
 
@@ -322,14 +331,10 @@ body.lock-scroll {
   }
   .magnetic-target,
   .apple-list-row,
-  .apple-list-row-inner,
   .apple-carousel-track,
   .apple-carousel-card {
     transform: none !important;
     filter: none !important;
     transition-duration: 120ms !important;
-  }
-  .apple-list-row:hover .apple-list-row-inner {
-    padding-inline: 10px !important;
   }
 }

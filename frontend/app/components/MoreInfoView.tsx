@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -65,7 +65,9 @@ function AppleHoverRow({
   external?: boolean;
   ariaExpanded?: boolean;
 }) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(4);
+  const { onPointerMove, onPointerLeave } = useMagneticHandlers(3);
+  const sharedClass =
+    "apple-list-row group block -mx-3.5 px-3.5 sm:-mx-4 sm:px-4 py-3.5 text-left";
 
   if (href) {
     return (
@@ -76,9 +78,9 @@ function AppleHoverRow({
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         data-cursor="magnetic"
-        className="apple-list-row block w-full py-3 text-left no-underline cursor-pointer"
+        className={`${sharedClass} no-underline cursor-pointer`}
       >
-        <div className="apple-list-row-inner">{children}</div>
+        {children}
       </a>
     );
   }
@@ -92,9 +94,9 @@ function AppleHoverRow({
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         data-cursor="magnetic"
-        className="apple-list-row block w-full py-3 text-left cursor-pointer"
+        className={`${sharedClass} w-[calc(100%+1.75rem)] sm:w-[calc(100%+2rem)] cursor-pointer`}
       >
-        <div className="apple-list-row-inner">{children}</div>
+        {children}
       </button>
     );
   }
@@ -103,9 +105,9 @@ function AppleHoverRow({
     <div
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
-      className="apple-list-row block w-full py-3 text-left"
+      className={sharedClass}
     >
-      <div className="apple-list-row-inner">{children}</div>
+      {children}
     </div>
   );
 }
@@ -138,6 +140,9 @@ export default function MoreInfoView({
 
   const firstAbout = aboutParagraphs[0] || "";
   const extraAbout = aboutParagraphs.slice(1);
+  const anyExpHasBullets = parsedExperiences.some(
+    (e) => e.bullets && e.bullets.length > 0
+  );
 
   return (
     <motion.section
@@ -145,13 +150,13 @@ export default function MoreInfoView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full px-6 sm:px-10 pt-4 pb-20"
+      className="apple-shell pt-4 sm:pt-6 pb-20"
     >
-      <div className="mx-auto w-full max-w-[640px]">
-        {/* Social Links Bar + Get in touch Pill CTA */}
+      <div className="mx-auto w-full max-w-[680px]">
+        {/* Social Links Bar + Get in touch Pill CTA (Flush-left & Flush-right) */}
         {socialLinks.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-11">
-            <div className="flex flex-wrap items-center -ml-2.5 gap-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-6 mb-10 border-b border-[var(--card-border)]">
+            <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-2">
               {socialLinks
                 .filter((s) => s.type !== "email")
                 .map((link) => {
@@ -167,7 +172,7 @@ export default function MoreInfoView({
               onPointerMove={ctaMagnetic.onPointerMove}
               onPointerLeave={ctaMagnetic.onPointerLeave}
               data-cursor="magnetic"
-              className="magnetic-target inline-flex min-h-[40px] items-center px-4 rounded-[12px] apple-hairline text-[13px] font-medium text-[var(--ink-primary)] hover:bg-[var(--row-hover-bg)] hover:scale-[1.04] transition-all cursor-pointer"
+              className="magnetic-target inline-flex h-10 items-center px-4 rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13px] font-semibold text-[var(--ink-primary)] hover:bg-[var(--row-hover-bg)] hover:scale-[1.03] transition-all cursor-pointer"
             >
               {lang === "EN" ? "Get in touch" : "Liên hệ ngay"}
             </a>
@@ -176,8 +181,8 @@ export default function MoreInfoView({
 
         {/* Editorial Intro */}
         <div className="mb-14">
-          <div className="py-[0.12em]">
-            <h1 className="apple-h1 text-[34px] sm:text-[44px] font-normal text-[var(--ink-primary)] mb-3">
+          <div className="py-[0.08em]">
+            <h1 className="apple-h1 text-[32px] sm:text-[42px] font-normal text-[var(--ink-primary)] mb-2.5">
               {profileName}
             </h1>
           </div>
@@ -196,7 +201,7 @@ export default function MoreInfoView({
           )}
 
           {firstAbout && (
-            <div className="mt-6 text-[17px] sm:text-[18px] leading-[1.7] text-[var(--ink-primary)]">
+            <div className="mt-6 text-[16.5px] sm:text-[18px] leading-[1.7] text-[var(--ink-primary)]">
               <p>{renderLinkifiedText(firstAbout)}</p>
 
               {extraAbout.length > 0 && (
@@ -207,7 +212,7 @@ export default function MoreInfoView({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                        transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
                         className="overflow-hidden"
                       >
                         <div className="pt-5 space-y-4 py-[0.12em] text-[var(--ink-secondary)]">
@@ -225,7 +230,7 @@ export default function MoreInfoView({
                     onPointerMove={readMoreMagnetic.onPointerMove}
                     onPointerLeave={readMoreMagnetic.onPointerLeave}
                     data-cursor="magnetic"
-                    className="magnetic-target mt-4 inline-flex min-h-[44px] items-center text-[16px] font-normal text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+                    className="magnetic-target mt-3 inline-flex min-h-[40px] items-center text-[15px] sm:text-[16px] font-medium text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
                   >
                     {aboutExpanded
                       ? lang === "EN"
@@ -244,16 +249,16 @@ export default function MoreInfoView({
         {/* 1. Experience / Work Section */}
         {parsedExperiences.length > 0 && (
           <div className="mb-12">
-            <h2 className="apple-h2 text-[26px] sm:text-[30px] font-normal text-[var(--ink-primary)] mb-3">
+            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
               {lang === "EN" ? "Experience" : "Kinh nghiệm"}
             </h2>
 
-            <div className="divide-y divide-transparent">
+            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
               {parsedExperiences.map((exp, idx) => {
-                const hasBullets = exp.bullets && exp.bullets.length > 0;
+                const hasBullets = Boolean(exp.bullets && exp.bullets.length > 0);
                 const isOpen = openExpIdx === idx;
                 return (
-                  <div key={idx}>
+                  <div key={idx} className="py-0.5">
                     <AppleHoverRow
                       onClick={
                         hasBullets
@@ -264,11 +269,11 @@ export default function MoreInfoView({
                     >
                       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
                         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 min-w-0">
-                          <span className="text-[17px] sm:text-[18px] font-medium text-[var(--ink-primary)]">
+                          <span className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)]">
                             {exp.org || exp.role}
                           </span>
                           {exp.org && exp.role && (
-                            <span className="text-[15px] sm:text-[16px] text-[var(--ink-meta)]">
+                            <span className="text-[14.5px] sm:text-[15.5px] text-[var(--ink-meta)]">
                               {exp.role}
                             </span>
                           )}
@@ -279,19 +284,21 @@ export default function MoreInfoView({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                           {exp.period && (
-                            <span className="text-[14px] sm:text-[15px] tabular-nums text-[var(--ink-meta)]">
+                            <span className="text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)]">
                               {exp.period}
                             </span>
                           )}
-                          {hasBullets && (
+                          {hasBullets ? (
                             <ChevronDown
                               className={`h-4 w-4 text-[var(--ink-meta)] transition-transform duration-200 ${
                                 isOpen ? "rotate-180" : ""
                               }`}
                             />
-                          )}
+                          ) : anyExpHasBullets ? (
+                            <span className="hidden sm:inline-block w-4" aria-hidden="true" />
+                          ) : null}
                         </div>
                       </div>
                     </AppleHoverRow>
@@ -302,10 +309,10 @@ export default function MoreInfoView({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
-                          <ul className="pl-4 sm:pl-5 pr-2 pb-4 pt-1 space-y-2 text-[14.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
+                          <ul className="pl-3.5 sm:pl-4 pr-2 pb-4 pt-1 space-y-2 text-[14.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
                             {exp.bullets.map((b, bIdx) => (
                               <li key={bIdx} className="flex items-start gap-2.5">
                                 <span
@@ -326,26 +333,28 @@ export default function MoreInfoView({
           </div>
         )}
 
-        {/* 2. Technical Skills & Tools Section */}
+        {/* 2. Technical Skills & Tools Section (2-Column Apple Spec Grid) */}
         {(parsedSkills.length > 0 || projectTags.length > 0) && (
           <div className="mb-12">
-            <h2 className="apple-h2 text-[26px] sm:text-[30px] font-normal text-[var(--ink-primary)] mb-3">
+            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
               {lang === "EN" ? "Technical Skills" : "Kỹ năng công nghệ"}
             </h2>
 
             {parsedSkills.length > 0 ? (
-              <div>
+              <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
                 {parsedSkills.map((group, idx) => (
-                  <AppleHoverRow key={idx}>
-                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 sm:gap-6">
-                      <span className="text-[17px] sm:text-[18px] font-medium text-[var(--ink-primary)] shrink-0">
-                        {group.category}
-                      </span>
-                      <span className="text-[15px] sm:text-[16px] leading-[1.6] text-[var(--ink-meta)] sm:text-right">
-                        {group.skills.join(" · ")}
-                      </span>
-                    </div>
-                  </AppleHoverRow>
+                  <div key={idx} className="py-0.5">
+                    <AppleHoverRow>
+                      <div className="grid grid-cols-1 sm:grid-cols-[190px_minmax(0,1fr)] gap-1 sm:gap-6 items-baseline">
+                        <span className="text-[16px] sm:text-[17px] font-medium text-[var(--ink-primary)]">
+                          {group.category}
+                        </span>
+                        <span className="text-[14.5px] sm:text-[15.5px] leading-[1.6] text-[var(--ink-meta)]">
+                          {group.skills.join(" · ")}
+                        </span>
+                      </div>
+                    </AppleHoverRow>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -366,11 +375,11 @@ export default function MoreInfoView({
         {/* 3. Certificates & Accreditations Section */}
         {certificates.length > 0 && (
           <div className="mb-12">
-            <h2 className="apple-h2 text-[26px] sm:text-[30px] font-normal text-[var(--ink-primary)] mb-3">
+            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
               {lang === "EN" ? "Certificates" : "Chứng chỉ"}
             </h2>
 
-            <div>
+            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
               {certificates.map((cert) => {
                 const title =
                   (lang === "EN" ? cert.title_en : cert.title_vn) ||
@@ -379,20 +388,19 @@ export default function MoreInfoView({
                   "Certificate";
                 const dateStr = formatYearOrDate(cert);
                 return (
-                  <AppleHoverRow
-                    key={cert.id}
-                    onClick={() => onSelectProject(cert)}
-                  >
-                    <div className="flex items-baseline justify-between gap-4">
-                      <span className="text-[17px] sm:text-[18px] font-normal text-[var(--ink-secondary)] group-hover:text-[var(--ink-primary)] truncate">
-                        {title}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-[14px] sm:text-[15px] tabular-nums text-[var(--ink-meta)] shrink-0">
-                        <span>{dateStr || (lang === "EN" ? "View" : "Xem")}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-                  </AppleHoverRow>
+                  <div key={cert.id} className="py-0.5">
+                    <AppleHoverRow onClick={() => onSelectProject(cert)}>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <span className="text-[16px] sm:text-[17px] font-normal text-[var(--ink-primary)] line-clamp-2">
+                          {title}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)] shrink-0">
+                          <span>{dateStr || (lang === "EN" ? "View" : "Xem")}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </AppleHoverRow>
+                  </div>
                 );
               })}
             </div>
@@ -402,44 +410,46 @@ export default function MoreInfoView({
         {/* 4. Education Section */}
         {parsedEducations.length > 0 && (
           <div className="mb-8">
-            <h2 className="apple-h2 text-[26px] sm:text-[30px] font-normal text-[var(--ink-primary)] mb-3">
+            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
               {lang === "EN" ? "Education" : "Học vấn"}
             </h2>
 
-            <div>
+            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
               {parsedEducations.map((edu, idx) => (
-                <AppleHoverRow key={idx}>
-                  <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
-                    <div className="min-w-0">
-                      <span className="text-[17px] sm:text-[18px] font-medium text-[var(--ink-primary)]">
-                        {edu.school}
-                      </span>
-                      {edu.major && (
-                        <span className="block sm:inline sm:ml-2.5 text-[15px] sm:text-[16px] text-[var(--ink-meta)]">
-                          {edu.major}
+                <div key={idx} className="py-0.5">
+                  <AppleHoverRow>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                      <div className="min-w-0">
+                        <span className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)]">
+                          {edu.school}
                         </span>
-                      )}
-                      {edu.notes && (
-                        <p className="text-[13.5px] text-[var(--ink-meta)] mt-0.5">
-                          {edu.notes}
-                        </p>
-                      )}
-                    </div>
+                        {edu.major && (
+                          <span className="block sm:inline sm:ml-2.5 text-[14.5px] sm:text-[15.5px] text-[var(--ink-meta)]">
+                            {edu.major}
+                          </span>
+                        )}
+                        {edu.notes && (
+                          <p className="text-[13.5px] text-[var(--ink-meta)] mt-0.5">
+                            {edu.notes}
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {edu.gpa && (
-                        <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-[var(--pill-bg)] text-[var(--ink-primary)]">
-                          {edu.gpa}
-                        </span>
-                      )}
-                      {edu.period && (
-                        <span className="text-[14px] sm:text-[15px] tabular-nums text-[var(--ink-meta)]">
-                          {edu.period}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {edu.gpa && (
+                          <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-[var(--pill-bg)] text-[var(--ink-primary)]">
+                            {edu.gpa}
+                          </span>
+                        )}
+                        {edu.period && (
+                          <span className="text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)]">
+                            {edu.period}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </AppleHoverRow>
+                  </AppleHoverRow>
+                </div>
               ))}
             </div>
           </div>
@@ -465,9 +475,9 @@ function SocialStatLink({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className="magnetic-target inline-flex min-h-[40px] items-center gap-1.5 px-2.5 text-[13.5px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.06] transition-all cursor-pointer"
+      className="magnetic-target inline-flex min-h-[38px] items-center gap-1.5 text-[13.5px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
     >
-      <Icon className="h-4 w-4 opacity-70" />
+      <Icon className="h-4 w-4 opacity-75" />
       <span>{link.label}</span>
     </a>
   );

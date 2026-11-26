@@ -109,26 +109,30 @@ export default function ShowcaseCarousel({
     [items.length]
   );
 
-  // Compute Apple centered stage offsets & peeking margins purely from state (no ref reads during render)
+  // Compute Apple centered stage offsets & exact symmetric peeking margins purely from state
   const { trackTranslateX, itemMargins } = useMemo(() => {
     if (!items.length) {
       return { trackTranslateX: 0, itemMargins: [] as { ml: number; mr: number }[] };
     }
 
     const defaultCardW = isMobile
-      ? Math.round(viewportWidth * 0.76)
-      : Math.min(Math.round(viewportWidth * 0.64), 760);
+      ? Math.min(Math.round(viewportWidth * 0.82), 540)
+      : Math.min(Math.round(viewportWidth * 0.6), 760);
 
     const widths = items.map((_, i) => {
       const measured = measuredWidths[i];
       return measured && measured > 0 ? measured : defaultCardW;
     });
 
-    const peekAmount = isMobile ? viewportWidth * 0.13 : viewportWidth * 0.1;
-    const minMargin = isMobile ? 12 : 24;
     const activeW = widths[safeIndex] || defaultCardW;
-    const requiredGap = Math.max(0, viewportWidth / 2 - activeW / 2 - peekAmount);
-    const bigMargin = Math.max(minMargin, Math.round(requiredGap));
+    const sideSpace = Math.max(0, (viewportWidth - activeW) / 2);
+    const minMargin = isMobile ? (viewportWidth < 600 ? 10 : 14) : 20;
+    const desiredPeek = isMobile
+      ? Math.min(48, Math.max(12, Math.round(sideSpace * 0.4)))
+      : Math.min(96, Math.max(36, Math.round(sideSpace * 0.3)));
+
+    // Total gap between active card and immediate neighbor = bigMargin + minMargin
+    const bigMargin = Math.max(minMargin, Math.round(sideSpace - desiredPeek - minMargin));
 
     const margins = widths.map((_, i) => ({
       ml: i > safeIndex ? bigMargin : minMargin,
@@ -196,7 +200,7 @@ export default function ShowcaseCarousel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [safeIndex, items.length, goToIndex, toggleOverlay]);
 
-  // Magnetic parallax on desktop frosted overlay (+/- 12px)
+  // Magnetic parallax on desktop frosted overlay (+/- 10px)
   const handleOverlayPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (isMobile || e.pointerType !== "mouse") return;
@@ -207,8 +211,8 @@ export default function ShowcaseCarousel({
       if (!rect.width || !rect.height) return;
       const nx = Math.max(-1, Math.min(1, (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)));
       const ny = Math.max(-1, Math.min(1, (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)));
-      el.style.setProperty("--px", `${(nx * 12).toFixed(2)}px`);
-      el.style.setProperty("--py", `${(ny * 12).toFixed(2)}px`);
+      el.style.setProperty("--px", `${(nx * 10).toFixed(2)}px`);
+      el.style.setProperty("--py", `${(ny * 10).toFixed(2)}px`);
     },
     [isMobile]
   );
@@ -349,10 +353,12 @@ export default function ShowcaseCarousel({
 
   if (!items.length || !activeItem) {
     return (
-      <div className="mx-auto max-w-2xl my-16 px-6 py-16 text-center rounded-[28px] apple-hairline bg-[var(--surface-elevated)] text-[var(--ink-meta)] text-sm">
-        {lang === "EN"
-          ? "No items match the selected filter."
-          : "Không có mục nào khớp bộ lọc đang chọn."}
+      <div className="apple-shell my-14">
+        <div className="mx-auto max-w-2xl px-6 py-16 text-center rounded-[26px] apple-hairline bg-[var(--surface-elevated)] text-[var(--ink-meta)] text-sm">
+          {lang === "EN"
+            ? "No items match the selected filter."
+            : "Không có mục nào khớp bộ lọc đang chọn."}
+        </div>
       </div>
     );
   }
@@ -387,31 +393,32 @@ export default function ShowcaseCarousel({
         if (!isOverlayOpen) toggleOverlay(true);
       }}
       data-cursor="overlay"
-      className={`carousel-overlay-surface magnetic-target z-20 rounded-[22px] transition-all duration-300 ${
+      className={`carousel-overlay-surface magnetic-target z-20 rounded-[20px] sm:rounded-[22px] transition-all duration-300 ${
         isMobile
-          ? "relative mx-auto mt-5 w-[86vw] max-w-[420px] apple-glass px-5 py-4 text-left"
-          : `absolute left-8 lg:left-12 top-1/2 -translate-y-1/2 ${
+          ? "relative mx-auto mt-4 w-[min(82vw,540px)] apple-glass px-4 sm:px-5 py-3.5 sm:py-4 text-left"
+          : `absolute top-1/2 ${
               isOverlayOpen
                 ? "apple-glass w-[330px] p-5 rounded-[24px]"
-                : "apple-glass hover:scale-[1.04] px-4.5 py-3.5 max-w-[290px] cursor-pointer"
+                : "apple-glass hover:scale-[1.03] px-4.5 py-3.5 w-[285px] cursor-pointer"
             }`
       }`}
       style={
         !isMobile
           ? {
+              left: "max(var(--page-gutter), calc(50% - min(30vw, 380px) - 44px))",
               transform: `translate3d(var(--px, 0px), calc(-50% + var(--py, 0px)), 0)`,
             }
           : undefined
       }
     >
-      <div className="flex items-start justify-between gap-3 py-[0.12em]">
-        <div className="min-w-0">
-          <h3 className="text-[16px] leading-[1.35] font-bold text-[var(--ink-primary)] truncate">
+      <div className="flex items-start justify-between gap-3 py-[0.08em]">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[15px] sm:text-[16px] leading-[1.35] font-bold text-[var(--ink-primary)] line-clamp-2">
             {activeTitle}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {activeYear && (
-              <span className="text-[13px] font-semibold tabular-nums text-[var(--ink-meta)]">
+              <span className="text-[12.5px] font-semibold tabular-nums text-[var(--ink-meta)]">
                 {activeYear}
               </span>
             )}
@@ -452,12 +459,12 @@ export default function ShowcaseCarousel({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.42, ease: [0.2, 0.6, 0.2, 1] }}
+            transition={{ duration: 0.4, ease: [0.2, 0.6, 0.2, 1] }}
             className={`overflow-hidden ${
               isMobile ? "max-h-[42dvh] overflow-y-auto overscroll-contain" : ""
             }`}
           >
-            <div className="pt-4 mt-3 border-t border-[var(--card-border)] space-y-3.5 py-[0.12em]">
+            <div className="pt-3.5 mt-3 border-t border-[var(--card-border)] space-y-3.5 py-[0.12em]">
               {activeDesc && (
                 <div className="text-[13.5px] leading-[1.6] text-[var(--glass-sub-ink)] line-clamp-6">
                   {renderLinkifiedText(activeDesc)}
@@ -484,7 +491,7 @@ export default function ShowcaseCarousel({
                     e.stopPropagation();
                     onSelectProject(activeItem);
                   }}
-                  className="inline-flex min-h-[40px] items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs font-semibold hover:opacity-85 transition-opacity cursor-pointer"
+                  className="inline-flex min-h-[38px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs font-semibold hover:opacity-85 transition-opacity cursor-pointer"
                 >
                   <Maximize2 className="h-3.5 w-3.5" />
                   <span>{lang === "EN" ? "Full Details" : "Xem Chi Tiết"}</span>
@@ -496,7 +503,7 @@ export default function ShowcaseCarousel({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                    className="inline-flex min-h-[38px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span>{lang === "EN" ? "Live" : "Mở Link"}</span>
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -524,20 +531,19 @@ export default function ShowcaseCarousel({
           ? "Projects showcase"
           : "Trình diễn dự án"
       }
-      className="relative w-full select-none focus:outline-none my-6 md:my-10"
+      className="relative w-full select-none focus:outline-none my-3 sm:my-4"
     >
       {/* Main Horizontal Stage */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        className="relative w-full overflow-hidden py-4 md:py-6"
+        className="relative w-full overflow-hidden py-2.5 sm:py-4"
         style={{
-          minHeight: isMobile ? undefined : "min(60vh, 540px)",
           touchAction: "pan-y",
         }}
       >
-        {/* Desktop Floating Frosted Overlay */}
+        {/* Desktop Stage-Anchored Frosted Overlay */}
         {!isMobile && renderOverlayCard()}
 
         {/* Desktop Invisible Left / Right Click Zones (disabled on <= 920px per Apple HIG audit) */}
@@ -547,13 +553,13 @@ export default function ShowcaseCarousel({
               onClick={() => safeIndex > 0 && goToIndex(safeIndex - 1)}
               data-cursor={safeIndex > 0 ? "prev" : "disabled"}
               aria-hidden="true"
-              className="absolute inset-y-0 left-0 w-[26%] z-10"
+              className="absolute inset-y-0 left-0 w-[22%] z-10"
             />
             <div
               onClick={() => safeIndex < items.length - 1 && goToIndex(safeIndex + 1)}
               data-cursor={safeIndex < items.length - 1 ? "next" : "disabled"}
               aria-hidden="true"
-              className="absolute inset-y-0 right-0 w-[26%] z-10"
+              className="absolute inset-y-0 right-0 w-[22%] z-10"
             />
           </>
         )}
@@ -576,7 +582,7 @@ export default function ShowcaseCarousel({
               item.title_vn ||
               "Untitled";
             const coverSrc = item.images && item.images[0] ? item.images[0] : "";
-            const margins = itemMargins[idx] || { ml: 20, mr: 20 };
+            const margins = itemMargins[idx] || { ml: 16, mr: 16 };
 
             return (
               <div
@@ -615,7 +621,7 @@ export default function ShowcaseCarousel({
                       fill
                       priority={idx <= 1}
                       unoptimized={isUnoptimizedAsset(coverSrc)}
-                      sizes="(max-width: 920px) 78vw, 760px"
+                      sizes="(max-width: 920px) 84vw, 760px"
                       onLoad={() => {
                         if (idx === safeIndex) syncMeasurements();
                       }}
@@ -626,16 +632,16 @@ export default function ShowcaseCarousel({
                       }
                     />
                     {item.images.length > 1 && isActive && (
-                      <span className="absolute top-4 right-4 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold tabular-nums text-[var(--ink-primary)]">
+                      <span className="absolute top-3.5 right-3.5 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold tabular-nums text-[var(--ink-primary)]">
                         1 / {item.images.length}
                       </span>
                     )}
                   </div>
                 ) : (
                   /* Bespoke Apple Studio Poster Card when a Notion entry has no cover image */
-                  <div className="relative flex h-full w-full flex-col justify-between p-7 sm:p-11 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)]">
+                  <div className="relative flex h-full w-full flex-col justify-between p-6 sm:p-10 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)]">
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--pill-bg)] text-[var(--ink-primary)]">
+                      <span className="inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-[var(--pill-bg)] text-[var(--ink-primary)]">
                         {isCertificateReel ? (
                           <Award className="h-5 w-5" />
                         ) : (
@@ -648,10 +654,10 @@ export default function ShowcaseCarousel({
                     </div>
 
                     <div className="max-w-lg py-[0.12em]">
-                      <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--ink-meta)] mb-2">
+                      <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] font-semibold text-[var(--ink-meta)] mb-1.5 sm:mb-2">
                         {item.category || (isCertificateReel ? "Credential" : "Featured Work")}
                       </p>
-                      <h4 className="apple-h2 text-xl sm:text-3xl font-semibold text-[var(--ink-primary)] line-clamp-2">
+                      <h4 className="apple-h2 text-lg sm:text-3xl font-semibold text-[var(--ink-primary)] line-clamp-2">
                         {title}
                       </h4>
                     </div>
@@ -667,7 +673,7 @@ export default function ShowcaseCarousel({
                           </span>
                         ))}
                       </div>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-meta)]">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-meta)] shrink-0">
                         <span>{lang === "EN" ? "Open" : "Mở"}</span>
                         <ArrowUpRight className="h-3.5 w-3.5" />
                       </span>
@@ -679,19 +685,19 @@ export default function ShowcaseCarousel({
           })}
         </div>
 
-        {/* Mobile Overlay beneath active card */}
+        {/* Mobile Overlay beneath active card (flush width with card) */}
         {isMobile && renderOverlayCard()}
       </div>
 
-      {/* Minimalist Stage Controls: Prev / Counter (tabular-nums + aria-live) / Next (44x44px targets) */}
+      {/* Symmetric Stage Controls: Uniform 40px height across Prev / Counter / Next */}
       {items.length > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="mt-2 sm:mt-3 flex items-center justify-center gap-2.5">
           <button
             type="button"
             onClick={() => goToIndex(safeIndex - 1)}
             disabled={safeIndex === 0}
             data-cursor="magnetic"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] disabled:opacity-30 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
             aria-label={lang === "EN" ? "Previous item" : "Mục trước"}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -699,7 +705,7 @@ export default function ShowcaseCarousel({
 
           <div
             aria-live="polite"
-            className="px-3.5 py-1.5 rounded-full bg-[var(--pill-bg)] text-xs font-semibold tabular-nums text-[var(--ink-meta)]"
+            className="inline-flex h-10 items-center px-4 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold tabular-nums text-[var(--ink-meta)]"
           >
             {String(safeIndex + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
           </div>
@@ -709,7 +715,7 @@ export default function ShowcaseCarousel({
             onClick={() => goToIndex(safeIndex + 1)}
             disabled={safeIndex === items.length - 1}
             data-cursor="magnetic"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] disabled:opacity-30 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
             aria-label={lang === "EN" ? "Next item" : "Mục tiếp"}
           >
             <ChevronRight className="h-4 w-4" />

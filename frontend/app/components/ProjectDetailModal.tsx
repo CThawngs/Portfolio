@@ -111,25 +111,44 @@ export default function ProjectDetailModal({
             exit={{ opacity: 0, scale: 0.97, y: 24 }}
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full sm:max-w-3xl max-h-[90dvh] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] apple-hairline bg-[var(--background)] p-6 sm:p-9 shadow-2xl"
+            className="relative w-full sm:max-w-3xl max-h-[90dvh] overflow-y-auto rounded-t-[28px] sm:rounded-[30px] apple-hairline bg-[var(--background)] p-5 sm:p-8 shadow-2xl"
           >
             {/* Mobile Grabber */}
-            <div className="sm:hidden mx-auto mb-4 h-1.5 w-11 rounded-full bg-[var(--ink-decorative)] opacity-50" aria-hidden="true" />
+            <div
+              className="sm:hidden mx-auto mb-3 h-1.5 w-11 rounded-full bg-[var(--ink-decorative)] opacity-50"
+              aria-hidden="true"
+            />
 
-            {/* Close Button (44x44 tap target) */}
-            <button
-              ref={closeBtnRef}
-              onClick={onClose}
-              data-cursor="magnetic"
-              className="sticky sm:absolute top-0 sm:top-5 float-right sm:float-none right-5 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-105 transition-all cursor-pointer"
-              aria-label={lang === "EN" ? "Close details" : "Đóng chi tiết"}
-            >
-              <X className="h-5 w-5" />
-            </button>
+            {/* Balanced Sheet Top Bar */}
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                {project.category && (
+                  <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-[var(--pill-bg)] text-[var(--ink-meta)]">
+                    {project.category}
+                  </span>
+                )}
+                {dateLabel && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{dateLabel}</span>
+                  </span>
+                )}
+              </div>
+
+              <button
+                ref={closeBtnRef}
+                onClick={onClose}
+                data-cursor="magnetic"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-105 transition-all cursor-pointer"
+                aria-label={lang === "EN" ? "Close details" : "Đóng chi tiết"}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
             {/* Media Gallery */}
             {images.length > 0 && activeImgSrc && (
-              <div className="relative w-full aspect-[16/10] rounded-[24px] overflow-hidden mb-7 bg-[var(--surface-elevated)] apple-hairline clear-both">
+              <div className="relative w-full aspect-[16/10] rounded-[20px] sm:rounded-[24px] overflow-hidden mb-6 bg-[var(--surface-elevated)] apple-hairline">
                 <Image
                   src={activeImgSrc}
                   alt={title}
@@ -150,7 +169,7 @@ export default function ProjectDetailModal({
                           idx: (imgIdx - 1 + images.length) % images.length,
                         })
                       }
-                      className="absolute left-3 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full apple-glass text-[var(--ink-primary)] hover:scale-105 transition-transform cursor-pointer"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full apple-glass text-[var(--ink-primary)] hover:scale-105 transition-transform cursor-pointer"
                       aria-label={lang === "EN" ? "Previous image" : "Ảnh trước"}
                     >
                       <ChevronLeft className="h-5 w-5" />
@@ -163,7 +182,7 @@ export default function ProjectDetailModal({
                           idx: (imgIdx + 1) % images.length,
                         })
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full apple-glass text-[var(--ink-primary)] hover:scale-105 transition-transform cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full apple-glass text-[var(--ink-primary)] hover:scale-105 transition-transform cursor-pointer"
                       aria-label={lang === "EN" ? "Next image" : "Ảnh tiếp"}
                     >
                       <ChevronRight className="h-5 w-5" />
@@ -176,32 +195,17 @@ export default function ProjectDetailModal({
               </div>
             )}
 
-            {/* Meta Pills */}
-            <div className="flex flex-wrap items-center gap-2.5 mb-3 pr-12">
-              {project.category && (
-                <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-[var(--pill-bg)] text-[var(--ink-meta)]">
-                  {project.category}
-                </span>
-              )}
-              {dateLabel && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{dateLabel}</span>
-                </span>
-              )}
-            </div>
-
             {/* Title */}
             <h2
               id="apple-sheet-title"
-              className="apple-h2 text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] mb-5"
+              className="apple-h2 text-xl sm:text-3xl font-semibold text-[var(--ink-primary)] mb-4"
             >
               {title}
             </h2>
 
             {/* Description */}
             {desc && (
-              <div className="text-[15px] sm:text-base text-[var(--ink-secondary)] leading-[1.75] space-y-4 mb-7">
+              <div className="text-[15px] sm:text-base text-[var(--ink-secondary)] leading-[1.75] space-y-4 mb-6">
                 {renderLinkifiedText(desc, "block whitespace-pre-wrap")}
               </div>
             )}
@@ -222,7 +226,7 @@ export default function ProjectDetailModal({
 
             {/* Live Action CTA */}
             {project.links && (
-              <div className="mt-7 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href={project.links}
                   target="_blank"

@@ -550,7 +550,7 @@ function MagneticTabButton({
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(10, active);
+  const { onPointerMove, onPointerLeave } = useMagneticHandlers(6, active);
 
   return (
     <button
@@ -561,10 +561,10 @@ function MagneticTabButton({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className={`magnetic-target relative shrink-0 min-h-[40px] px-4 py-2 rounded-[12px] text-[15px] font-bold transition-all cursor-pointer ${
+      className={`magnetic-target relative shrink-0 h-8 px-3.5 rounded-[9px] text-[13.5px] font-semibold transition-all cursor-pointer ${
         active
-          ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] cursor-default"
-          : "bg-transparent text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_6px_18px_rgba(0,0,0,0.45)] hover:scale-[1.04]"
+          ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs cursor-default"
+          : "bg-transparent text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
       }`}
     >
       {children}
@@ -1001,8 +1001,8 @@ export default function PortfolioUI({
     []
   );
 
-  const navLeftMagnetic = useMagneticHandlers(8);
-  const navRightMagnetic = useMagneticHandlers(8);
+  const navLeftMagnetic = useMagneticHandlers(6);
+  const navRightMagnetic = useMagneticHandlers(6);
   const footerEmailMagnetic = useMagneticHandlers(4);
 
   const activeTypingRole = profileData
@@ -1018,137 +1018,154 @@ export default function PortfolioUI({
       ""
     : "";
 
+  const hasCenterTabs = activeView === "showcase" && showcaseTabs.length > 1;
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] selection:bg-[#FFD433] selection:text-black">
       <CustomCursor />
 
       <div ref={pageWrapperRef} className="flex-1 flex flex-col will-change-transform">
-        <header className="relative z-40 w-full px-5 sm:px-10 lg:px-14 pt-6 sm:pt-8 pb-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center min-w-0">
-              {activeView === "more-info" ? (
-                <button
-                  type="button"
-                  onClick={() => switchView("showcase")}
-                  onPointerMove={navLeftMagnetic.onPointerMove}
-                  onPointerLeave={navLeftMagnetic.onPointerLeave}
-                  data-cursor="magnetic"
-                  className="magnetic-target inline-flex min-h-[44px] items-center gap-2 text-[16px] font-normal text-[var(--ink-primary)] hover:opacity-65 hover:scale-[1.06] transition-all cursor-pointer"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>{lang === "EN" ? "Portfolio" : "Trang chủ"}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("all-projects");
-                    setSelectedProjectTag(null);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  onPointerMove={navLeftMagnetic.onPointerMove}
-                  onPointerLeave={navLeftMagnetic.onPointerLeave}
-                  data-cursor="magnetic"
-                  className="magnetic-target inline-flex min-h-[44px] items-baseline gap-2.5 text-left cursor-pointer group"
-                >
-                  <span className="text-[16px] font-medium text-[var(--ink-primary)] group-hover:opacity-70 transition-opacity truncate">
-                    {profileName}
-                  </span>
-                  {profileRole && (
-                    <span className="hidden xl:inline text-[14px] font-normal text-[var(--ink-meta)] truncate max-w-[260px]">
-                      {profileRole}
+        {/* Symmetric Top Header with Unified Margin Rails */}
+        <header className="relative z-40 w-full pt-4 sm:pt-5 pb-2">
+          <div className="apple-shell">
+            <div
+              className={
+                hasCenterTabs
+                  ? "flex items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4"
+                  : "flex items-center justify-between gap-3"
+              }
+            >
+              {/* Left Zone: Brand or Back to Showcase */}
+              <div className="flex items-center min-w-0 lg:justify-self-start">
+                {activeView === "more-info" ? (
+                  <button
+                    type="button"
+                    onClick={() => switchView("showcase")}
+                    onPointerMove={navLeftMagnetic.onPointerMove}
+                    onPointerLeave={navLeftMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3.5 rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13.5px] sm:text-[14px] font-semibold text-[var(--ink-primary)] hover:opacity-80 hover:scale-[1.03] transition-all cursor-pointer"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>{lang === "EN" ? "Portfolio" : "Trang chủ"}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("all-projects");
+                      setSelectedProjectTag(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    onPointerMove={navLeftMagnetic.onPointerMove}
+                    onPointerLeave={navLeftMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-10 items-center gap-2.5 text-left min-w-0 cursor-pointer group"
+                  >
+                    <span className="text-[15px] sm:text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-primary)] group-hover:opacity-70 transition-opacity truncate">
+                      {profileName}
                     </span>
+                    {profileRole && (
+                      <span className="hidden 2xl:inline text-[13.5px] font-normal text-[var(--ink-meta)] truncate max-w-[230px]">
+                        {profileRole}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Center Zone (Desktop >= 1024px): True Optical Center Segmented Bar */}
+              {hasCenterTabs && (
+                <nav
+                  role="tablist"
+                  aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
+                  className="hidden lg:inline-flex lg:justify-self-center items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
+                >
+                  {showcaseTabs.map((tab) => (
+                    <MagneticTabButton
+                      key={tab.id}
+                      active={effectiveTab === tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                    >
+                      {tab.label}
+                    </MagneticTabButton>
+                  ))}
+                </nav>
+              )}
+
+              {/* Right Zone: Uniform 40px Utility Controls */}
+              <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 lg:justify-self-end">
+                {activeView === "more-info" && mounted && vnTime && (
+                  <span className="hidden md:inline text-[13.5px] font-normal tabular-nums text-[var(--ink-muted)] mr-1.5">
+                    {vnTime}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setLang((prev) => (prev === "EN" ? "VN" : "EN"))}
+                  data-cursor="magnetic"
+                  className="inline-flex h-9 sm:h-10 min-w-[42px] sm:min-w-[46px] items-center justify-center px-2.5 sm:px-3 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[12px] font-bold tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
+                  aria-label={lang === "EN" ? "Switch to Vietnamese" : "Chuyển sang tiếng Anh"}
+                >
+                  {lang}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  data-cursor="magnetic"
+                  className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
+                  aria-label={lang === "EN" ? "Toggle color theme" : "Đổi giao diện sáng/tối"}
+                >
+                  {mounted ? (
+                    resolvedTheme === "dark" ? (
+                      <Sun className="h-4 w-4" />
+                    ) : (
+                      <Moon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <span className="h-4 w-4 rounded-full bg-[var(--ink-decorative)] opacity-30" />
                   )}
                 </button>
-              )}
-            </div>
 
-            {activeView === "showcase" && showcaseTabs.length > 1 && (
-              <nav
-                role="tablist"
-                aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
-                className="hidden md:flex items-center gap-1.5 max-w-[46vw] overflow-x-auto hide-scrollbar py-1 px-1"
-              >
-                {showcaseTabs.map((tab) => (
-                  <MagneticTabButton
-                    key={tab.id}
-                    active={effectiveTab === tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                {activeView === "showcase" && (
+                  <button
+                    type="button"
+                    onClick={() => switchView("more-info")}
+                    onPointerMove={navRightMagnetic.onPointerMove}
+                    onPointerLeave={navRightMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3 sm:px-3.5 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13px] sm:text-[13.5px] font-semibold text-[var(--ink-primary)] hover:opacity-80 hover:scale-[1.03] transition-all cursor-pointer"
                   >
-                    {tab.label}
-                  </MagneticTabButton>
-                ))}
-              </nav>
-            )}
-
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {activeView === "more-info" && mounted && vnTime && (
-                <span className="hidden md:inline text-[14px] font-normal tabular-nums text-[var(--ink-muted)] mr-1">
-                  {vnTime}
-                </span>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setLang((prev) => (prev === "EN" ? "VN" : "EN"))}
-                data-cursor="magnetic"
-                className="inline-flex h-10 min-w-[48px] items-center justify-center px-3 rounded-[12px] bg-[var(--pill-bg)] text-[12px] font-bold tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
-                aria-label={lang === "EN" ? "Switch to Vietnamese" : "Chuyển sang tiếng Anh"}
-              >
-                {lang}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                data-cursor="magnetic"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-[var(--pill-bg)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
-                aria-label={lang === "EN" ? "Toggle color theme" : "Đổi giao diện sáng/tối"}
-              >
-                {mounted ? (
-                  resolvedTheme === "dark" ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )
-                ) : (
-                  <span className="h-4 w-4 rounded-full bg-[var(--ink-decorative)] opacity-30" />
+                    <span>{lang === "EN" ? "More Info" : "Thông tin"}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 opacity-80" />
+                  </button>
                 )}
-              </button>
-
-              {activeView === "showcase" && (
-                <button
-                  type="button"
-                  onClick={() => switchView("more-info")}
-                  onPointerMove={navRightMagnetic.onPointerMove}
-                  onPointerLeave={navRightMagnetic.onPointerLeave}
-                  data-cursor="magnetic"
-                  className="magnetic-target inline-flex min-h-[44px] items-center gap-1.5 pl-2 pr-1 text-[15px] sm:text-[16px] font-medium text-[var(--ink-primary)] hover:opacity-60 hover:scale-[1.06] transition-all cursor-pointer"
-                >
-                  <span>{lang === "EN" ? "More Info" : "Thông tin"}</span>
-                  <ArrowUpRight className="h-4 w-4 opacity-75" />
-                </button>
-              )}
+              </div>
             </div>
-          </div>
 
-          {activeView === "showcase" && showcaseTabs.length > 1 && (
-            <nav
-              role="tablist"
-              aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
-              className="md:hidden mt-3 flex items-center justify-center gap-1.5 overflow-x-auto hide-scrollbar py-1"
-            >
-              {showcaseTabs.map((tab) => (
-                <MagneticTabButton
-                  key={tab.id}
-                  active={effectiveTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+            {/* Mobile & Tablet (< 1024px) Centered Segmented Category Row */}
+            {hasCenterTabs && (
+              <div className="lg:hidden mt-3 flex justify-center">
+                <nav
+                  role="tablist"
+                  aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
+                  className="inline-flex items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
                 >
-                  {tab.label}
-                </MagneticTabButton>
-              ))}
-            </nav>
-          )}
+                  {showcaseTabs.map((tab) => (
+                    <MagneticTabButton
+                      key={tab.id}
+                      active={effectiveTab === tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                    >
+                      {tab.label}
+                    </MagneticTabButton>
+                  ))}
+                </nav>
+              </div>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 flex flex-col justify-center">
@@ -1159,62 +1176,65 @@ export default function PortfolioUI({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                transition={{ duration: 0.32, ease: "easeOut" }}
                 className="w-full"
               >
+                {/* Flush 40px Sub-Toolbar */}
                 {(currentItems.length > 1 || currentTags.length > 0) && (
-                  <div className="mx-auto max-w-6xl px-5 sm:px-10 mt-2 flex flex-wrap items-center justify-center gap-2">
-                    <div className="inline-flex items-center p-1 rounded-[12px] bg-[var(--pill-bg)]">
-                      <button
-                        type="button"
-                        onClick={() => setLayoutMode("stage")}
-                        data-cursor="magnetic"
-                        className={`inline-flex min-h-[34px] items-center gap-1.5 px-3 rounded-[9px] text-xs font-semibold transition-all cursor-pointer ${
-                          layoutMode === "stage"
-                            ? "bg-[var(--background)] text-[var(--ink-primary)] shadow-2xs"
-                            : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                        }`}
-                      >
-                        <GalleryHorizontalEnd className="h-3.5 w-3.5" />
-                        <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLayoutMode("grid")}
-                        data-cursor="magnetic"
-                        className={`inline-flex min-h-[34px] items-center gap-1.5 px-3 rounded-[9px] text-xs font-semibold transition-all cursor-pointer ${
-                          layoutMode === "grid"
-                            ? "bg-[var(--background)] text-[var(--ink-primary)] shadow-2xs"
-                            : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                        }`}
-                      >
-                        <LayoutGrid className="h-3.5 w-3.5" />
-                        <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
-                      </button>
-                    </div>
+                  <div className="apple-shell mt-1 sm:mt-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <div className="inline-flex h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("stage")}
+                          data-cursor="magnetic"
+                          className={`inline-flex h-8 items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                            layoutMode === "stage"
+                              ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                              : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                          }`}
+                        >
+                          <GalleryHorizontalEnd className="h-3.5 w-3.5" />
+                          <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("grid")}
+                          data-cursor="magnetic"
+                          className={`inline-flex h-8 items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                            layoutMode === "grid"
+                              ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                              : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                          }`}
+                        >
+                          <LayoutGrid className="h-3.5 w-3.5" />
+                          <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
+                        </button>
+                      </div>
 
-                    {(currentTags.length > 0 || currentItems.length > 1) && (
-                      <button
-                        type="button"
-                        onClick={() => setShowFilters((prev) => !prev)}
-                        data-cursor="magnetic"
-                        aria-expanded={showFilters}
-                        className={`inline-flex min-h-[40px] items-center gap-1.5 px-3.5 rounded-[12px] text-xs font-semibold transition-all cursor-pointer ${
-                          showFilters || currentSelectedTag
-                            ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                            : "bg-[var(--pill-bg)] text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                        }`}
-                      >
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        <span>
-                          {currentSelectedTag
-                            ? `#${currentSelectedTag}`
-                            : lang === "EN"
-                            ? "Filter & Sort"
-                            : "Lọc & Sắp xếp"}
-                        </span>
-                      </button>
-                    )}
+                      {(currentTags.length > 0 || currentItems.length > 1) && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFilters((prev) => !prev)}
+                          data-cursor="magnetic"
+                          aria-expanded={showFilters}
+                          className={`inline-flex h-10 items-center gap-1.5 px-3.5 rounded-[12px] apple-hairline text-xs font-semibold transition-all cursor-pointer ${
+                            showFilters || currentSelectedTag
+                              ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                              : "bg-[var(--pill-bg)] text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                          }`}
+                        >
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          <span>
+                            {currentSelectedTag
+                              ? `#${currentSelectedTag}`
+                              : lang === "EN"
+                              ? "Filter & Sort"
+                              : "Lọc & Sắp xếp"}
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1227,111 +1247,115 @@ export default function PortfolioUI({
                       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                       className="overflow-hidden"
                     >
-                      <div className="mx-auto max-w-4xl px-5 sm:px-10 pt-4 pb-2 flex flex-col items-center gap-3">
-                        <div className="inline-flex items-center gap-1.5 p-1 rounded-[12px] bg-[var(--pill-bg)]">
-                          <span className="inline-flex items-center gap-1 px-2.5 text-xs font-medium text-[var(--ink-meta)]">
-                            <ArrowUpDown className="h-3.5 w-3.5" />
-                            <span>{lang === "EN" ? "Sort" : "Sắp xếp"}</span>
-                          </span>
-                          {(["newest", "oldest"] as const).map((ord) => (
-                            <button
-                              key={ord}
-                              type="button"
-                              onClick={() => {
-                                if (isCertTab) {
-                                  setCertSort(ord);
-                                  setCertPage(1);
-                                } else {
-                                  setProjectSort(ord);
-                                  setProjectPage(1);
-                                }
-                              }}
-                              className={`min-h-[32px] px-3 rounded-[9px] text-xs font-semibold transition-all cursor-pointer ${
-                                currentSort === ord
-                                  ? "bg-[var(--background)] text-[var(--ink-primary)] shadow-2xs"
-                                  : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                              }`}
-                            >
-                              {ord === "newest"
-                                ? lang === "EN"
-                                  ? "Newest"
-                                  : "Mới nhất"
-                                : lang === "EN"
-                                ? "Oldest"
-                                : "Cũ nhất"}
-                            </button>
-                          ))}
-                        </div>
-
-                        {currentTags.length > 0 && (
-                          <div className="flex flex-wrap items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isCertTab) {
-                                  setSelectedCertTag(null);
-                                  setCertPage(1);
-                                } else {
-                                  setSelectedProjectTag(null);
-                                  setProjectPage(1);
-                                }
-                              }}
-                              className={`min-h-[34px] px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                                !currentSelectedTag
-                                  ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                                  : "bg-[var(--pill-bg)] text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                              }`}
-                            >
-                              {lang === "EN" ? "All" : "Tất cả"}
-                            </button>
-                            {currentTags.map((tag) => (
+                      <div className="apple-shell pt-3.5 pb-1">
+                        <div className="mx-auto max-w-3xl flex flex-col items-center gap-3">
+                          <div className="inline-flex h-10 items-center gap-1 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                            <span className="inline-flex items-center gap-1 px-2.5 text-xs font-medium text-[var(--ink-meta)]">
+                              <ArrowUpDown className="h-3.5 w-3.5" />
+                              <span>{lang === "EN" ? "Sort" : "Sắp xếp"}</span>
+                            </span>
+                            {(["newest", "oldest"] as const).map((ord) => (
                               <button
-                                key={tag}
+                                key={ord}
                                 type="button"
                                 onClick={() => {
                                   if (isCertTab) {
-                                    setSelectedCertTag(selectedCertTag === tag ? null : tag);
+                                    setCertSort(ord);
                                     setCertPage(1);
                                   } else {
-                                    setSelectedProjectTag(selectedProjectTag === tag ? null : tag);
+                                    setProjectSort(ord);
                                     setProjectPage(1);
                                   }
                                 }}
-                                className={`min-h-[34px] px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                                  currentSelectedTag === tag
-                                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                                    : "bg-[var(--pill-bg)] text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                className={`h-8 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                                  currentSort === ord
+                                    ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                    : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
                                 }`}
                               >
-                                {tag}
+                                {ord === "newest"
+                                  ? lang === "EN"
+                                    ? "Newest"
+                                    : "Mới nhất"
+                                  : lang === "EN"
+                                  ? "Oldest"
+                                  : "Cũ nhất"}
                               </button>
                             ))}
                           </div>
-                        )}
+
+                          {currentTags.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isCertTab) {
+                                    setSelectedCertTag(null);
+                                    setCertPage(1);
+                                  } else {
+                                    setSelectedProjectTag(null);
+                                    setProjectPage(1);
+                                  }
+                                }}
+                                className={`h-8 px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                                  !currentSelectedTag
+                                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                    : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                }`}
+                              >
+                                {lang === "EN" ? "All" : "Tất cả"}
+                              </button>
+                              {currentTags.map((tag) => (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isCertTab) {
+                                      setSelectedCertTag(selectedCertTag === tag ? null : tag);
+                                      setCertPage(1);
+                                    } else {
+                                      setSelectedProjectTag(selectedProjectTag === tag ? null : tag);
+                                      setProjectPage(1);
+                                    }
+                                  }}
+                                  className={`h-8 px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                                    currentSelectedTag === tag
+                                      ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                      : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                  }`}
+                                >
+                                  {tag}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 {projects.length === 0 ? (
-                  <div className="mx-auto max-w-xl px-6 py-24 text-center">
-                    <p className="apple-h2 text-2xl font-normal text-[var(--ink-primary)] mb-2">
-                      {profileName}
-                    </p>
-                    <p className="text-sm text-[var(--ink-meta)] mb-6">
-                      {lang === "EN"
-                        ? "Published Notion portfolio entries will appear on this stage automatically."
-                        : "Các dự án đã xuất bản trên Notion sẽ tự động xuất hiện trên sân khấu này."}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => switchView("more-info")}
-                      data-cursor="magnetic"
-                      className="inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--pill-bg)] text-sm font-medium text-[var(--ink-primary)] hover:scale-[1.03] transition-transform cursor-pointer"
-                    >
-                      <span>{lang === "EN" ? "Explore More Info" : "Xem hồ sơ chi tiết"}</span>
-                      <ArrowUpRight className="h-4 w-4" />
-                    </button>
+                  <div className="apple-shell py-20 text-center">
+                    <div className="mx-auto max-w-xl">
+                      <p className="apple-h2 text-2xl font-normal text-[var(--ink-primary)] mb-2">
+                        {profileName}
+                      </p>
+                      <p className="text-sm text-[var(--ink-meta)] mb-6">
+                        {lang === "EN"
+                          ? "Published Notion portfolio entries will appear on this stage automatically."
+                          : "Các dự án đã xuất bản trên Notion sẽ tự động xuất hiện trên sân khấu này."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => switchView("more-info")}
+                        data-cursor="magnetic"
+                        className="inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--pill-bg)] apple-hairline text-sm font-medium text-[var(--ink-primary)] hover:scale-[1.03] transition-transform cursor-pointer"
+                      >
+                        <span>{lang === "EN" ? "Explore More Info" : "Xem hồ sơ chi tiết"}</span>
+                        <ArrowUpRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ) : layoutMode === "stage" ? (
                   <ShowcaseCarousel
@@ -1344,8 +1368,8 @@ export default function PortfolioUI({
                     renderLinkifiedText={renderLinkified}
                   />
                 ) : (
-                  <section className="mx-auto max-w-6xl px-5 sm:px-10 py-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <section className="apple-shell py-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {paginatedGridItems.map((item, idx) => {
                         const title =
                           (lang === "EN" ? item.title_en : item.title_vn) ||
@@ -1366,16 +1390,20 @@ export default function PortfolioUI({
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.35, delay: idx * 0.04 }}
-                            className="group flex flex-col rounded-[26px] apple-hairline bg-[var(--background)] hover:bg-[var(--surface-elevated)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
+                            className="group flex h-full flex-col rounded-[24px] apple-hairline bg-[var(--background)] hover:bg-[var(--surface-elevated)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
                             style={{ boxShadow: "var(--card-shadow)" }}
                           >
-                            <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)]">
+                            <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
                               {hasImage ? (
                                 <Image
                                   src={item.images[0]}
                                   alt={title}
                                   fill
-                                  unoptimized={/(\.gif|\.svg)(\?|$)/i.test(item.images[0]) || item.images[0].startsWith("data:")} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                  unoptimized={
+                                    /(\.gif|\.svg)(\?|$)/i.test(item.images[0]) ||
+                                    item.images[0].startsWith("data:")
+                                  }
+                                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                   className={`${
                                     isCertTab ? "object-contain p-3" : "object-cover object-top"
                                   } transition-transform duration-500 group-hover:scale-[1.03]`}
@@ -1391,7 +1419,7 @@ export default function PortfolioUI({
                               )}
                             </div>
 
-                            <div className="flex flex-1 flex-col p-6">
+                            <div className="flex flex-1 flex-col p-5 sm:p-6">
                               <div className="flex items-center justify-between gap-2 mb-2">
                                 <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
                                   {formatDateRangeString(item.project_date) ||
@@ -1400,7 +1428,7 @@ export default function PortfolioUI({
                                 <ArrowUpRight className="h-4 w-4 text-[var(--ink-meta)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                               </div>
 
-                              <h3 className="text-lg font-semibold text-[var(--ink-primary)] line-clamp-1">
+                              <h3 className="text-[17px] leading-[1.35] font-semibold text-[var(--ink-primary)] line-clamp-2">
                                 {title}
                               </h3>
 
@@ -1411,7 +1439,7 @@ export default function PortfolioUI({
                               )}
 
                               {item.tags && item.tags.length > 0 && (
-                                <div className="mt-4 pt-3 border-t border-[var(--card-border)] flex flex-wrap gap-1.5">
+                                <div className="mt-auto pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-1.5">
                                   {item.tags.slice(0, 4).map((t) => (
                                     <span
                                       key={t}
@@ -1429,7 +1457,7 @@ export default function PortfolioUI({
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="mt-8 flex items-center justify-center gap-2">
+                      <div className="mt-8 flex items-center justify-center gap-2.5">
                         <button
                           type="button"
                           onClick={() =>
@@ -1438,12 +1466,12 @@ export default function PortfolioUI({
                               : setProjectPage((p) => Math.max(1, p - 1))
                           }
                           disabled={currentPage === 1}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] disabled:opacity-30 cursor-pointer"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
                           aria-label="Previous page"
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="px-3 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                        <span className="inline-flex h-10 items-center px-4 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
                           {currentPage} / {totalPages}
                         </span>
                         <button
@@ -1454,7 +1482,7 @@ export default function PortfolioUI({
                               : setProjectPage((p) => Math.min(totalPages, p + 1))
                           }
                           disabled={currentPage === totalPages}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] disabled:opacity-30 cursor-pointer"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
                           aria-label="Next page"
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -1495,45 +1523,48 @@ export default function PortfolioUI({
           </AnimatePresence>
         </main>
 
-        <footer className="w-full px-5 sm:px-10 lg:px-14 py-6 mt-auto text-[12px]">
-          <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-3">
-            <nav
-              aria-label="Social links"
-              className="flex flex-wrap items-center justify-center md:justify-start gap-4"
-            >
-              {socialLinks
-                .filter((s) => s.type !== "email")
-                .map((s) => (
-                  <FooterMagneticLink key={s.type} href={s.href}>
-                    {s.label}
-                  </FooterMagneticLink>
-                ))}
-              {profileData?.email && (
-                <a
-                  href={`mailto:${profileData.email}`}
-                  className="md:hidden font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors"
-                >
-                  E-mail
-                </a>
-              )}
-            </nav>
+        {/* Grounded Symmetric 3-Column Footer on Shared Margin Rails */}
+        <footer className="w-full mt-auto pt-2 pb-4 text-[12px]">
+          <div className="apple-shell">
+            <div className="pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+              <nav
+                aria-label="Social links"
+                className="flex flex-wrap items-center justify-center md:justify-start gap-4"
+              >
+                {socialLinks
+                  .filter((s) => s.type !== "email")
+                  .map((s) => (
+                    <FooterMagneticLink key={s.type} href={s.href}>
+                      {s.label}
+                    </FooterMagneticLink>
+                  ))}
+                {profileData?.email && (
+                  <a
+                    href={`mailto:${profileData.email}`}
+                    className="md:hidden font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors"
+                  >
+                    E-mail
+                  </a>
+                )}
+              </nav>
 
-            <p className="text-center font-semibold text-[var(--ink-muted)]">
-              © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
-            </p>
+              <p className="text-center font-semibold text-[var(--ink-muted)] md:justify-self-center">
+                © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
+              </p>
 
-            <div className="hidden md:flex items-center justify-end">
-              {profileData?.email && (
-                <a
-                  href={`mailto:${profileData.email}`}
-                  onPointerMove={footerEmailMagnetic.onPointerMove}
-                  onPointerLeave={footerEmailMagnetic.onPointerLeave}
-                  data-cursor="magnetic"
-                  className="magnetic-target px-1.5 py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
-                >
-                  E-mail
-                </a>
-              )}
+              <div className="hidden md:flex items-center justify-end md:justify-self-end">
+                {profileData?.email && (
+                  <a
+                    href={`mailto:${profileData.email}`}
+                    onPointerMove={footerEmailMagnetic.onPointerMove}
+                    onPointerLeave={footerEmailMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+                  >
+                    E-mail
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </footer>
@@ -1566,7 +1597,7 @@ function FooterMagneticLink({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className="magnetic-target px-1 py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+      className="magnetic-target py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
     >
       {children}
     </a>
