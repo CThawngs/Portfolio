@@ -1,17 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
   ArrowUpRight,
+  Award,
+  Briefcase,
   Calendar,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
+  Code2,
+  Cpu,
 } from "lucide-react";
 import { useMagneticHandlers } from "./Magnetic";
-import type { Project, ProfileData } from "../PortfolioUI";
+import {
+  Scroll3DSection,
+  Tilt3DCard,
+  useReducedMotionPreference,
+} from "./Scroll3D";
+import type { ProfileData } from "../PortfolioUI";
 
 export interface SkillGroupItem {
   category: string;
@@ -49,52 +55,28 @@ interface MoreInfoViewProps {
   parsedExperiences: ExperienceEntry[];
   parsedSkills: SkillGroupItem[];
   parsedEducations: EducationEntry[];
-  certificates: Project[];
+  projectCount: number;
+  certificateCount: number;
   projectTags: string[];
   socialLinks: SocialLinkEntry[];
   formatDate: (d: string | null) => string;
-  formatDateRange: (dateRange: Project["project_date"]) => string | null;
-  formatYearOrDate: (p: Project) => string;
-  onSelectProject: (p: Project) => void;
-  onOpenCertificatesShowcase?: () => void;
+  onJumpToSection: (sectionId: string) => void;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
   renderTypingSubtitle: () => React.ReactNode;
 }
 
-const CERTS_PER_PAGE = 6;
-
 function AppleHoverRow({
   children,
   onClick,
-  href,
-  external = false,
   ariaExpanded,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
-  href?: string;
-  external?: boolean;
   ariaExpanded?: boolean;
 }) {
   const { onPointerMove, onPointerLeave } = useMagneticHandlers(3);
   const sharedClass =
-    "apple-list-row group block -mx-3.5 px-3.5 sm:-mx-4 sm:px-4 py-3.5 text-left";
-
-  if (href) {
-    return (
-      <a
-        href={href}
-        target={external ? "_blank" : undefined}
-        rel={external ? "noopener noreferrer" : undefined}
-        onPointerMove={onPointerMove}
-        onPointerLeave={onPointerLeave}
-        data-cursor="magnetic"
-        className={`${sharedClass} no-underline cursor-pointer`}
-      >
-        {children}
-      </a>
-    );
-  }
+    "apple-list-row group block -mx-2.5 px-2.5 sm:-mx-3.5 sm:px-3.5 py-3.5 text-left";
 
   if (onClick) {
     return (
@@ -105,7 +87,7 @@ function AppleHoverRow({
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         data-cursor="magnetic"
-        className={`${sharedClass} w-[calc(100%+1.75rem)] sm:w-[calc(100%+2rem)] cursor-pointer`}
+        className={`${sharedClass} w-[calc(100%+1.25rem)] sm:w-[calc(100%+1.75rem)] cursor-pointer`}
       >
         {children}
       </button>
@@ -131,22 +113,32 @@ export default function MoreInfoView({
   parsedExperiences,
   parsedSkills,
   parsedEducations,
-  certificates,
+  projectCount,
+  certificateCount,
   projectTags,
   socialLinks,
   formatDate,
-  formatDateRange,
-  formatYearOrDate,
-  onSelectProject,
-  onOpenCertificatesShowcase,
+  onJumpToSection,
   renderLinkifiedText,
   renderTypingSubtitle,
 }: MoreInfoViewProps) {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [openExpIdx, setOpenExpIdx] = useState<number | null>(0);
-  const [certPage, setCertPage] = useState(1);
+  const heroRef = useRef<HTMLElement | null>(null);
+
   const ctaMagnetic = useMagneticHandlers(5);
   const readMoreMagnetic = useMagneticHandlers(4);
+
+  const reducedMotion = useReducedMotionPreference();
+
+  // Continuous GPU-only 3D Hero Parallax on scroll (target has explicit `relative` positioning)
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.968]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 22]);
+  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -3.2]);
 
   const primaryEmailHref = profileData?.email
     ? `mailto:${profileData.email}`
@@ -158,121 +150,209 @@ export default function MoreInfoView({
     (e) => e.bullets && e.bullets.length > 0
   );
 
-  const totalCertPages = Math.max(1, Math.ceil(certificates.length / CERTS_PER_PAGE));
-  const safeCertPage = Math.min(certPage, totalCertPages);
-  const visibleCerts = certificates.slice(
-    (safeCertPage - 1) * CERTS_PER_PAGE,
-    safeCertPage * CERTS_PER_PAGE
-  );
+  const skillGroupsCount =
+    parsedSkills.length > 0
+      ? parsedSkills.reduce((acc, g) => acc + g.skills.length, 0)
+      : projectTags.length;
+
+  const bentoStats = [
+    {
+      id: "projects",
+      label: lang === "EN" ? "Projects" : "Dự án",
+      value: projectCount,
+      sub: lang === "EN" ? "Shipped builds" : "Sản phẩm thực tế",
+      icon: Code2,
+      show: true,
+    },
+    {
+      id: "certificates",
+      label: lang === "EN" ? "Credentials" : "Chứng chỉ",
+      value: certificateCount,
+      sub: lang === "EN" ? "Verified awards" : "Chứng nhận quốc tế",
+      icon: Award,
+      show: certificateCount > 0,
+    },
+    {
+      id: "experience",
+      label: lang === "EN" ? "Experience" : "Kinh nghiệm",
+      value: parsedExperiences.length,
+      sub: lang === "EN" ? "Roles & teams" : "Vị trí đảm nhiệm",
+      icon: Briefcase,
+      show: parsedExperiences.length > 0,
+    },
+    {
+      id: "skills",
+      label: lang === "EN" ? "Tech Stack" : "Công nghệ",
+      value: skillGroupsCount,
+      sub: lang === "EN" ? "Tools & frameworks" : "Kỹ năng chuyên môn",
+      icon: Cpu,
+      show: skillGroupsCount > 0,
+    },
+  ].filter((s) => s.show);
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="apple-shell pt-4 sm:pt-6 pb-20"
-    >
-      <div className="mx-auto w-full max-w-[680px]">
-        {/* Social Links Bar + Get in touch Pill CTA (Flush-left & Flush-right) */}
-        {socialLinks.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-6 mb-10 border-b border-[var(--card-border)]">
-            <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-2">
-              {socialLinks
-                .filter((s) => s.type !== "email")
-                .map((link) => {
-                  const Icon = link.icon;
-                  return (
-                    <SocialStatLink key={link.type} link={link} Icon={Icon} />
-                  );
-                })}
+    <div className="apple-shell pt-3 sm:pt-6 pb-6 space-y-6 sm:space-y-9">
+      {/* 1. HERO & ABOUT 3D STUDIO CARD (#about) */}
+      <section
+        id="about"
+        ref={heroRef}
+        className="relative apple-perspective-stage"
+      >
+        <motion.div
+          style={
+            reducedMotion
+              ? undefined
+              : {
+                  scale: heroScale,
+                  y: heroY,
+                  rotateX: heroRotateX,
+                  transformPerspective: 1200,
+                  transformOrigin: "50% 0%",
+                }
+          }
+          className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[32px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
+        >
+          {/* Top Social & Contact Row */}
+          {socialLinks.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-6 sm:mb-7 border-b border-[var(--card-border)]">
+              <div className="flex flex-wrap items-center gap-x-3.5 sm:gap-x-5 gap-y-1.5">
+                {socialLinks
+                  .filter((s) => s.type !== "email")
+                  .map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <SocialStatLink key={link.type} link={link} Icon={Icon} />
+                    );
+                  })}
+              </div>
+
+              <a
+                href={primaryEmailHref}
+                onPointerMove={ctaMagnetic.onPointerMove}
+                onPointerLeave={ctaMagnetic.onPointerLeave}
+                data-cursor="magnetic"
+                className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3.5 sm:px-4 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs sm:text-[13px] font-semibold hover:opacity-85 hover:scale-[1.03] transition-all cursor-pointer"
+              >
+                <span>{lang === "EN" ? "Get in touch" : "Liên hệ ngay"}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
             </div>
+          )}
 
-            <a
-              href={primaryEmailHref}
-              onPointerMove={ctaMagnetic.onPointerMove}
-              onPointerLeave={ctaMagnetic.onPointerLeave}
-              data-cursor="magnetic"
-              className="magnetic-target inline-flex h-10 items-center px-4 rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13px] font-semibold text-[var(--ink-primary)] hover:bg-[var(--row-hover-bg)] hover:scale-[1.03] transition-all cursor-pointer"
-            >
-              {lang === "EN" ? "Get in touch" : "Liên hệ ngay"}
-            </a>
-          </div>
-        )}
-
-        {/* Editorial Intro */}
-        <div className="mb-14">
-          <div className="py-[0.08em]">
-            <h1 className="apple-h1 text-[32px] sm:text-[42px] font-normal text-[var(--ink-primary)] mb-2.5">
+          {/* Editorial Headline & Bio */}
+          <div className="max-w-3xl">
+            <h1 className="apple-h1 text-[28px] sm:text-[40px] lg:text-[46px] font-semibold text-[var(--ink-primary)] mb-2 break-words">
               {profileName}
             </h1>
+
+            {renderTypingSubtitle()}
+
+            {profileData?.dob && (
+              <p className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[12px] sm:text-[12.5px] font-medium tabular-nums text-[var(--ink-meta)]">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>
+                  {lang === "VN"
+                    ? `Ngày sinh: ${formatDate(profileData.dob)}`
+                    : `Born: ${formatDate(profileData.dob)}`}
+                </span>
+              </p>
+            )}
+
+            {firstAbout && (
+              <div className="mt-5 sm:mt-6 text-[15.5px] sm:text-[17.5px] leading-[1.7] text-[var(--ink-primary)]">
+                <p>{renderLinkifiedText(firstAbout)}</p>
+
+                {extraAbout.length > 0 && (
+                  <>
+                    <AnimatePresence initial={false}>
+                      {aboutExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pt-4 space-y-4 text-[var(--ink-secondary)]">
+                            {extraAbout.map((para, i) => (
+                              <p key={i}>{renderLinkifiedText(para)}</p>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <button
+                      type="button"
+                      onClick={() => setAboutExpanded((prev) => !prev)}
+                      onPointerMove={readMoreMagnetic.onPointerMove}
+                      onPointerLeave={readMoreMagnetic.onPointerLeave}
+                      data-cursor="magnetic"
+                      className="magnetic-target mt-3 inline-flex min-h-[38px] items-center text-[14px] sm:text-[15px] font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+                    >
+                      {aboutExpanded
+                        ? lang === "EN"
+                          ? "Read Less"
+                          : "Thu gọn"
+                        : lang === "EN"
+                        ? "Read More"
+                        : "Đọc thêm"}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
-          {renderTypingSubtitle()}
-
-          {profileData?.dob && (
-            <p className="mt-2.5 inline-flex items-center gap-1.5 text-[13px] font-medium tabular-nums text-[var(--ink-meta)]">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
-                {lang === "VN"
-                  ? `Ngày sinh: ${formatDate(profileData.dob)}`
-                  : `Born: ${formatDate(profileData.dob)}`}
-              </span>
-            </p>
-          )}
-
-          {firstAbout && (
-            <div className="mt-6 text-[16.5px] sm:text-[18px] leading-[1.7] text-[var(--ink-primary)]">
-              <p>{renderLinkifiedText(firstAbout)}</p>
-
-              {extraAbout.length > 0 && (
-                <>
-                  <AnimatePresence initial={false}>
-                    {aboutExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pt-5 space-y-4 py-[0.12em] text-[var(--ink-secondary)]">
-                          {extraAbout.map((para, i) => (
-                            <p key={i}>{renderLinkifiedText(para)}</p>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <button
-                    type="button"
-                    onClick={() => setAboutExpanded((prev) => !prev)}
-                    onPointerMove={readMoreMagnetic.onPointerMove}
-                    onPointerLeave={readMoreMagnetic.onPointerLeave}
-                    data-cursor="magnetic"
-                    className="magnetic-target mt-3 inline-flex min-h-[40px] items-center text-[15px] sm:text-[16px] font-medium text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+          {/* Interactive 3D Bento Quick-Jump Strip (Responsive 2x2 on iPhone mini/7/X, 4 cols on sm+) */}
+          {bentoStats.length > 0 && (
+            <div className="mt-6 sm:mt-8 pt-6 border-t border-[var(--card-border)] grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {bentoStats.map((stat, idx) => {
+                const Icon = stat.icon;
+                return (
+                  <Tilt3DCard
+                    key={stat.id}
+                    index={idx}
+                    maxTilt={4}
+                    onClick={() => onJumpToSection(stat.id)}
+                    className="group rounded-[18px] sm:rounded-[20px] p-3.5 sm:p-4 bg-[var(--surface-elevated)]/85 hover:bg-[var(--surface-card-hover)] apple-hairline cursor-pointer text-left"
                   >
-                    {aboutExpanded
-                      ? lang === "EN"
-                        ? "Read Less"
-                        : "Thu gọn"
-                      : lang === "EN"
-                      ? "Read More"
-                      : "Đọc thêm"}
-                  </button>
-                </>
-              )}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)]">
+                        <Icon className="h-4 w-4 opacity-85" />
+                      </span>
+                      <ArrowUpRight className="h-3.5 w-3.5 text-[var(--ink-muted)] group-hover:text-[var(--ink-primary)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    </div>
+                    <p className="text-[20px] sm:text-[24px] font-semibold tabular-nums text-[var(--ink-primary)] leading-tight">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs sm:text-[13px] font-semibold text-[var(--ink-primary)] mt-0.5">
+                      {stat.label}
+                    </p>
+                    <p className="text-[11px] text-[var(--ink-meta)] truncate">
+                      {stat.sub}
+                    </p>
+                  </Tilt3DCard>
+                );
+              })}
             </div>
           )}
-        </div>
+        </motion.div>
+      </section>
 
-        {/* 1. Experience / Work Section */}
-        {parsedExperiences.length > 0 && (
-          <div className="mb-12">
-            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
-              {lang === "EN" ? "Experience" : "Kinh nghiệm"}
-            </h2>
+      {/* 2. EXPERIENCE SECTION (#experience) */}
+      {parsedExperiences.length > 0 && (
+        <Scroll3DSection id="experience">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
+            <div className="flex items-baseline justify-between gap-3 mb-4">
+              <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)]">
+                {lang === "EN" ? "Experience" : "Kinh nghiệm"}
+              </h2>
+              <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                {parsedExperiences.length}{" "}
+                {lang === "EN" ? "roles" : "vị trí"}
+              </span>
+            </div>
 
             <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
               {parsedExperiences.map((exp, idx) => {
@@ -290,16 +370,16 @@ export default function MoreInfoView({
                     >
                       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
                         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 min-w-0">
-                          <span className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)]">
+                          <span className="text-[16px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)]">
                             {exp.org || exp.role}
                           </span>
                           {exp.org && exp.role && (
-                            <span className="text-[14.5px] sm:text-[15.5px] text-[var(--ink-meta)]">
+                            <span className="text-[14px] sm:text-[15.5px] text-[var(--ink-meta)]">
                               {exp.role}
                             </span>
                           )}
                           {exp.badge && (
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--pill-bg)] text-[var(--ink-meta)]">
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)]">
                               {exp.badge}
                             </span>
                           )}
@@ -307,7 +387,7 @@ export default function MoreInfoView({
 
                         <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                           {exp.period && (
-                            <span className="text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)]">
+                            <span className="text-[13px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
                               {exp.period}
                             </span>
                           )}
@@ -318,7 +398,10 @@ export default function MoreInfoView({
                               }`}
                             />
                           ) : anyExpHasBullets ? (
-                            <span className="hidden sm:inline-block w-4" aria-hidden="true" />
+                            <span
+                              className="hidden sm:inline-block w-4"
+                              aria-hidden="true"
+                            />
                           ) : null}
                         </div>
                       </div>
@@ -330,14 +413,14 @@ export default function MoreInfoView({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
-                          <ul className="pl-3.5 sm:pl-4 pr-2 pb-4 pt-1 space-y-2 text-[14.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
+                          <ul className="pl-2.5 sm:pl-4 pr-2 pb-4 pt-1 space-y-2 text-[14px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
                             {exp.bullets.map((b, bIdx) => (
                               <li key={bIdx} className="flex items-start gap-2.5">
                                 <span
-                                  className="mt-2.5 h-1 w-1 rounded-full bg-[var(--ink-meta)] shrink-0"
+                                  className="mt-2.5 h-1.5 w-1.5 rounded-full bg-[var(--ink-meta)] shrink-0"
                                   aria-hidden="true"
                                 />
                                 <span>{renderLinkifiedText(b)}</span>
@@ -352,12 +435,14 @@ export default function MoreInfoView({
               })}
             </div>
           </div>
-        )}
+        </Scroll3DSection>
+      )}
 
-        {/* 2. Technical Skills & Tools Section (2-Column Apple Spec Grid) */}
-        {(parsedSkills.length > 0 || projectTags.length > 0) && (
-          <div className="mb-12">
-            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
+      {/* 3. TECHNICAL SKILLS SECTION (#skills) */}
+      {(parsedSkills.length > 0 || projectTags.length > 0) && (
+        <Scroll3DSection id="skills">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
+            <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-4">
               {lang === "EN" ? "Technical Skills" : "Kỹ năng công nghệ"}
             </h2>
 
@@ -366,11 +451,11 @@ export default function MoreInfoView({
                 {parsedSkills.map((group, idx) => (
                   <div key={idx} className="py-0.5">
                     <AppleHoverRow>
-                      <div className="grid grid-cols-1 sm:grid-cols-[190px_minmax(0,1fr)] gap-1 sm:gap-6 items-baseline">
-                        <span className="text-[16px] sm:text-[17px] font-medium text-[var(--ink-primary)]">
+                      <div className="grid grid-cols-1 sm:grid-cols-[210px_minmax(0,1fr)] gap-1 sm:gap-6 items-baseline">
+                        <span className="text-[15.5px] sm:text-[16.5px] font-semibold text-[var(--ink-primary)]">
                           {group.category}
                         </span>
-                        <span className="text-[14.5px] sm:text-[15.5px] leading-[1.6] text-[var(--ink-meta)]">
+                        <span className="text-[14px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
                           {group.skills.join(" · ")}
                         </span>
                       </div>
@@ -379,11 +464,11 @@ export default function MoreInfoView({
                 ))}
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {projectTags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1.5 rounded-xl text-[13px] font-medium bg-[var(--pill-bg)] text-[var(--ink-secondary)]"
+                    className="px-3 py-1.5 rounded-xl text-[13px] font-medium bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)]"
                   >
                     {tag}
                   </span>
@@ -391,12 +476,14 @@ export default function MoreInfoView({
               </div>
             )}
           </div>
-        )}
+        </Scroll3DSection>
+      )}
 
-        {/* 3. Education Section */}
-        {parsedEducations.length > 0 && (
-          <div className="mb-12">
-            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
+      {/* 4. EDUCATION SECTION (#education) */}
+      {parsedEducations.length > 0 && (
+        <Scroll3DSection id="education">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
+            <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-4">
               {lang === "EN" ? "Education" : "Học vấn"}
             </h2>
 
@@ -406,11 +493,11 @@ export default function MoreInfoView({
                   <AppleHoverRow>
                     <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
                       <div className="min-w-0">
-                        <span className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)]">
+                        <span className="text-[16px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)]">
                           {edu.school}
                         </span>
                         {edu.major && (
-                          <span className="block sm:inline sm:ml-2.5 text-[14.5px] sm:text-[15.5px] text-[var(--ink-meta)]">
+                          <span className="block sm:inline sm:ml-2.5 text-[14px] sm:text-[15.5px] text-[var(--ink-meta)]">
                             {edu.major}
                           </span>
                         )}
@@ -423,12 +510,12 @@ export default function MoreInfoView({
 
                       <div className="flex items-center gap-2 shrink-0">
                         {edu.gpa && (
-                          <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-[var(--pill-bg)] text-[var(--ink-primary)]">
+                          <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)]">
                             {edu.gpa}
                           </span>
                         )}
                         {edu.period && (
-                          <span className="text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)]">
+                          <span className="text-[13px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
                             {edu.period}
                           </span>
                         )}
@@ -439,155 +526,9 @@ export default function MoreInfoView({
               ))}
             </div>
           </div>
-        )}
-
-        {/* 4. Certificates & Accreditations Section (Full Card Metadata + Paginated) */}
-        {certificates.length > 0 && (
-          <div className="mb-8">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div className="flex items-baseline gap-2.5">
-                <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)]">
-                  {lang === "EN" ? "Certificates & Accreditations" : "Chứng chỉ & Thành tựu"}
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[var(--pill-bg)] text-[var(--ink-meta)]">
-                  {certificates.length}
-                </span>
-              </div>
-
-              {onOpenCertificatesShowcase && (
-                <button
-                  type="button"
-                  onClick={onOpenCertificatesShowcase}
-                  data-cursor="magnetic"
-                  className="inline-flex h-9 items-center gap-1.5 px-3.5 rounded-[10px] bg-[var(--pill-bg)] apple-hairline text-xs font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
-                >
-                  <span>{lang === "EN" ? "Browse Gallery" : "Mở Bộ Sưu Tập"}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
-              {visibleCerts.map((cert) => {
-                const title =
-                  (lang === "EN" ? cert.title_en : cert.title_vn) ||
-                  cert.title_en ||
-                  cert.title_vn ||
-                  "Certificate";
-                const desc =
-                  (lang === "EN"
-                    ? cert.desc_en || cert.desc_vn
-                    : cert.desc_vn || cert.desc_en) || "";
-                const dateStr = formatDateRange(cert.project_date) || formatYearOrDate(cert);
-
-                return (
-                  <div key={cert.id} className="py-4">
-                    <div
-                      onClick={() => onSelectProject(cert)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onSelectProject(cert);
-                        }
-                      }}
-                      data-cursor="magnetic"
-                      className="apple-list-row group block -mx-3.5 px-3.5 sm:-mx-4 sm:px-4 py-3 text-left cursor-pointer"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {cert.category && (
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--pill-bg)] text-[var(--ink-primary)]">
-                              {cert.category}
-                            </span>
-                          )}
-                          {dateStr && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium tabular-nums text-[var(--ink-meta)]">
-                              <Calendar className="h-3 w-3 opacity-75" />
-                              <span>{dateStr}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-meta)] group-hover:text-[var(--ink-primary)] transition-colors">
-                          <span>{lang === "EN" ? "View Certificate" : "Xem Chứng Chỉ"}</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </span>
-                      </div>
-
-                      <h3 className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)] leading-[1.4]">
-                        {title}
-                      </h3>
-
-                      {desc && (
-                        <div className="mt-1.5 text-[14px] leading-[1.6] text-[var(--ink-secondary)] whitespace-pre-line">
-                          {renderLinkifiedText(desc)}
-                        </div>
-                      )}
-
-                      {((cert.tags && cert.tags.length > 0) || cert.links) && (
-                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            {(cert.tags || []).map((t) => (
-                              <span
-                                key={t}
-                                className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-meta)]"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-
-                          {cert.links && (
-                            <a
-                              href={cert.links}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--pill-bg)] text-[11px] font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity"
-                            >
-                              <span>{lang === "EN" ? "Verify Link" : "Link Xác Thực"}</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {totalCertPages > 1 && (
-              <div className="mt-5 flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCertPage((p) => Math.max(1, p - 1))}
-                  disabled={safeCertPage === 1}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
-                  aria-label="Previous certificates page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="inline-flex h-9 items-center px-3.5 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                  {safeCertPage} / {totalCertPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCertPage((p) => Math.min(totalCertPages, p + 1))}
-                  disabled={safeCertPage === totalCertPages}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
-                  aria-label="Next certificates page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </motion.section>
+        </Scroll3DSection>
+      )}
+    </div>
   );
 }
 
@@ -607,9 +548,9 @@ function SocialStatLink({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className="magnetic-target inline-flex min-h-[38px] items-center gap-1.5 text-[13.5px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.05] transition-all cursor-pointer"
+      className="magnetic-target inline-flex min-h-[36px] items-center gap-1.5 text-[13px] sm:text-[13.5px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
     >
-      <Icon className="h-4 w-4 opacity-75" />
+      <Icon className="h-4 w-4 opacity-80" />
       <span>{link.label}</span>
     </a>
   );
