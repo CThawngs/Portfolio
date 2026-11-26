@@ -12,7 +12,10 @@ import {
   FolderKanban,
 } from "lucide-react";
 import {
+  canOptimizeWithNextImage,
   classifyAspectRatio,
+  getOptimizedImageSrcSet,
+  getOptimizedImageUrl,
   type ImageOrientation,
 } from "./SafePortfolioImage";
 import { getTagColorScheme, type TagColorScheme } from "./tagPalette";
@@ -32,14 +35,9 @@ interface ProjectDetailModalProps {
  * - Strictly 2 close mechanisms: (1) Top-right 'X' button, (2) Clicking outside the panel
  *   (plus Escape keyboard support for accessibility). Bottom-right 'Close' button removed.
  * - Full-bleed left-side image (`p-0`, flush edge-to-edge against outer modal corners) with
- *   adaptive layout for Portrait, Square, Landscape, and No-Image items:
- *   - Portrait (`< 0.86`): 41% left column width
- *   - Square (`0.86 - 1.2`): 48% left column width
- *   - Landscape (`> 1.2`): 58% left column width
- *   - Foreground artwork renders 100% uncropped (`object-contain`) over a soft full-bleed
- *     ambient echo of the image itself so zero content is ever cut off and zero bare bars appear.
- *   - No-Image special case: cleanly collapses into a sleek centered single-column sheet.
- * - Desktop (`lg:`): Left media pane stays stationary while right details scroll independently.
+ *   adaptive layout for Portrait (`41%`), Square (`48%`), Landscape (`58%`), and No-Image.
+ * - Lightweight WebP loading: ~1.2 KB `w=64` thumbnail for ambient edge wash + compressed
+ *   `w=1200` WebP (`decoding="async"`) for crisp uncropped artwork.
  */
 export default function ProjectDetailModal({
   project,
@@ -53,6 +51,7 @@ export default function ProjectDetailModal({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const onCloseRef = useRef(onClose);
 
+  const [rawFallbackFor, setRawFallbackFor] = useState<string | null>(null);
   const [failedImgSrc, setFailedImgSrc] = useState<string | null>(null);
   const [measuredOrientation, setMeasuredOrientation] = useState<{
     src: string;
@@ -65,7 +64,6 @@ export default function ProjectDetailModal({
 
   const projectId = project?.id ?? null;
 
-  // Scroll Lock + Escape Key + WCAG Focus Trap
   useEffect(() => {
     if (!projectId) return;
 
@@ -121,12 +119,27 @@ export default function ProjectDetailModal({
 
   const images = project?.images?.filter(Boolean) ?? [];
   const primaryImgSrc = images[0] || "";
-  const showMediaPane = Boolean(primaryImgSrc && failedImgSrc !== primaryImgSrc);
+  const showMediaPane = Boolean(
+    primaryImgSrc && failedImgSrc !== primaryImgSrc
+  );
 
   const orientation: ImageOrientation =
     measuredOrientation && measuredOrientation.src === primaryImgSrc
       ? measuredOrientation.orientation
       : "landscape";
+
+  const usingRaw =
+    rawFallbackFor === primaryImgSrc ||
+    !canOptimizeWithNextImage(primaryImgSrc);
+  const echoThumbSrc = usingRaw
+    ? primaryImgSrc
+    : getOptimizedImageUrl(primaryImgSrc, 64);
+  const mainImgSrc = usingRaw
+    ? primaryImgSrc
+    : getOptimizedImageUrl(primaryImgSrc, 1200);
+  const mainImgSrcSet = usingRaw
+    ? undefined
+    : getOptimizedImageSrcSet(primaryImgSrc, [640, 828, 1200]);
 
   const dateLabel = project
     ? formatDateRange(project.project_date) ||
@@ -172,7 +185,6 @@ export default function ProjectDetailModal({
     ? "Open Live Project"
     : "Mở Xem Trực Tiếp";
 
-  // Adaptive desktop modal width & left-pane ratio tailored to Portrait / Square / Landscape / No-Image
   const modalMaxWidthClass = !showMediaPane
     ? "sm:max-w-[600px]"
     : orientation === "portrait"
@@ -195,8 +207,8 @@ export default function ProjectDetailModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 lg:p-8 bg-black/60 dark:bg-black/78 backdrop-blur-xl"
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 lg:p-8 bg-black/68 dark:bg-black/82 backdrop-blur-xs"
           onClick={onClose}
           role="dialog"
           aria-modal="true"
@@ -204,20 +216,20 @@ export default function ProjectDetailModal({
         >
           <motion.div
             ref={dialogRef}
-            initial={{ opacity: 0, scale: 0.95, y: 24 }}
+            initial={{ opacity: 0, scale: 0.96, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 16 }}
-            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className={`relative w-full ${modalMaxWidthClass} max-h-[92dvh] sm:max-h-[86dvh] flex flex-col overflow-hidden rounded-t-[24px] sm:rounded-[28px] bg-[var(--surface-modal)] apple-hairline shadow-2xl`}
           >
-            {/* Top-Right Close Button ('X') — Always Pinned at Top-Right of Panel Across All Viewports */}
+            {/* Top-Right Close Button ('X') */}
             <button
               ref={closeBtnRef}
               type="button"
               onClick={onClose}
               data-cursor="magnetic"
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--surface-modal)]/85 lg:bg-[var(--pill-bg)] backdrop-blur-md apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-105 transition-all shadow-sm cursor-pointer"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--surface-modal)]/90 lg:bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-105 transition-all shadow-sm cursor-pointer"
               aria-label={lang === "EN" ? "Close details" : "Đóng chi tiết"}
             >
               <X className="h-4 w-4" />
@@ -230,37 +242,38 @@ export default function ProjectDetailModal({
                   : "flex flex-col max-h-[86dvh]"
               }`}
             >
-              {/* LEFT PANE: True Full-Bleed Edge-to-Edge Media (`p-0`), Uncropped Across Portrait / Square / Landscape, Stationary on Desktop */}
+              {/* LEFT PANE: Full-Bleed Edge-to-Edge Media (`p-0`), Adaptive Portrait / Square / Landscape */}
               {showMediaPane && (
                 <div
                   data-testid="modal-media-pane"
                   data-orientation={orientation}
                   className="relative w-full p-0 m-0 overflow-hidden bg-[var(--surface-modal)] flex items-center justify-center min-h-[210px] sm:min-h-[280px] lg:min-h-[420px] lg:h-full lg:max-h-[86dvh]"
                 >
-                  {/* Full-Bleed Soft Ambient Echo Layer — Extends Artwork Colors Flush to All Outer Edges */}
+                  {/* Ultra-lightweight ~1KB w=64 WebP Ambient Color Echo */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={primaryImgSrc}
+                    src={echoThumbSrc}
                     alt=""
                     aria-hidden="true"
                     loading="eager"
                     decoding="async"
-                    className="pointer-events-none select-none absolute inset-0 h-full w-full object-cover scale-125 blur-2xl opacity-55 dark:opacity-45 saturate-125"
+                    className="pointer-events-none select-none absolute inset-0 h-full w-full object-cover scale-125 blur-md opacity-55 dark:opacity-45"
                   />
 
-                  {/* Subtle Radial Vignette for Seamless Transition */}
                   <div
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 bg-black/[0.04] dark:bg-black/[0.16]"
                   />
 
-                  {/* Foreground Artwork — 100% Uncropped (`object-contain`), Full-Bleed Flush to Edges */}
+                  {/* Foreground Artwork — 100% Uncropped (`object-contain`), Compressed WebP */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={primaryImgSrc}
+                    src={mainImgSrc}
+                    srcSet={mainImgSrcSet}
+                    sizes="(max-width: 1023px) 96vw, 640px"
                     alt={title}
                     loading="eager"
-                    decoding="sync"
+                    decoding="async"
                     fetchPriority="high"
                     onLoad={(e) => {
                       const img = e.currentTarget;
@@ -274,22 +287,23 @@ export default function ProjectDetailModal({
                         });
                       }
                     }}
-                    onError={() => setFailedImgSrc(primaryImgSrc)}
-                    className={`relative z-10 block w-full h-full max-h-[46dvh] sm:max-h-[50dvh] lg:max-h-[86dvh] ${
-                      orientation === "landscape"
-                        ? "object-contain"
-                        : "object-contain"
-                    }`}
+                    onError={() => {
+                      if (!usingRaw) {
+                        setRawFallbackFor(primaryImgSrc);
+                      } else {
+                        setFailedImgSrc(primaryImgSrc);
+                      }
+                    }}
+                    className="relative z-10 block w-full h-full max-h-[46dvh] sm:max-h-[50dvh] lg:max-h-[86dvh] object-contain"
                   />
                 </div>
               )}
 
-              {/* RIGHT PANE: Seamless Same-Color Details Column (Scrolls Independently While Left Image Stays Stationary) */}
+              {/* RIGHT PANE: Seamless Same-Color Details Column */}
               <div
                 data-testid="modal-details-pane"
                 className="flex flex-col min-h-0 lg:max-h-[86dvh] lg:overflow-hidden bg-[var(--surface-modal)]"
               >
-                {/* Pinned Top Header (Reserves pr-12 on Desktop for Top-Right 'X' Button) */}
                 <div
                   className={`flex items-center gap-2.5 px-4 sm:px-6 pt-4 sm:pt-6 pb-2.5 shrink-0 ${
                     showMediaPane ? "pr-4 lg:pr-16" : "pr-14 sm:pr-16"
@@ -320,7 +334,6 @@ export default function ProjectDetailModal({
                   </div>
                 </div>
 
-                {/* Independently Scrollable Editorial Content */}
                 <div className="flex-1 min-h-0 lg:overflow-y-auto overscroll-contain px-4 sm:px-6 py-3 sm:py-4 pb-[max(1.1rem,env(safe-area-inset-bottom))] space-y-4 sm:space-y-5">
                   <div>
                     <h2
@@ -331,7 +344,6 @@ export default function ProjectDetailModal({
                     </h2>
                   </div>
 
-                  {/* Metadata Strip (1-col on ultra-narrow <360px, 2-col on >=360px) */}
                   <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2.5">
                     <div className="rounded-[14px] sm:rounded-[16px] p-3 bg-[var(--pill-bg)]/65 apple-hairline">
                       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-muted)] mb-1">
@@ -355,7 +367,6 @@ export default function ProjectDetailModal({
                     </div>
                   </div>
 
-                  {/* Overview / Story */}
                   {desc && (
                     <div className="space-y-2">
                       <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
@@ -367,7 +378,6 @@ export default function ProjectDetailModal({
                     </div>
                   )}
 
-                  {/* Colorful Technologies & Tags */}
                   {project.tags && project.tags.length > 0 && (
                     <div className="space-y-2.5 pt-0.5">
                       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
@@ -395,7 +405,6 @@ export default function ProjectDetailModal({
                   )}
                 </div>
 
-                {/* Pinned Bottom Action Bar — Shown Only When External Link Exists (No Redundant Bottom 'Close' Button!) */}
                 {project.links && (
                   <div className="flex items-center px-4 sm:px-6 pt-3 pb-[max(0.95rem,env(safe-area-inset-bottom))] border-t border-[var(--card-border)] bg-[var(--surface-modal)] shrink-0">
                     <a

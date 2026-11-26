@@ -27,13 +27,6 @@ interface ShowcaseCarouselProps {
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
 }
 
-/**
- * ShowcaseCarousel — Frameless 3-Column Editorial Stage
- * - Center Stage displays ONLY the standalone image with all 4 corners cleanly rounded
- *   (zero outer card wrapper, zero padding frame, zero overlaid badges), adapting smoothly
- *   to Portrait, Square, Landscape, and No-Image entries.
- * - Pre-decodes neighboring items (±4 around active index) so Next/Prev switches in 0ms.
- */
 export default function ShowcaseCarousel({
   items,
   lang,
@@ -51,22 +44,18 @@ export default function ShowcaseCarousel({
   const safeIndex = items.length ? Math.min(currentIndex, items.length - 1) : 0;
   const activeItem = items[safeIndex] || null;
 
-  // High-priority preload & GPU decode of adjacent Stage items for 0ms transitions
+  // Polite neighbor preload (±2 compressed w=1080 WebP images) for 0ms Next/Prev transitions
   useEffect(() => {
     if (!items.length) return;
     const neighborUrls: string[] = [];
-    for (let offset = -3; offset <= 5; offset++) {
+    for (const offset of [1, -1, 2, -2]) {
       const idx = safeIndex + offset;
       if (idx >= 0 && idx < items.length) {
-        const imgs = items[idx]?.images;
-        if (imgs && imgs.length > 0) {
-          for (const u of imgs) {
-            if (u) neighborUrls.push(u);
-          }
-        }
+        const cover = items[idx]?.images?.[0];
+        if (cover) neighborUrls.push(cover);
       }
     }
-    preloadImagesPriority(neighborUrls);
+    preloadImagesPriority(neighborUrls, 1080);
   }, [items, safeIndex]);
 
   const goToIndex = useCallback(
@@ -80,7 +69,6 @@ export default function ShowcaseCarousel({
     [items.length, safeIndex]
   );
 
-  // Scoped keyboard navigation when stage is near viewport center
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -125,7 +113,6 @@ export default function ShowcaseCarousel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [safeIndex, items.length, goToIndex]);
 
-  // Lightweight Mobile/Tablet Touch Swipe
   const touchRef = useRef<{ startX: number; startY: number; active: boolean }>({
     startX: 0,
     startY: 0,
@@ -192,6 +179,7 @@ export default function ShowcaseCarousel({
   const artworkPlaceholder = (
     <div
       onClick={() => onSelectProject(activeItem)}
+      data-cursor="view"
       className="relative flex aspect-[16/10] w-full max-w-[600px] mx-auto flex-col items-center justify-center p-6 sm:p-8 rounded-[18px] sm:rounded-[22px] bg-[var(--surface-elevated)] apple-hairline text-center overflow-hidden cursor-pointer"
     >
       <div
@@ -227,17 +215,16 @@ export default function ShowcaseCarousel({
       }
       className="relative w-full select-none focus:outline-none py-3 sm:py-6"
     >
-      {/* 3-Column Non-Overlapping Editorial Stage on Desktop / Clean Responsive Stack on < 1024px */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] xl:grid-cols-[300px_minmax(0,1fr)_300px] gap-4 sm:gap-6 lg:gap-8 xl:gap-12 items-center">
-        {/* LEFT COLUMN (Desktop >= 1024px): Date, Title, Colorful Tags, Action Buttons */}
+        {/* LEFT COLUMN (Desktop >= 1024px) */}
         <div className="hidden lg:flex flex-col justify-center items-start text-left min-w-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`left-${activeItem.id}-${lang}`}
-              initial={{ opacity: 0, x: -12 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 8 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, x: 6 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="w-full space-y-3"
             >
               {activeDateStr && (
@@ -295,7 +282,7 @@ export default function ShowcaseCarousel({
           </AnimatePresence>
         </div>
 
-        {/* CENTER COLUMN: Pure Frameless 4-Corner-Rounded Artwork (Adapts to Portrait, Square & Landscape) */}
+        {/* CENTER COLUMN: Frameless 4-Corner-Rounded Compressed WebP Artwork */}
         <div
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
@@ -309,8 +296,8 @@ export default function ShowcaseCarousel({
                 custom={direction}
                 initial={{
                   opacity: 0,
-                  x: direction * 24,
-                  scale: 0.985,
+                  x: direction * 20,
+                  scale: 0.988,
                 }}
                 animate={{
                   opacity: 1,
@@ -319,10 +306,10 @@ export default function ShowcaseCarousel({
                 }}
                 exit={{
                   opacity: 0,
-                  x: direction * -20,
-                  scale: 0.985,
+                  x: direction * -16,
+                  scale: 0.988,
                 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 className="flex w-full items-center justify-center"
               >
                 {coverSrc ? (
@@ -340,14 +327,13 @@ export default function ShowcaseCarousel({
             </AnimatePresence>
           </div>
 
-          {/* Centered Stage Controls (Prev / Counter / Next) */}
           {items.length > 1 && (
             <div className="mt-3.5 sm:mt-4 flex items-center justify-center gap-2 sm:gap-2.5">
               <button
                 type="button"
                 onClick={() => goToIndex(safeIndex - 1)}
                 disabled={safeIndex === 0}
-                data-cursor="magnetic"
+                data-cursor="prev"
                 className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
                 aria-label={lang === "EN" ? "Previous item" : "Mục trước"}
               >
@@ -366,7 +352,7 @@ export default function ShowcaseCarousel({
                 type="button"
                 onClick={() => goToIndex(safeIndex + 1)}
                 disabled={safeIndex === items.length - 1}
-                data-cursor="magnetic"
+                data-cursor="next"
                 className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 hover:scale-105 transition-all cursor-pointer disabled:cursor-default"
                 aria-label={lang === "EN" ? "Next item" : "Mục tiếp"}
               >
@@ -376,15 +362,15 @@ export default function ShowcaseCarousel({
           )}
         </div>
 
-        {/* RIGHT COLUMN (Desktop >= 1024px): Full Editorial Description */}
+        {/* RIGHT COLUMN (Desktop >= 1024px) */}
         <div className="hidden lg:flex flex-col justify-center items-start text-left min-w-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`right-${activeItem.id}-${lang}`}
-              initial={{ opacity: 0, x: 12 }}
+              initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="w-full space-y-2.5"
             >
               <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
@@ -406,7 +392,7 @@ export default function ShowcaseCarousel({
           </AnimatePresence>
         </div>
 
-        {/* MOBILE & TABLET (< 1024px): Clean Responsive Details Card Below */}
+        {/* MOBILE & TABLET (< 1024px) */}
         <div className="lg:hidden w-full rounded-[20px] sm:rounded-[24px] apple-surface-card p-4 sm:p-5 text-left space-y-3">
           {activeDateStr && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">

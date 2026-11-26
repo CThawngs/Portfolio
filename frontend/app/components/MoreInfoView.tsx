@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, ChevronDown } from "lucide-react";
 import { useMagneticHandlers } from "./Magnetic";
-import {
-  Scroll3DSection,
-  useReducedMotionPreference,
-} from "./Scroll3D";
+import { Scroll3DSection } from "./Scroll3D";
 import { getTagColorScheme, type TagColorScheme } from "./tagPalette";
 import type { ProfileData } from "../PortfolioUI";
 
@@ -64,7 +61,8 @@ function AppleHoverRow({
   onClick?: () => void;
   ariaExpanded?: boolean;
 }) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(3);
+  const { onPointerEnter, onPointerMove, onPointerLeave } =
+    useMagneticHandlers(3);
   const sharedClass =
     "apple-list-row group block -mx-2 px-2 sm:-mx-3.5 sm:px-3.5 py-3 sm:py-3.5 text-left";
 
@@ -74,6 +72,7 @@ function AppleHoverRow({
         type="button"
         onClick={onClick}
         aria-expanded={ariaExpanded}
+        onPointerEnter={onPointerEnter}
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         data-cursor="magnetic"
@@ -86,6 +85,7 @@ function AppleHoverRow({
 
   return (
     <div
+      onPointerEnter={onPointerEnter}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       className={sharedClass}
@@ -96,7 +96,8 @@ function AppleHoverRow({
 }
 
 function HeroSocialIconButton({ link }: { link: SocialLinkEntry }) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(5);
+  const { onPointerEnter, onPointerMove, onPointerLeave } =
+    useMagneticHandlers(5);
   const Icon = link.icon;
   const isMail = link.type === "email" || link.href.startsWith("mailto:");
 
@@ -107,6 +108,7 @@ function HeroSocialIconButton({ link }: { link: SocialLinkEntry }) {
       rel={isMail ? undefined : "noopener noreferrer"}
       aria-label={link.label}
       title={link.label}
+      onPointerEnter={onPointerEnter}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
@@ -134,18 +136,8 @@ export default function MoreInfoView({
 }: MoreInfoViewProps) {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [openExpIdx, setOpenExpIdx] = useState<number | null>(0);
-  const heroRef = useRef<HTMLElement | null>(null);
 
   const readMoreMagnetic = useMagneticHandlers(4);
-  const reducedMotion = useReducedMotionPreference();
-
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.975]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 18]);
-  const heroRotateX = useTransform(scrollYProgress, [0, 1], [0, -2.5]);
 
   const firstAbout = aboutParagraphs[0] || "";
   const extraAbout = aboutParagraphs.slice(1);
@@ -155,26 +147,9 @@ export default function MoreInfoView({
 
   return (
     <div className="apple-shell pt-2 sm:pt-5 pb-4 sm:pb-6 space-y-5 sm:space-y-8">
-      {/* 1. HERO & ABOUT CARD (#about) — Centered & Evenly Aligned */}
-      <section
-        id="about"
-        ref={heroRef}
-        className="relative apple-perspective-stage"
-      >
-        <motion.div
-          style={
-            reducedMotion
-              ? undefined
-              : {
-                  scale: heroScale,
-                  y: heroY,
-                  rotateX: heroRotateX,
-                  transformPerspective: 1200,
-                  transformOrigin: "50% 0%",
-                }
-          }
-          className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
-        >
+      {/* 1. HERO & ABOUT CARD (#about) — Centered & Zero Scroll-Linked Transform Overhead */}
+      <section id="about" className="relative">
+        <div className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8 lg:p-10">
           {/* Centered & Symmetrically Balanced Personal Info Block */}
           <div className="mx-auto max-w-3xl flex flex-col items-center text-center">
             <h1 className="apple-h1 text-[24px] min-[380px]:text-[28px] sm:text-[40px] lg:text-[46px] font-semibold text-[var(--ink-primary)] mb-2 text-balance break-words">
@@ -208,7 +183,10 @@ export default function MoreInfoView({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+                          transition={{
+                            duration: 0.3,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
                           className="overflow-hidden"
                         >
                           <div className="pt-4 space-y-4 text-[var(--ink-secondary)]">
@@ -224,6 +202,7 @@ export default function MoreInfoView({
                       <button
                         type="button"
                         onClick={() => setAboutExpanded((prev) => !prev)}
+                        onPointerEnter={readMoreMagnetic.onPointerEnter}
                         onPointerMove={readMoreMagnetic.onPointerMove}
                         onPointerLeave={readMoreMagnetic.onPointerLeave}
                         data-cursor="magnetic"
@@ -252,7 +231,7 @@ export default function MoreInfoView({
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       </section>
 
       {/* 2. EXPERIENCE SECTION (#experience) */}
@@ -271,7 +250,9 @@ export default function MoreInfoView({
 
             <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
               {parsedExperiences.map((exp, idx) => {
-                const hasBullets = Boolean(exp.bullets && exp.bullets.length > 0);
+                const hasBullets = Boolean(
+                  exp.bullets && exp.bullets.length > 0
+                );
                 const isOpen = openExpIdx === idx;
                 return (
                   <div key={idx} className="py-0.5">
@@ -328,12 +309,18 @@ export default function MoreInfoView({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                          transition={{
+                            duration: 0.24,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
                           className="overflow-hidden"
                         >
                           <ul className="pl-2 sm:pl-4 pr-1 sm:pr-2 pb-3.5 sm:pb-4 pt-1 space-y-2 text-[13.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
                             {exp.bullets.map((b, bIdx) => (
-                              <li key={bIdx} className="flex items-start gap-2.5">
+                              <li
+                                key={bIdx}
+                                className="flex items-start gap-2.5"
+                              >
                                 <span
                                   className="mt-2.5 h-1.5 w-1.5 rounded-full bg-[var(--ink-meta)] shrink-0"
                                   aria-hidden="true"

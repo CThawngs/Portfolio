@@ -6,7 +6,7 @@
   --background: #f5f5f7;
   --foreground: #141416;
   --surface-elevated: #ececf0;
-  --surface-card-bg: rgba(255, 255, 255, 0.92);
+  --surface-card-bg: #ffffff;
   --surface-card-hover: #ffffff;
   --surface-modal: #ffffff;
   --ink-primary: #141416;
@@ -14,68 +14,66 @@
   --ink-meta: #63636b;
   --ink-muted: #76767f;
   --ink-decorative: #c6c6cf;
-  --pill-bg: rgba(229, 229, 235, 0.88);
+  --pill-bg: rgba(229, 229, 235, 0.92);
   --pill-active-bg: #ffffff;
   --row-hover-bg: rgba(20, 20, 22, 0.04);
-  --glass-bg: rgba(245, 245, 247, 0.84);
+  --glass-bg: rgba(245, 245, 247, 0.88);
   --glass-border: rgba(20, 20, 22, 0.08);
   --glass-sub-ink: #43434a;
   --glass-shadow: 0 12px 32px rgba(15, 15, 20, 0.07), 0 2px 6px rgba(15, 15, 20, 0.03);
   --card-border: rgba(20, 20, 22, 0.08);
-  --card-shadow: 0 12px 30px rgba(15, 15, 20, 0.045), 0 2px 6px rgba(15, 15, 20, 0.025);
-  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 10px 26px rgba(15, 15, 20, 0.045), 0 2px 6px rgba(15, 15, 20, 0.025);
+  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --focus-ring: #0071e3;
   --page-gutter: clamp(12px, 3.8vw, 48px);
 
   /* Daylight Architectural Studio Lighting */
-  --studio-key-light: rgba(255, 255, 255, 0.92);
+  --studio-key-light: rgba(255, 255, 255, 0.94);
   --studio-warm-wash: rgba(245, 208, 162, 0.16);
   --studio-cool-wash: rgba(186, 206, 238, 0.18);
-  --studio-dot-color: rgba(20, 20, 26, 0.07);
-  --studio-horizon-line: rgba(20, 20, 26, 0.07);
+  --studio-dot-color: rgba(20, 20, 26, 0.072);
+  --studio-horizon-line: rgba(20, 20, 26, 0.075);
   --scroll-beam: linear-gradient(90deg, #141416 0%, #52525b 100%);
-  --glare-color: rgba(255, 255, 255, 0.52);
+  --glare-color: rgba(255, 255, 255, 0.45);
 }
 
 /*
  * Luxury Smoked-Obsidian & Warm-Champagne Titanium Studio Dark Mode
- * Crafted after Raycast Pro, Resend & Apple Titanium Pro:
- * - Deep velvet onyx canvas (#060608) lit from overhead by warm-pearl & champagne-gold
- *   softbox beams, masked architectural micro-dot perspective, and tactile analog film grain.
- * - Zero generic neon purple/cyan "AI gradient" orbs; zero flat lifeless grey.
+ * Zero per-frame blur filters or blend modes so even integrated GPUs & low-end
+ * laptops sustain locked 60/120fps scrolling while keeping rich studio depth.
  */
 .dark {
   --background: #060608;
   --foreground: #f2f2f5;
-  --surface-elevated: #111216;
-  --surface-card-bg: linear-gradient(180deg, rgba(23, 24, 30, 0.86) 0%, rgba(14, 15, 19, 0.92) 100%);
-  --surface-card-hover: linear-gradient(180deg, rgba(29, 31, 38, 0.92) 0%, rgba(18, 19, 24, 0.96) 100%);
+  --surface-elevated: #121318;
+  --surface-card-bg: linear-gradient(180deg, #161820 0%, #0e1015 100%);
+  --surface-card-hover: linear-gradient(180deg, #1b1d27 0%, #12141b 100%);
   --surface-modal: #111216;
   --ink-primary: #f3f3f6;
   --ink-secondary: #a9abb6;
   --ink-meta: #8a8d99;
-  --ink-muted: #696c78;
+  --ink-muted: #6b6e7b;
   --ink-decorative: #3d404b;
-  --pill-bg: rgba(28, 30, 37, 0.9);
-  --pill-active-bg: rgba(45, 48, 58, 0.96);
+  --pill-bg: #1c1e26;
+  --pill-active-bg: #2c2f3b;
   --row-hover-bg: rgba(255, 255, 255, 0.042);
-  --glass-bg: rgba(8, 9, 12, 0.8);
+  --glass-bg: rgba(9, 10, 14, 0.88);
   --glass-border: rgba(255, 255, 255, 0.09);
   --glass-sub-ink: #c9cbd4;
-  --glass-shadow: 0 22px 52px rgba(0, 0, 0, 0.7), 0 2px 10px rgba(0, 0, 0, 0.45);
+  --glass-shadow: 0 20px 44px rgba(0, 0, 0, 0.68), 0 2px 8px rgba(0, 0, 0, 0.42);
   --card-border: rgba(255, 255, 255, 0.085);
-  --card-shadow: 0 20px 46px -12px rgba(0, 0, 0, 0.72), 0 2px 10px rgba(0, 0, 0, 0.42);
+  --card-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.72), 0 2px 8px rgba(0, 0, 0, 0.4);
   --specular-rim: inset 0 1px 0 rgba(255, 248, 236, 0.095);
   --focus-ring: #5ca8ff;
 
   /* Overhead Warm-Pearl + Champagne Gold + Silver-Slate Studio Softbox */
-  --studio-key-light: rgba(242, 235, 222, 0.135);
-  --studio-warm-wash: rgba(235, 192, 134, 0.078);
+  --studio-key-light: rgba(242, 235, 222, 0.13);
+  --studio-warm-wash: rgba(235, 192, 134, 0.08);
   --studio-cool-wash: rgba(172, 198, 242, 0.072);
-  --studio-dot-color: rgba(255, 250, 242, 0.115);
+  --studio-dot-color: rgba(255, 250, 242, 0.11);
   --studio-horizon-line: rgba(255, 244, 224, 0.14);
-  --scroll-beam: linear-gradient(90deg, rgba(244, 214, 172, 0.75) 0%, rgba(242, 244, 250, 0.9) 55%, rgba(178, 204, 245, 0.75) 100%);
-  --glare-color: rgba(255, 248, 236, 0.075);
+  --scroll-beam: linear-gradient(90deg, rgba(244, 214, 172, 0.8) 0%, rgba(242, 244, 250, 0.95) 55%, rgba(178, 204, 245, 0.8) 100%);
+  --glare-color: rgba(255, 248, 236, 0.065);
 }
 
 @theme inline {
@@ -109,7 +107,6 @@ body {
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 240ms ease, color 200ms ease;
 }
 
 /* Uniform Vietnamese Glyph Rendering */
@@ -122,41 +119,60 @@ body.lock-scroll {
 }
 
 /*
- * Architectural Studio Canvas
- * Combines an overhead warm-platinum softbox spotlight, subtle champagne & silver
- * rim washes, and deep obsidian falloff for unmistakable human-crafted depth.
+ * Architectural Studio Canvas (Static Single-Pass GPU Texture — 0ms Scroll Cost)
+ * Combines overhead warm-platinum softbox spotlight, champagne & silver rim washes,
+ * and deep obsidian falloff using pure mathematical gradients with zero CSS blur filters.
  */
 .apple-studio-canvas {
   background-color: var(--background);
   background-image:
-    radial-gradient(110% 56% at 50% -6%, var(--studio-key-light) 0%, transparent 72%),
-    radial-gradient(62% 46% at 14% 12%, var(--studio-warm-wash) 0%, transparent 70%),
-    radial-gradient(64% 48% at 86% 24%, var(--studio-cool-wash) 0%, transparent 72%),
-    radial-gradient(80% 50% at 50% 96%, var(--studio-warm-wash) 0%, transparent 78%);
+    radial-gradient(96% 52% at 50% -6%, var(--studio-key-light) 0%, transparent 72%),
+    radial-gradient(58% 44% at 15% 10%, var(--studio-warm-wash) 0%, transparent 70%),
+    radial-gradient(60% 46% at 85% 20%, var(--studio-cool-wash) 0%, transparent 72%),
+    radial-gradient(76% 48% at 50% 98%, var(--studio-warm-wash) 0%, transparent 76%);
 }
 
-/* Masked Architectural Precision Micro-Dot Matrix (Lit Only Inside Studio Cone) */
+/* Zero-Blur Wide Softbox Conic Wash */
+.apple-studio-rays {
+  background: conic-gradient(
+    from 180deg at 50% -14%,
+    transparent 0deg,
+    transparent 118deg,
+    var(--studio-warm-wash) 156deg,
+    var(--studio-key-light) 180deg,
+    var(--studio-cool-wash) 204deg,
+    transparent 242deg,
+    transparent 360deg
+  );
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 10%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 10%, transparent 78%);
+  opacity: 0.88;
+}
+
+/* Masked Architectural Precision Micro-Dot Matrix */
 .apple-studio-dots {
   background-image: radial-gradient(var(--studio-dot-color) 1px, transparent 1px);
   background-size: 22px 22px;
-  mask-image: radial-gradient(ellipse 84% 56% at 50% 12%, #000 12%, rgba(0, 0, 0, 0.38) 52%, transparent 86%);
-  -webkit-mask-image: radial-gradient(ellipse 84% 56% at 50% 12%, #000 12%, rgba(0, 0, 0, 0.38) 52%, transparent 86%);
+  mask-image: radial-gradient(ellipse 82% 54% at 50% 12%, #000 10%, rgba(0, 0, 0, 0.35) 50%, transparent 84%);
+  -webkit-mask-image: radial-gradient(ellipse 82% 54% at 50% 12%, #000 10%, rgba(0, 0, 0, 0.35) 50%, transparent 84%);
 }
 
-/* Overhead Architectural Conic Light Rays (Subtle Studio Softbox Caustics) */
-.apple-studio-rays {
-  background: conic-gradient(
-    from 180deg at 50% -10%,
-    transparent 0deg,
-    transparent 132deg,
-    var(--studio-warm-wash) 158deg,
-    var(--studio-key-light) 180deg,
-    var(--studio-cool-wash) 202deg,
-    transparent 228deg,
-    transparent 360deg
+/* Zero-Filter Studio Matte Frame for Uncropped Grid Covers (Portrait / Square / Certificate) */
+.apple-contain-matte {
+  background-color: var(--surface-elevated);
+  background-image: radial-gradient(
+    80% 80% at 50% 45%,
+    rgba(255, 255, 255, 0.55) 0%,
+    transparent 76%
   );
-  filter: blur(44px);
-  opacity: 0.9;
+}
+.dark .apple-contain-matte {
+  background-color: #101218;
+  background-image: radial-gradient(
+    80% 80% at 50% 45%,
+    rgba(255, 246, 232, 0.065) 0%,
+    transparent 76%
+  );
 }
 
 /* Unified Page Container & Margin Rails */
@@ -188,13 +204,15 @@ body.lock-scroll {
   }
 }
 
-/* Elevated Smoked-Titanium Surface Card */
+/*
+ * Elevated Smoked-Titanium Surface Card
+ * Opaque gradient surface with specular rim — zero per-card backdrop-filter blur
+ * so scrolling 12+ cards stays silky smooth on low-end integrated GPUs.
+ */
 .apple-surface-card {
   background: var(--surface-card-bg);
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow), var(--specular-rim);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 .apple-surface-card:hover {
   background: var(--surface-card-hover);
@@ -205,70 +223,91 @@ body.lock-scroll {
   }
 }
 
-/* Seamless Sticky Header Scrim — Explicitly Zero Border & Zero White Outline on Scroll */
+/* Seamless Sticky Header Scrim — Explicitly Zero Border & Lightweight Blur */
 .apple-header-scrim {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(170%);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
   border: 0 solid transparent !important;
   box-shadow: none !important;
 }
 
-/* Frosted Glass Surface (Used selectively on floating popovers & pills) */
+/* Frosted Glass Surface (Used selectively on floating mobile nav popover) */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--specular-rim);
 }
 .dark .apple-glass {
-  background: rgba(15, 16, 20, 0.95);
+  background: rgba(15, 16, 21, 0.96);
 }
 @supports (backdrop-filter: blur(1px)) {
   .apple-glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(170%);
-    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    backdrop-filter: blur(14px) saturate(155%);
+    -webkit-backdrop-filter: blur(14px) saturate(155%);
   }
 }
 
-/* Subtle Hover Row */
+/* Subtle Hover Row & Magnetic Parallax (Zero idle will-change VRAM overhead) */
+.magnetic-target {
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    border-color 150ms ease;
+}
+
 .apple-list-row {
   border-radius: 14px;
-  transition: background-color 180ms ease;
-}
-.apple-list-row:hover {
-  background-color: var(--row-hover-bg);
-}
-
-/* 3D Perspective Stage & Specular Tilt Cards */
-.apple-perspective-stage {
-  perspective: 1200px;
-}
-
-.apple-3d-tilt-card {
-  transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
   transition:
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 220ms ease,
-    box-shadow 260ms ease,
-    border-color 220ms ease;
-  will-change: transform;
+    background-color 180ms ease,
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .magnetic-target:hover,
+  .apple-list-row:hover {
+    will-change: transform;
+  }
+  .apple-list-row:hover {
+    background-color: var(--row-hover-bg);
+  }
+}
+
+/* Lightweight Interactive Card Lift & Optional Fine-Pointer Specular Tilt */
+.apple-3d-tilt-card {
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease,
+    border-color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .apple-3d-tilt-card:hover {
+    will-change: transform;
+    transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, -2px, 0);
+  }
 }
 
 @media (hover: none), (pointer: coarse) {
   .apple-3d-tilt-card:active {
-    transform: scale(0.986) translateZ(0);
+    transform: scale(0.988);
   }
 }
 
 .apple-3d-glare {
   opacity: var(--glare-opacity, 0);
   background: radial-gradient(
-    360px circle at var(--gx, 50%) var(--gy, 50%),
+    320px circle at var(--gx, 50%) var(--gy, 50%),
     var(--glare-color),
     transparent 68%
   );
-  transition: opacity 240ms ease;
+  transition: opacity 200ms ease;
 }
 
 /* Vietnamese Diacritic Safe Headings */
@@ -287,7 +326,7 @@ body.lock-scroll {
   letter-spacing: -0.008em;
 }
 
-/* Custom Frosted Glass Circle Cursor (Desktop Fine Pointer Only) */
+/* ── Reference Portfolio Custom Cursor + Smooth Spring Effect (Desktop Fine Pointer Only) ── */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   html.custom-cursor-active,
   html.custom-cursor-active body,
@@ -295,9 +334,157 @@ body.lock-scroll {
   html.custom-cursor-active button,
   html.custom-cursor-active [role="button"],
   html.custom-cursor-active [role="tab"],
-  html.custom-cursor-active [data-cursor="magnetic"] {
+  html.custom-cursor-active [data-cursor] {
     cursor: none !important;
   }
+}
+
+/* Layer 1: Zero-Latency 1:1 Precision Core Dot (Guarantees Cursor Is Always Crisp & Visible) */
+.apple-cursor-dot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 10002;
+  background-color: #141416;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 1px 4px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%) scale(1);
+  transition:
+    opacity 150ms ease,
+    width 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 160ms ease;
+  will-change: transform, opacity;
+}
+
+.dark .apple-cursor-dot {
+  background-color: #f7f4ee;
+  box-shadow: 0 0 0 1.5px rgba(6, 6, 8, 0.85), 0 1px 5px rgba(0, 0, 0, 0.65);
+}
+
+.apple-cursor-dot[data-visible="true"] {
+  opacity: 1;
+}
+
+.apple-cursor-dot[data-zone="view"],
+.apple-cursor-dot[data-zone="prev"],
+.apple-cursor-dot[data-zone="next"],
+.apple-cursor-dot[data-zone="overlay"] {
+  opacity: 0;
+}
+
+.apple-cursor-dot[data-pressing="true"] {
+  width: 5px;
+  height: 5px;
+}
+
+/* Layer 2: Reference Portfolio Smooth-Trailing Elevated Studio Circle (Zero backdrop-filter lag) */
+.apple-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 10001;
+  border: 1.5px solid rgba(20, 20, 26, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 6px 18px rgba(15, 15, 20, 0.14), 0 1px 3px rgba(15, 15, 20, 0.08);
+  color: #141416;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%) scale(1);
+  transition:
+    width 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+  will-change: transform, width, height, opacity;
+}
+
+.dark .apple-cursor {
+  border-color: rgba(255, 248, 236, 0.38);
+  background: rgba(255, 250, 242, 0.13);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #f5f5f7;
+}
+
+.apple-cursor[data-visible="true"] {
+  opacity: 1;
+}
+
+/* Interactive Button / Link Magnetic Halo */
+.apple-cursor[data-zone="magnetic"] {
+  width: 46px;
+  height: 46px;
+  border-color: rgba(20, 20, 26, 0.32);
+  background: rgba(255, 255, 255, 0.42);
+}
+.dark .apple-cursor[data-zone="magnetic"] {
+  border-color: rgba(244, 214, 172, 0.62);
+  background: rgba(244, 214, 172, 0.12);
+}
+
+/* Interactive Project / Certificate Card & Stage Artwork Morph Pill */
+.apple-cursor[data-zone="view"] {
+  width: 52px;
+  height: 52px;
+  background: rgba(20, 20, 24, 0.9);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26);
+}
+.dark .apple-cursor[data-zone="view"] {
+  background: rgba(245, 243, 238, 0.94);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #0b0c10;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.62);
+}
+
+/* Directional Stage Navigation Zones */
+.apple-cursor[data-zone="prev"],
+.apple-cursor[data-zone="next"] {
+  width: 46px;
+  height: 46px;
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(20, 20, 26, 0.18);
+  color: #141416;
+}
+.dark .apple-cursor[data-zone="prev"],
+.dark .apple-cursor[data-zone="next"] {
+  background: rgba(28, 30, 38, 0.94);
+  border-color: rgba(255, 248, 236, 0.36);
+  color: #f5f5f7;
+}
+
+.apple-cursor[data-zone="overlay"] {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+}
+
+.apple-cursor[data-pressing="true"] {
+  width: 31px;
+  height: 31px;
+}
+
+.apple-cursor .cursor-icon {
+  display: none;
+}
+.apple-cursor[data-zone="view"] .cursor-icon-view,
+.apple-cursor[data-zone="prev"] .cursor-icon-prev,
+.apple-cursor[data-zone="next"] .cursor-icon-next {
+  display: block;
 }
 
 /* Hide Native Scrollbar on Horizontal Pill Strips */
@@ -310,12 +497,18 @@ body.lock-scroll {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  .apple-cursor,
+  .apple-cursor-dot {
+    display: none !important;
+  }
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }
