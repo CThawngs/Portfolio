@@ -14,8 +14,9 @@ import {
 import {
   canOptimizeWithNextImage,
   classifyAspectRatio,
-  getOptimizedImageSrcSet,
+  getCachedBitmap,
   getOptimizedImageUrl,
+  recordLoadedBitmap,
   type ImageOrientation,
 } from "./SafePortfolioImage";
 import { getTagColorScheme, type TagColorScheme } from "./tagPalette";
@@ -33,11 +34,12 @@ interface ProjectDetailModalProps {
 /**
  * ProjectDetailModal
  * - Strictly 2 close mechanisms: (1) Top-right 'X' button, (2) Clicking outside the panel
- *   (plus Escape keyboard support for accessibility). Bottom-right 'Close' button removed.
- * - Full-bleed left-side image (`p-0`, flush edge-to-edge against outer modal corners) with
- *   adaptive layout for Portrait (`41%`), Square (`48%`), Landscape (`58%`), and No-Image.
- * - Lightweight WebP loading: ~1.2 KB `w=64` thumbnail for ambient edge wash + compressed
- *   `w=1200` WebP (`decoding="async"`) for crisp uncropped artwork.
+ *   (plus Escape keyboard support for accessibility).
+ * - Instant 0ms Image Rendering:
+ *   Reuses the exact decoded bitmap URL (`cachedBitmap.currentSrc`) already loaded by
+ *   Stage or Grid view for both the ambient color wash and the immediate base layer
+ *   (eliminating cold `/_next/image` network misses), while seamlessly layering a crisp
+ *   `w=1080` high-res WebP upgrade on top if the cached bitmap was smaller.
  */
 export default function ProjectDetailModal({
   project,
@@ -53,6 +55,7 @@ export default function ProjectDetailModal({
 
   const [rawFallbackFor, setRawFallbackFor] = useState<string | null>(null);
   const [failedImgSrc, setFailedImgSrc] = useState<string | null>(null);
+  const [hiResLoadedFor, setHiResLoadedFor] = useState<string | null>(null);
   const [measuredOrientation, setMeasuredOrientation] = useState<{
     src: string;
     orientation: ImageOrientation;
@@ -123,23 +126,32 @@ export default function ProjectDetailModal({
     primaryImgSrc && failedImgSrc !== primaryImgSrc
   );
 
+  const cachedBitmap = getCachedBitmap(primaryImgSrc);
+
   const orientation: ImageOrientation =
     measuredOrientation && measuredOrientation.src === primaryImgSrc
       ? measuredOrientation.orientation
-      : "landscape";
+      : cachedBitmap?.orientation ?? "landscape";
 
   const usingRaw =
     rawFallbackFor === primaryImgSrc ||
     !canOptimizeWithNextImage(primaryImgSrc);
-  const echoThumbSrc = usingRaw
+
+  const hiResTargetSrc = usingRaw
     ? primaryImgSrc
-    : getOptimizedImageUrl(primaryImgSrc, 64);
-  const mainImgSrc = usingRaw
+    : getOptimizedImageUrl(primaryImgSrc, 1080);
+
+  // Instant 0ms base URL: exact in-RAM `currentSrc` from Stage/Grid if available, else 640w WebP
+  const instantBaseSrc = usingRaw
     ? primaryImgSrc
-    : getOptimizedImageUrl(primaryImgSrc, 1200);
-  const mainImgSrcSet = usingRaw
-    ? undefined
-    : getOptimizedImageSrcSet(primaryImgSrc, [640, 828, 1200]);
+    : cachedBitmap?.currentSrc || getOptimizedImageUrl(primaryImgSrc, 640);
+
+  const needsHiResOverlay =
+    !usingRaw &&
+    canOptimizeWithNextImage(primaryImgSrc) &&
+    instantBaseSrc !== hiResTargetSrc;
+
+  const isHiResReady = hiResLoadedFor === primaryImgSrc;
 
   const dateLabel = project
     ? formatDateRange(project.project_date) ||
@@ -207,7 +219,7 @@ export default function ProjectDetailModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          transition={{ duration: 0.16 }}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 lg:p-8 bg-black/68 dark:bg-black/82 backdrop-blur-xs"
           onClick={onClose}
           role="dialog"
@@ -216,10 +228,10 @@ export default function ProjectDetailModal({
         >
           <motion.div
             ref={dialogRef}
-            initial={{ opacity: 0, scale: 0.96, y: 18 }}
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className={`relative w-full ${modalMaxWidthClass} max-h-[92dvh] sm:max-h-[86dvh] flex flex-col overflow-hidden rounded-t-[24px] sm:rounded-[28px] bg-[var(--surface-modal)] apple-hairline shadow-2xl`}
           >
@@ -242,21 +254,21 @@ export default function ProjectDetailModal({
                   : "flex flex-col max-h-[86dvh]"
               }`}
             >
-              {/* LEFT PANE: Full-Bleed Edge-to-Edge Media (`p-0`), Adaptive Portrait / Square / Landscape */}
+              {/* LEFT PANE: Full-Bleed Edge-to-Edge Media (`p-0`), Instant 0ms Cached Bitmap */}
               {showMediaPane && (
                 <div
                   data-testid="modal-media-pane"
                   data-orientation={orientation}
                   className="relative w-full p-0 m-0 overflow-hidden bg-[var(--surface-modal)] flex items-center justify-center min-h-[210px] sm:min-h-[280px] lg:min-h-[420px] lg:h-full lg:max-h-[86dvh]"
                 >
-                  {/* Ultra-lightweight ~1KB w=64 WebP Ambient Color Echo */}
+                  {/* Zero-network-miss Ambient Color Echo reusing already-cached `instantBaseSrc` */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={echoThumbSrc}
+                    src={instantBaseSrc}
                     alt=""
                     aria-hidden="true"
                     loading="eager"
-                    decoding="async"
+                    decoding="sync"
                     className="pointer-events-none select-none absolute inset-0 h-full w-full object-cover scale-125 blur-md opacity-55 dark:opacity-45"
                   />
 
@@ -265,19 +277,24 @@ export default function ProjectDetailModal({
                     className="pointer-events-none absolute inset-0 bg-black/[0.04] dark:bg-black/[0.16]"
                   />
 
-                  {/* Foreground Artwork — 100% Uncropped (`object-contain`), Compressed WebP */}
+                  {/* Layer 1: Instant 0ms RAM-Cached Foreground Artwork */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={mainImgSrc}
-                    srcSet={mainImgSrcSet}
-                    sizes="(max-width: 1023px) 96vw, 640px"
+                    data-testid="modal-primary-image"
+                    src={instantBaseSrc}
                     alt={title}
                     loading="eager"
-                    decoding="async"
+                    decoding="sync"
                     fetchPriority="high"
                     onLoad={(e) => {
                       const img = e.currentTarget;
                       if (img.naturalWidth && img.naturalHeight) {
+                        recordLoadedBitmap(
+                          primaryImgSrc,
+                          img.currentSrc || img.src,
+                          img.naturalWidth,
+                          img.naturalHeight
+                        );
                         setMeasuredOrientation({
                           src: primaryImgSrc,
                           orientation: classifyAspectRatio(
@@ -296,6 +313,50 @@ export default function ProjectDetailModal({
                     }}
                     className="relative z-10 block w-full h-full max-h-[46dvh] sm:max-h-[50dvh] lg:max-h-[86dvh] object-contain"
                   />
+
+                  {/* Layer 2: Seamless High-Res `w=1080` Crisp Upgrade (when opened from smaller Grid thumbnail) */}
+                  {needsHiResOverlay && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      ref={(node) => {
+                        if (
+                          node &&
+                          node.complete &&
+                          node.naturalWidth > 0 &&
+                          hiResLoadedFor !== primaryImgSrc
+                        ) {
+                          recordLoadedBitmap(
+                            primaryImgSrc,
+                            node.currentSrc || node.src,
+                            node.naturalWidth,
+                            node.naturalHeight
+                          );
+                          setHiResLoadedFor(primaryImgSrc);
+                        }
+                      }}
+                      src={hiResTargetSrc}
+                      alt=""
+                      aria-hidden="true"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        if (img.naturalWidth && img.naturalHeight) {
+                          recordLoadedBitmap(
+                            primaryImgSrc,
+                            img.currentSrc || img.src,
+                            img.naturalWidth,
+                            img.naturalHeight
+                          );
+                        }
+                        setHiResLoadedFor(primaryImgSrc);
+                      }}
+                      className={`pointer-events-none absolute inset-0 z-20 block w-full h-full max-h-[46dvh] sm:max-h-[50dvh] lg:max-h-[86dvh] m-auto object-contain transition-opacity duration-200 ${
+                        isHiResReady ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                  )}
                 </div>
               )}
 

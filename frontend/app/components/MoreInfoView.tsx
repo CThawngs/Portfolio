@@ -31,6 +31,7 @@ export interface EducationEntry {
 
 export interface SocialLinkEntry {
   type: string;
+  name: string;
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -95,9 +96,14 @@ function AppleHoverRow({
   );
 }
 
+/**
+ * Unified Social Media + Email Link (`<a>` wrapping Icon + Gap + Name as 1 hit target)
+ * Clicking or hovering the icon, the name, or the space between them triggers the exact
+ * same unified link to the corresponding Social Media / Email target.
+ */
 function HeroSocialIconButton({ link }: { link: SocialLinkEntry }) {
   const { onPointerEnter, onPointerMove, onPointerLeave } =
-    useMagneticHandlers(5);
+    useMagneticHandlers(4);
   const Icon = link.icon;
   const isMail = link.type === "email" || link.href.startsWith("mailto:");
 
@@ -112,9 +118,11 @@ function HeroSocialIconButton({ link }: { link: SocialLinkEntry }) {
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className="magnetic-target group relative inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[13px] sm:rounded-[14px] bg-[var(--pill-bg)] hover:bg-[var(--pill-active-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.06] transition-all cursor-pointer"
+      data-testid={`hero-social-${link.type}`}
+      className="magnetic-target group relative inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-full text-[14px] sm:text-[15px] font-medium text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:bg-[var(--row-hover-bg)] transition-colors cursor-pointer select-none"
     >
-      <Icon className="h-[18px] w-[18px] sm:h-[19px] sm:w-[19px]" />
+      <Icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-105" />
+      <span className="leading-none">{link.name}</span>
     </a>
   );
 }
@@ -223,13 +231,20 @@ export default function MoreInfoView({
             )}
           </div>
 
-          {/* Centered & Evenly Spaced Bottom Contact & Social Media Icon Links */}
+          {/* Centered Unified Contact & Social Media Bar (Icon + Name in 1 Single Link, Including Email) */}
           {socialLinks.length > 0 && (
-            <div className="mt-5 sm:mt-7 pt-5 w-full max-w-md mx-auto border-t border-[var(--card-border)] flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <nav
+              aria-label={
+                lang === "EN"
+                  ? "Social media and email links"
+                  : "Liên kết mạng xã hội và email"
+              }
+              className="mt-5 sm:mt-7 pt-4 sm:pt-5 w-full max-w-2xl mx-auto border-t border-[var(--card-border)] flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 sm:gap-x-5"
+            >
               {socialLinks.map((link) => (
                 <HeroSocialIconButton key={link.type} link={link} />
               ))}
-            </div>
+            </nav>
           )}
         </div>
       </section>

@@ -91,6 +91,45 @@ export function classifyAspectRatio(
   return "landscape";
 }
 
+export interface CachedPortfolioBitmap {
+  currentSrc: string;
+  width: number;
+  height: number;
+  orientation: ImageOrientation;
+}
+
+const loadedBitmapCache = new Map<string, CachedPortfolioBitmap>();
+
+/**
+ * Records the exact browser-resolved `currentSrc` URL and natural dimensions
+ * of any loaded Stage/Grid/Preloaded image so `ProjectDetailModal` can display
+ * the already-decoded RAM bitmap in 0ms with zero cold network roundtrip.
+ */
+export function recordLoadedBitmap(
+  rawSrc: string,
+  currentSrc: string,
+  width: number,
+  height: number
+): void {
+  if (!rawSrc || !currentSrc || !width || !height) return;
+  const existing = loadedBitmapCache.get(rawSrc);
+  if (!existing || width >= existing.width) {
+    loadedBitmapCache.set(rawSrc, {
+      currentSrc,
+      width,
+      height,
+      orientation: classifyAspectRatio(width, height),
+    });
+  }
+}
+
+export function getCachedBitmap(
+  rawSrc: string
+): CachedPortfolioBitmap | undefined {
+  if (!rawSrc) return undefined;
+  return loadedBitmapCache.get(rawSrc);
+}
+
 interface SafePortfolioImageProps extends Omit<ImageProps, "src" | "onError"> {
   src: string;
   fallback?: React.ReactNode;
@@ -149,9 +188,7 @@ interface AdaptiveGridCoverProps {
  * AdaptiveGridCover (Lightweight Single-Image WebP Cover)
  * - Serves ~28–55 KB WebP via `/_next/image` (`384w / 640w / 828w`) with automatic
  *   raw-URL fallback if the optimizer ever errors.
- * - Zero duplicate blurred `<img>` nodes (eliminating per-card CSS blur GPU lag).
- * - Async off-main-thread bitmap decoding (`decoding="async"`) + priority loading
- *   only for above-the-fold cards.
+ * - Shares decoded bitmap dimensions with `ProjectDetailModal` for instant 0ms modal open.
  */
 export function AdaptiveGridCover({
   src = "",
@@ -160,20 +197,31 @@ export function AdaptiveGridCover({
   priority = false,
   fallback,
 }: AdaptiveGridCoverProps) {
+  const cached = getCachedBitmap(src);
   const [rawFallbackFor, setRawFallbackFor] = useState<string | null>(null);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(
+    cached ? src : null
+  );
   const [measuredRatio, setMeasuredRatio] = useState<{
     src: string;
     ratio: number;
-  } | null>(null);
+  } | null>(
+    cached && cached.height > 0
+      ? { src, ratio: cached.width / cached.height }
+      : null
+  );
 
   if (!src || failedSrc === src) {
     return <>{fallback}</>;
   }
 
   const ratio =
-    measuredRatio && measuredRatio.src === src ? measuredRatio.ratio : null;
+    measuredRatio && measuredRatio.src === src
+      ? measuredRatio.ratio
+      : cached && cached.height > 0
+      ? cached.width / cached.height
+      : null;
 
   const useContainMatte =
     isCertificate || (ratio !== null && (ratio < 1.22 || ratio > 2.25));
@@ -183,7 +231,7 @@ export function AdaptiveGridCover({
   const resolvedSrcSet = usingRaw
     ? undefined
     : getOptimizedImageSrcSet(src, [384, 640, 828]);
-  const isLoaded = loadedSrc === src;
+  const isLoaded = loadedSrc === src || Boolean(cached);
 
   return (
     <div
@@ -194,8 +242,16 @@ export function AdaptiveGridCover({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={(node) => {
-          if (node && node.complete && node.naturalWidth > 0 && loadedSrc !== src) {
-            setLoadedSrc(src);
+          if (node && node.complete && node.naturalWidth > 0) {
+            recordLoadedBitmap(
+              src,
+              node.currentSrc || node.src,
+              node.naturalWidth,
+              node.naturalHeight
+            );
+            if (loadedSrc !== src) {
+              setLoadedSrc(src);
+            }
             if (!measuredRatio || measuredRatio.src !== src) {
               setMeasuredRatio({
                 src,
@@ -215,6 +271,12 @@ export function AdaptiveGridCover({
           const img = e.currentTarget;
           setLoadedSrc(src);
           if (img.naturalWidth && img.naturalHeight) {
+            recordLoadedBitmap(
+              src,
+              img.currentSrc || img.src,
+              img.naturalWidth,
+              img.naturalHeight
+            );
             setMeasuredRatio({
               src,
               ratio: img.naturalWidth / img.naturalHeight,
@@ -244,6 +306,8 @@ interface IntrinsicPortfolioImageProps {
   className?: string;
   fallback?: React.ReactNode;
   onClick?: () => void;
+  onPointerEnter?: () => void;
+  onTouchStart?: () => void;
   onDimensionsDetected?: (width: number, height: number) => void;
 }
 
@@ -256,6 +320,8 @@ export function IntrinsicPortfolioImage({
   className = "",
   fallback = null,
   onClick,
+  onPointerEnter,
+  onTouchStart,
   onDimensionsDetected,
 }: IntrinsicPortfolioImageProps) {
   const [rawFallbackFor, setRawFallbackFor] = useState<string | null>(null);
@@ -274,6 +340,16 @@ export function IntrinsicPortfolioImage({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={(node) => {
+        if (node && node.complete && node.naturalWidth > 0) {
+          recordLoadedBitmap(
+            src,
+            node.currentSrc || node.src,
+            node.naturalWidth,
+            node.naturalHeight
+          );
+        }
+      }}
       src={resolvedSrc}
       srcSet={resolvedSrcSet}
       sizes="(max-width: 639px) 94vw, (max-width: 1023px) 82vw, 750px"
@@ -283,10 +359,18 @@ export function IntrinsicPortfolioImage({
       fetchPriority="high"
       data-cursor={onClick ? "view" : undefined}
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
+      onTouchStart={onTouchStart}
       onLoad={(e) => {
-        if (onDimensionsDetected) {
-          const img = e.currentTarget;
-          if (img.naturalWidth && img.naturalHeight) {
+        const img = e.currentTarget;
+        if (img.naturalWidth && img.naturalHeight) {
+          recordLoadedBitmap(
+            src,
+            img.currentSrc || img.src,
+            img.naturalWidth,
+            img.naturalHeight
+          );
+          if (onDimensionsDetected) {
             onDimensionsDetected(img.naturalWidth, img.naturalHeight);
           }
         }

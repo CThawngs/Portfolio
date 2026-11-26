@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useRef, useCallback, useSyncExternalStore } from "react";
+import React, {
+  useRef,
+  useCallback,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 
 export function subscribeReducedMotion(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
@@ -24,8 +29,9 @@ export function useReducedMotionPreference(): boolean {
 
 /**
  * Scroll3DSection
- * Zero-overhead native semantic section container (no scroll-linked JS observers or 3D
- * projection matrices during scroll so low-end laptops scroll with zero jank).
+ * One-shot GPU compositor entrance (`opacity` + `translate3d(0, 18px, 0) -> 0`).
+ * Disconnects its `IntersectionObserver` immediately after revealing once so
+ * ongoing scroll remains 100% zero-overhead (locked 60fps on low-end laptops).
  */
 export function Scroll3DSection({
   id,
@@ -37,33 +43,199 @@ export function Scroll3DSection({
   children: React.ReactNode;
   delay?: number;
 }) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const reducedMotion = useReducedMotionPreference();
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      el.setAttribute("data-revealed", "true");
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.94) {
+      el.setAttribute("data-revealed", "true");
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.setAttribute("data-revealed", "true");
+            observer.disconnect();
+            break;
+          }
+        }
+      },
+      { threshold: 0.06, rootMargin: "0px 0px -28px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [reducedMotion]);
+
   return (
-    <section id={id} className={className}>
+    <section
+      ref={sectionRef}
+      id={id}
+      data-revealed={reducedMotion ? "true" : "false"}
+      className={`apple-section-reveal ${className}`}
+    >
       {children}
     </section>
   );
 }
 
+function getGridColumnCount(): number {
+  if (typeof window === "undefined") return 3;
+  if (window.innerWidth >= 1024) return 3;
+  if (window.innerWidth >= 640) return 2;
+  return 1;
+}
+
+/**
+ * StaggeredShowcaseGrid
+ * Orchestrates strict Row-by-Row, Left-before-Right, Bottom-to-Top card entrance:
+ * - Within Row 1: Left card -> Middle card -> Right card (`+115ms` per column).
+ * - Row 2 waits until Row 1 finishes cascading (`+210ms` row-completion beat) before
+ *   revealing Row 2 Left -> Middle -> Right, and so on for subsequent rows.
+ * - Uses a single shared `IntersectionObserver` that unobserves each card once revealed
+ *   and clears transition delays once settled so 60fps scroll & hover stay snappy.
+ */
+export function StaggeredShowcaseGrid({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const reducedMotion = useReducedMotionPreference();
+
+  useEffect(() => {
+    const gridEl = gridRef.current;
+    if (!gridEl) return;
+
+    const cards = Array.from(
+      gridEl.querySelectorAll<HTMLElement>("[data-grid-index]")
+    );
+    if (!cards.length) return;
+
+    if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      for (const c of cards) {
+        c.setAttribute("data-card-visible", "true");
+        c.setAttribute("data-card-settled", "true");
+      }
+      return;
+    }
+
+    let queueCursorMs = 0;
+    let lastScheduledRow = -1;
+    const timers: number[] = [];
+
+    const CARD_STEP_MS = 115;
+    const ROW_COMPLETE_PAUSE_MS = 210;
+
+    const scheduleBatch = (batch: HTMLElement[], obs?: IntersectionObserver) => {
+      if (!batch.length) return;
+      batch.sort((a, b) => {
+        const ia = Number(a.getAttribute("data-grid-index") || "0");
+        const ib = Number(b.getAttribute("data-grid-index") || "0");
+        return ia - ib;
+      });
+
+      const cols = getGridColumnCount();
+      const now = performance.now();
+
+      for (const cardEl of batch) {
+        if (cardEl.getAttribute("data-card-visible") === "true") continue;
+        const idx = Number(cardEl.getAttribute("data-grid-index") || "0");
+        const row = Math.floor(idx / cols);
+
+        if (queueCursorMs <= now) {
+          queueCursorMs = now;
+          lastScheduledRow = row;
+        } else if (row > lastScheduledRow) {
+          queueCursorMs += ROW_COMPLETE_PAUSE_MS;
+          lastScheduledRow = row;
+        }
+
+        const delayMs = Math.max(0, Math.round(queueCursorMs - now));
+        cardEl.style.setProperty("--stagger-delay", `${delayMs}ms`);
+        cardEl.setAttribute("data-stagger-delay", String(delayMs));
+        cardEl.setAttribute("data-card-visible", "true");
+
+        queueCursorMs += CARD_STEP_MS;
+        obs?.unobserve(cardEl);
+
+        const settleTimer = window.setTimeout(() => {
+          cardEl.style.removeProperty("--stagger-delay");
+          cardEl.setAttribute("data-card-settled", "true");
+        }, delayMs + 480);
+        timers.push(settleTimer);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const newlyVisible: HTMLElement[] = [];
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.target instanceof HTMLElement) {
+            newlyVisible.push(entry.target);
+          }
+        }
+        if (newlyVisible.length > 0) {
+          scheduleBatch(newlyVisible, observer);
+        }
+      },
+      { threshold: 0.06, rootMargin: "0px 0px -20px 0px" }
+    );
+
+    for (const card of cards) {
+      observer.observe(card);
+    }
+
+    return () => {
+      observer.disconnect();
+      for (const t of timers) {
+        window.clearTimeout(t);
+      }
+    };
+  }, [reducedMotion]);
+
+  return (
+    <div ref={gridRef} className={className}>
+      {children}
+    </div>
+  );
+}
+
 /**
  * Tilt3DCard
- * Lightweight interactive card:
- * - Zero scroll observers, zero Framer Motion wrapper overhead, zero idle `will-change` VRAM cost.
- * - Caches card bounding box once on `pointerenter` so mouse movement never triggers layout reflow.
- * - Automatically skips 3D specular calculation on low-core devices (`hardwareConcurrency <= 4`).
+ * Lightweight interactive card with optional staggered grid entrance (`staggerReveal`)
+ * and hover/touch image pre-warming (`onPrewarm`).
  */
 export function Tilt3DCard({
   children,
   onClick,
+  onPrewarm,
   className = "",
   maxTilt = 3.2,
+  index,
+  staggerReveal = false,
   cursorZone = "view",
   style,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
+  onPrewarm?: () => void;
   className?: string;
   maxTilt?: number;
   index?: number;
+  staggerReveal?: boolean;
   cursorZone?: "view" | "magnetic";
   style?: React.CSSProperties;
 }) {
@@ -74,6 +246,7 @@ export function Tilt3DCard({
 
   const handlePointerEnter = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      onPrewarm?.();
       if (reducedMotion || e.pointerType !== "mouse") return;
       if (
         typeof navigator !== "undefined" &&
@@ -84,8 +257,12 @@ export function Tilt3DCard({
       }
       rectRef.current = e.currentTarget.getBoundingClientRect();
     },
-    [reducedMotion]
+    [onPrewarm, reducedMotion]
   );
+
+  const handleTouchStart = useCallback(() => {
+    onPrewarm?.();
+  }, [onPrewarm]);
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -140,11 +317,21 @@ export function Tilt3DCard({
       ref={cardRef}
       onClick={onClick}
       onPointerEnter={handlePointerEnter}
+      onTouchStart={handleTouchStart}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      data-grid-index={staggerReveal && typeof index === "number" ? index : undefined}
+      data-card-visible={
+        staggerReveal ? (reducedMotion ? "true" : "false") : undefined
+      }
+      data-card-settled={
+        staggerReveal ? (reducedMotion ? "true" : "false") : undefined
+      }
       data-cursor={onClick ? cursorZone : undefined}
       style={style}
-      className={`apple-3d-tilt-card relative h-full ${className}`}
+      className={`apple-3d-tilt-card ${
+        staggerReveal ? "apple-grid-card-entrance" : ""
+      } relative h-full ${className}`}
     >
       {children}
       <div
