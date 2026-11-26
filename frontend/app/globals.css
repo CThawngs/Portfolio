@@ -4,40 +4,332 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1d1d1f;
+  --surface-elevated: #f5f5f7;
+  --ink-primary: #1d1d1f;
+  --ink-secondary: #515154;
+  --ink-meta: #6b6b70;
+  --ink-muted: #75757a;
+  --ink-decorative: #c7c7cc;
+  --pill-bg: #f0f0f2;
+  --pill-active-bg: #ebebef;
+  --row-hover-bg: #efeff2;
+  --glass-bg: rgba(255, 255, 255, 0.86);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-sub-ink: #48484a;
+  --glass-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --card-border: rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.07), 0 4px 14px rgba(0, 0, 0, 0.04);
+  --focus-ring: #0071e3;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f5f5f7;
+  --surface-elevated: #161618;
+  --ink-primary: #f5f5f7;
+  --ink-secondary: #a1a1a6;
+  --ink-meta: #98989d;
+  --ink-muted: #8e8e93;
+  --ink-decorative: #48484a;
+  --pill-bg: #1c1c1e;
+  --pill-active-bg: #2c2c2e;
+  --row-hover-bg: #1c1c1e;
+  --glass-bg: rgba(24, 24, 26, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-sub-ink: #c7c7cc;
+  --glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --card-border: rgba(255, 255, 255, 0.14);
+  --card-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --focus-ring: #2997ff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+::selection {
+  background: #ffd433;
+  color: #000000;
 }
 
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;
+  background-color: var(--background);
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 280ms ease, color 220ms ease;
 }
 
-/* ── Hide scrollbar while preserving scroll functionality ────────────────────
-   Applied via the .hide-scrollbar class. Works in Firefox, Chrome & Safari. */
+body.is-dragging {
+  user-select: none !important;
+}
+
+body.lock-scroll {
+  overflow-y: hidden !important;
+}
+
+/* Accessibility Focus Ring (Apple HIG Blue) */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+/* Tabular Numbers for Live Clock & Counters */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline Borders: 1px on 1x DPR, 0.5px on Retina 2x+ DPR */
+.apple-hairline {
+  border: 1px solid var(--card-border);
+}
+@media (min-resolution: 2dppx) {
+  .apple-hairline {
+    border-width: 0.5px;
+  }
+}
+
+/* Frosted Glass Surface with Fallback */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.dark .apple-glass {
+  background: rgba(24, 24, 26, 0.96);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .apple-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+/* Vietnamese Diacritic Safe Headings */
+.apple-h1 {
+  line-height: 1.24;
+  letter-spacing: -0.02em;
+}
+.apple-h2 {
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+}
+:lang(vi) .apple-h1 {
+  letter-spacing: -0.01em;
+}
+:lang(vi) .apple-h2 {
+  letter-spacing: -0.008em;
+}
+
+/* Custom Frosted Glass Circle Cursor (Desktop Fine Pointer Only) */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html.custom-cursor-active,
+  html.custom-cursor-active body,
+  html.custom-cursor-active a,
+  html.custom-cursor-active button,
+  html.custom-cursor-active [role="button"] {
+    cursor: none !important;
+  }
+}
+
+.apple-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 10001;
+  border: 1.5px solid rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(5px) saturate(160%);
+  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) translate(-50%, -50%) scale(1);
+  transition:
+    width 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    filter 160ms ease;
+  will-change: transform, width, height, opacity;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1d1d1f;
+}
+
+.dark .apple-cursor {
+  border-color: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  color: #f5f5f7;
+}
+
+.apple-cursor.is-pressing {
+  width: 32px;
+  height: 32px;
+}
+
+.apple-cursor.is-magnetic-target {
+  width: 12px;
+  height: 12px;
+  opacity: 0.45;
+  background: var(--ink-primary);
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.apple-cursor.is-overlay-hover {
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  filter: blur(4px);
+}
+
+/* Magnetic Parallax Utility */
+.magnetic-target {
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    border-color 180ms ease;
+  will-change: transform;
+}
+
+/* Showcase Stage Carousel */
+.apple-carousel-track {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  will-change: transform;
+}
+.apple-carousel-track.is-animated {
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.apple-carousel-card {
+  flex: 0 0 auto;
+  position: relative;
+  overflow: hidden;
+  width: min(64vw, 760px);
+  height: min(52vh, 460px);
+  border-radius: 30px;
+  opacity: 0.22;
+  filter: blur(6px);
+  transform: translateZ(0) scale(0.965);
+  will-change: opacity, filter, transform, margin;
+}
+.apple-carousel-card.is-animated {
+  transition:
+    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.apple-carousel-card.is-active {
+  opacity: 1;
+  filter: blur(0px);
+  transform: translateZ(0) scale(1);
+}
+
+@media (max-width: 920px) {
+  .apple-carousel-card {
+    width: 76vw;
+    height: min(58vw, 340px);
+    border-radius: 24px;
+    opacity: 0.16;
+    filter: none;
+    transform: translateZ(0) scale(0.96);
+  }
+  .apple-carousel-card.is-active {
+    opacity: 1;
+    filter: none;
+    transform: translateZ(0) scale(1);
+  }
+  .apple-glass {
+    backdrop-filter: blur(12px) saturate(160%);
+  }
+}
+
+/* Apple Editorial List Row Hover Physics */
+.apple-list-row {
+  position: relative;
+  border-radius: 18px;
+  background-color: transparent;
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1);
+  transition:
+    background-color 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 420ms ease;
+  will-change: transform, background-color;
+}
+.apple-list-row-inner {
+  padding-inline: 0px;
+  transition: padding-inline 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .apple-list-row:hover {
+    background-color: var(--row-hover-bg);
+    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.022);
+    transition:
+      background-color 150ms ease-out,
+      transform 150ms ease-out,
+      color 150ms ease-out;
+  }
+  .apple-list-row:hover .apple-list-row-inner {
+    padding-inline: 18px;
+    transition: padding-inline 150ms ease-out;
+  }
+}
+
+/* Hide scrollbar while preserving scroll functionality */
 .hide-scrollbar {
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* IE / Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-scrollbar::-webkit-scrollbar {
-  display: none;                /* Chrome, Safari, Opera */
+  display: none;
+}
+
+/* Reduced Motion Accessibility Guard */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .apple-cursor {
+    display: none !important;
+  }
+  .magnetic-target,
+  .apple-list-row,
+  .apple-list-row-inner,
+  .apple-carousel-track,
+  .apple-carousel-card {
+    transform: none !important;
+    filter: none !important;
+    transition-duration: 120ms !important;
+  }
+  .apple-list-row:hover .apple-list-row-inner {
+    padding-inline: 10px !important;
+  }
 }
