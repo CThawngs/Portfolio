@@ -74,6 +74,11 @@ body {
   transition: background-color 280ms ease, color 220ms ease;
 }
 
+/* Uniform Vietnamese Glyph Rendering (Inter Vietnamese Subset without Mixed Geist Fallback) */
+:lang(vi) body {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 body.is-dragging {
   user-select: none !important;
 }
@@ -150,8 +155,19 @@ body.lock-scroll {
   html.custom-cursor-active body,
   html.custom-cursor-active a,
   html.custom-cursor-active button,
-  html.custom-cursor-active [role="button"] {
+  html.custom-cursor-active [role="button"],
+  html.custom-cursor-active [role="tab"] {
     cursor: none !important;
+  }
+
+  /* Yield cleanly to native OS pointer inside dense frosted summary card */
+  html.custom-cursor-active .carousel-overlay-surface {
+    cursor: auto !important;
+  }
+  html.custom-cursor-active .carousel-overlay-surface.cursor-pointer,
+  html.custom-cursor-active .carousel-overlay-surface a,
+  html.custom-cursor-active .carousel-overlay-surface button {
+    cursor: pointer !important;
   }
 }
 

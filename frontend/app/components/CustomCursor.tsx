@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -43,6 +43,10 @@ export default function CustomCursor() {
 
     const resolveZone = (target: EventTarget | null): CursorZone => {
       if (!(target instanceof Element)) return "default";
+      // Inside frosted summary card, fade out big glass ring and yield to crisp native OS cursor
+      if (target.closest(".carousel-overlay-surface")) {
+        return "overlay";
+      }
       const zoneEl = target.closest("[data-cursor]");
       if (zoneEl) {
         const attr = zoneEl.getAttribute("data-cursor");
@@ -51,10 +55,7 @@ export default function CustomCursor() {
         }
         if (attr === "disabled") return "default";
       }
-      if (target.closest(".carousel-overlay-surface")) {
-        return "overlay";
-      }
-      if (target.closest("a, button, [role='button'], input, select, textarea")) {
+      if (target.closest("a, button, [role='button'], [role='tab'], input, select, textarea")) {
         return "magnetic";
       }
       return "default";
