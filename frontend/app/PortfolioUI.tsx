@@ -1,32 +1,57 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Code,
   Briefcase,
-  Camera,
-  Mail,
-  ExternalLink,
-  GraduationCap,
-  Sparkles,
-  Layers,
-  Cpu,
-  Award,
   Calendar,
+  Camera,
+  ExternalLink,
+  FolderKanban,
+  Mail,
+  ArrowLeft,
+  ArrowUpRight,
+  ArrowUpDown,
+  Award,
+  Code,
+  LayoutGrid,
+  GalleryHorizontalEnd,
+  Tag,
+  Sun,
+  Moon,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
-  X,
-  ArrowUpRight,
-  User,
-  Wrench,
-  CheckCircle2,
 } from "lucide-react";
 
-// ── Custom SVG GitHub Icon ───────────────────────────────────────────────────
+import CustomCursor from "./components/CustomCursor";
+import { useMagneticHandlers } from "./components/Magnetic";
+import ShowcaseCarousel from "./components/ShowcaseCarousel";
+import MoreInfoView from "./components/MoreInfoView";
+import ProjectDetailModal from "./components/ProjectDetailModal";
+
+const noopSubscribe = () => () => {};
+
+function subscribeReducedMotion(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+
+function getReducedMotionSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -46,9 +71,9 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-// ── LinkifiedText ─────────────────────────────────────────────────────────────
-const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
-const TRAILING_PUNCT_RE = /[)\].,;!?'"]+$/;
+const URL_SPLIT_RE = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+const URL_EXACT_RE = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
+const TRAILING_PUNCT_RE = /[)\].!,;?'"]+$/;
 
 function LinkifiedText({
   text,
@@ -58,16 +83,13 @@ function LinkifiedText({
   className?: string;
 }) {
   if (!text) return null;
-  const parts = text.split(URL_REGEX);
+  const parts = text.split(URL_SPLIT_RE);
   return (
     <span className={className}>
       {parts.map((part, i) => {
-        URL_REGEX.lastIndex = 0;
-        if (!URL_REGEX.test(part)) {
-          URL_REGEX.lastIndex = 0;
+        if (!URL_EXACT_RE.test(part)) {
           return <React.Fragment key={i}>{part}</React.Fragment>;
         }
-        URL_REGEX.lastIndex = 0;
 
         const clean = part.replace(TRAILING_PUNCT_RE, "");
         const trailing = part.slice(clean.length);
@@ -80,7 +102,7 @@ function LinkifiedText({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline underline-offset-4 cursor-pointer transition-colors duration-150 break-all"
+              className="font-medium text-[var(--ink-primary)] underline decoration-[var(--ink-decorative)] hover:decoration-[var(--ink-primary)] underline-offset-4 transition-colors duration-150 break-all cursor-pointer"
             >
               {clean}
             </a>
@@ -92,11 +114,10 @@ function LinkifiedText({
   );
 }
 
-// ── TerminalTyping (Single-Line Typewriter from Notion Profile) ───────────────
-const TYPING_SPEED = 45;
-const DELETING_SPEED = 20;
-const PAUSE_TIME = 2200;
-const GAP_TIME = 300;
+const TYPING_SPEED = 42;
+const DELETING_SPEED = 18;
+const PAUSE_TIME = 2400;
+const GAP_TIME = 280;
 
 function splitPhrases(text: string): string[] {
   if (!text) return [];
@@ -106,32 +127,27 @@ function splitPhrases(text: string): string[] {
     .filter(Boolean);
 }
 
-interface TerminalTypingProps {
-  role: string;
-  bio: string;
-}
-
-function TerminalTyping({ role, bio }: TerminalTypingProps) {
+function TerminalTyping({ role, bio }: { role: string; bio: string }) {
   const items = useMemo(() => {
     const roleItems = role ? splitPhrases(role) : [];
     const bioItems = bio ? splitPhrases(bio) : [];
     return [...roleItems, ...bioItems].filter(Boolean);
   }, [role, bio]);
 
+  const reducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    () => false
+  );
+
   const [itemIdx, setItemIdx] = useState(0);
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    setItemIdx(0);
-    setDisplayText("");
-    setIsDeleting(false);
-  }, [items]);
+    if (!items.length || reducedMotion) return;
 
-  useEffect(() => {
-    if (!items.length) return;
-
-    const currentItem = items[itemIdx] || "";
+    const currentItem = items[itemIdx % items.length] || "";
 
     if (!isDeleting) {
       if (displayText.length < currentItem.length) {
@@ -159,23 +175,25 @@ function TerminalTyping({ role, bio }: TerminalTypingProps) {
         return () => clearTimeout(timeout);
       }
     }
-  }, [displayText, isDeleting, itemIdx, items]);
+  }, [displayText, isDeleting, itemIdx, items, reducedMotion]);
 
   if (!items.length) return null;
 
   return (
-    <div className="w-full flex items-center justify-center min-h-[2rem] my-1">
-      <p className="text-base sm:text-lg md:text-xl font-medium text-slate-700 dark:text-slate-300 text-center tracking-normal max-w-3xl leading-relaxed">
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 dark:from-emerald-400 dark:via-teal-300 dark:to-sky-400 font-semibold">
-          {displayText}
-        </span>
-        <span className="inline-block w-[2.5px] h-[1.15em] align-middle bg-emerald-600 dark:bg-emerald-400 ml-1.5 animate-pulse rounded-full" />
+    <div className="w-full min-h-[1.85rem] py-[0.12em]">
+      <p className="text-[16px] sm:text-[18px] font-normal text-[var(--ink-meta)] leading-[1.55]">
+        <span>{reducedMotion ? items.join(" · ") : displayText}</span>
+        {!reducedMotion && (
+          <span
+            aria-hidden="true"
+            className="inline-block w-[1.5px] h-[1.05em] align-middle bg-[var(--ink-meta)] ml-1 animate-pulse"
+          />
+        )}
       </p>
     </div>
   );
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 export interface Project {
   id: string;
   status: string;
@@ -222,8 +240,9 @@ interface PortfolioUIProps {
 }
 
 type SortOrder = "newest" | "oldest";
-
-// ── Smart Dynamic Parsers for Notion Profile Config ───────────────────────────
+type ActiveView = "showcase" | "more-info";
+type ShowcaseLayout = "stage" | "grid";
+type MacroTab = "projects" | "certificates";
 
 function cleanText(str: string): string {
   if (!str) return "";
@@ -274,21 +293,11 @@ function parseSkills(text: string): SkillGroup[] {
   return groups;
 }
 
-function getCategoryIcon(catName: string) {
-  const lower = catName.toLowerCase();
-  if (lower.includes("lang") || lower.includes("ngôn ngữ") || lower.includes("code")) return Code;
-  if (lower.includes("front") || lower.includes("web") || lower.includes("giao diện") || lower.includes("ui")) return Layers;
-  if (lower.includes("back") || lower.includes("cloud") || lower.includes("hệ thống") || lower.includes("database") || lower.includes("devops")) return Cpu;
-  if (lower.includes("ai") || lower.includes("llm") || lower.includes("agent") || lower.includes("tự động")) return Sparkles;
-  if (lower.includes("tool") || lower.includes("design") || lower.includes("thiết kế") || lower.includes("công cụ") || lower.includes("protocol")) return Wrench;
-  return Sparkles;
-}
-
 interface ExperienceItem {
-  org: string;     // Tên công ty / Tên hoạt động
-  role: string;    // Vị trí (Position/Role)
-  period?: string; // Thời gian (Period)
-  badge?: string;  // Badge (tùy chọn)
+  org: string;
+  role: string;
+  period?: string;
+  badge?: string;
   bullets: string[];
 }
 
@@ -307,7 +316,6 @@ function parseExperiences(text: string): ExperienceItem[] {
     const isBullet = /^[-*•·+–—]\s*/.test(line);
 
     if (!isBullet) {
-      // Header line: Company | Position | Period | Badge
       const parts = line.split(/\s*\|\s*/).map((p) => cleanText(p));
 
       let org = "";
@@ -347,7 +355,6 @@ function parseExperiences(text: string): ExperienceItem[] {
         bullets: [],
       };
     } else {
-      // Bullet point line
       const cleaned = cleanText(line.replace(/^[-*•·+–—]\s*/, ""));
       if (cleaned) {
         if (!currentItem) {
@@ -380,7 +387,7 @@ interface EducationItem {
 function parseEducation(text: string): EducationItem[] {
   if (!text) return [];
   const blocks = text
-    .split(/\n\s*\n+|\|\|+|---+/)
+    .split(/\n\s*\n+|\|\|+|- - -+|---+/)
     .map((b) => b.trim())
     .filter(Boolean);
 
@@ -441,25 +448,8 @@ function parseParagraphs(text: string): string[] {
     .filter(Boolean);
 }
 
-// ── Tag Styling Helper ────────────────────────────────────────────────────────
-const tagThemes = [
-  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
-  "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/25",
-  "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/25",
-  "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/25",
-  "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25",
-  "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/25",
-];
-
-const getTagStyle = (tagName: string): string => {
-  let hash = 0;
-  for (let i = 0; i < tagName.length; i++) {
-    hash += tagName.charCodeAt(i);
-  }
-  return tagThemes[hash % tagThemes.length];
-};
-
 const ITEMS_PER_PAGE = 6;
+const INITIAL_VISIBLE_TAGS = 12;
 
 const getTimeValue = (item: Project): number => {
   if (item.project_date?.start) {
@@ -473,50 +463,403 @@ const getTimeValue = (item: Project): number => {
   return 0;
 };
 
+const DEV_DEMO_PROFILE: ProfileData = {
+  name_en: "Nguyen Chi Thang",
+  name_vn: "Nguyễn Chí Thắng",
+  role_en: "AI Application Engineer | Solo Builder & Product Architect",
+  role_vn: "Kỹ Sư Ứng Dụng AI | Kiến Trúc Sư Sản Phẩm Độc Lập",
+  bio_en: "Designing intelligent LLM workflows, computer vision systems, and minimalist software.",
+  bio_vn: "Thiết kế hệ thống tự động hóa LLM, thị giác máy tính và phần mềm tối giản chuẩn quốc tế.",
+  about_en:
+    "I build end-to-end AI applications, autonomous agent workflows, and crisp user interfaces that feel effortless to use.\n\nMy work bridges Notion CMS pipelines, multimodal LLMs, and high-craft web engineering—turning complex backend orchestration into calm, tactile product experiences.",
+  about_vn:
+    "Mình xây dựng các ứng dụng AI toàn trình, hệ thống tác tử tự hành và giao diện người dùng tối giản, mượt mà đến từng chuyển động.\n\nCác dự án kết hợp sức mạnh của Notion CMS, mô hình ngôn ngữ lớn đa phương thức và kỹ thuật web hiện đại để biến những luồng xử lý phức tạp thành trải nghiệm tinh gọn nhất.",
+  skills_en:
+    "AI & Agents: LLMs, Computer Vision, OpenRouter, RAG, Prompt Engineering\nFrontend: Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion\nBackend & Ops: Python, Node.js, Notion API, GitHub Actions, Docker",
+  skills_vn:
+    "AI & Tác tử: LLMs, Thị giác máy tính, OpenRouter, RAG, Prompt Engineering\nGiao diện: Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion\nHệ thống: Python, Node.js, Notion API, GitHub Actions, Docker",
+  experience_en:
+    "AI Engineering Lab | AI Engineer Intern | 2026 - Present | Featured\n- Built LLM & Computer Vision optimization pipelines reducing inference latency by 38%\n- Designed automated bilingual content orchestration with zero-token idle overhead\nIndependent Studio | Solo Founder & Builder | 2024 - 2026\n- Shipped full-stack developer tools and Notion-synced web applications",
+  experience_vn:
+    "Phòng Nghiên Cứu AI | Thực Tập Sinh Kỹ Sư AI | 2026 - Hiện tại | Nổi bật\n- Xây dựng luồng tối ưu hóa LLM & Thị giác máy tính giúp giảm 38% độ trễ suy luận\n- Thiết kế kiến trúc đồng bộ nội dung song ngữ tự động hoàn toàn qua GitHub Actions\nIndependent Studio | Nhà Sáng Lập Độc Lập | 2024 - 2026\n- Phát triển công cụ cho lập trình viên và nền tảng web đồng bộ trực tiếp với Notion",
+  education_en: "Ly Tu Trong College | Information Technology | Specialized in AI & Software Engineering | 2022 - 2027",
+  education_vn: "Cao đẳng Lý Tự Trọng | Công nghệ Thông tin | Chuyên sâu AI & Kỹ thuật Phần mềm | 2022 - 2027",
+  dob: "2007-04-28",
+  email: "nguyenchithang2804@gmail.com",
+  github: "https://github.com/CThawngs",
+  linkedin: "https://www.linkedin.com/in/cthawngs/",
+  instagram: "https://www.instagram.com/cthawngs2804/",
+};
+
+const DEV_DEMO_PROJECTS: Project[] = [
+  {
+    id: "demo-1",
+    status: "Published",
+    title_en: "Portfolio AI Automation CMS",
+    title_vn: "Hệ Thống CMS Portfolio Tự Động Hóa AI",
+    desc_en:
+      "Serverless bridge between Notion CMS and OpenRouter LLMs with context-aware bilingual translation and instant ISR publishing. https://github.com/CThawngs/Portfolio",
+    desc_vn:
+      "Cầu nối serverless giữa Notion CMS và OpenRouter LLM giúp dịch thuật song ngữ tự động chuẩn ngữ cảnh kỹ thuật số. https://github.com/CThawngs/Portfolio",
+    category: "AI Systems",
+    links: "https://github.com/CThawngs/Portfolio",
+    images: ["/Portfolio Publish One Click.gif"],
+    tags: ["Next.js", "Notion API", "Python", "OpenRouter", "Tailwind CSS"],
+    project_date: { start: "2026-09-01", end: null },
+  },
+  {
+    id: "demo-2",
+    status: "Published",
+    title_en: "Context-Aware Translation Engine",
+    title_vn: "Bộ Máy Dịch Thuật Nhận Thức Ngữ Cảnh",
+    desc_en:
+      "Zero-idle-token hourly pipeline preserving software engineering terminology across English and Vietnamese.",
+    desc_vn:
+      "Luồng dịch thuật định kỳ tiết kiệm tối đa token và giữ nguyên chuẩn xác thuật ngữ chuyên ngành phần mềm.",
+    category: "AI Systems",
+    links: "https://github.com/CThawngs/Portfolio",
+    images: ["/Portfolio Translate Automation.gif"],
+    tags: ["LLM", "GitHub Actions", "Automation", "Python"],
+    project_date: { start: "2026-06-15", end: "2026-08-20" },
+  },
+  {
+    id: "demo-3",
+    status: "Published",
+    title_en: "Disk Cleaner MCP & Lifecycle Controller",
+    title_vn: "Công Cụ Dọn Đĩa MCP & Điều Khiển Lưu Trữ Tự Động",
+    desc_en:
+      "AI-powered Model Context Protocol server for safe workspace analysis, duplicate detection, and instant archival revalidation.",
+    desc_vn:
+      "Máy chủ Model Context Protocol tích hợp AI phân tích dung lượng ổ đĩa, phát hiện trùng lặp và làm mới bộ nhớ đệm tức thì.",
+    category: "Developer Tools",
+    links: "https://github.com/CThawngs",
+    images: ["/Portfolio Archive.gif"],
+    tags: ["TypeScript", "MCP", "Edge ISR", "REST API", "Node.js"],
+    project_date: { start: "2026-03-10", end: "2026-05-01" },
+  },
+  {
+    id: "demo-cert-1",
+    status: "Published",
+    title_en: "AI Riser Vietnam 2026 (Google Hackathon) — Top 200 Teams",
+    title_vn: "AI Riser Vietnam 2026 (Google Hackathon) — Top 200 Đội Xuất Sắc",
+    desc_en:
+      "Selected among the top 200 teams nationwide in Google's AI Riser Vietnam 2026 Hackathon for building practical Generative AI agent workflows.",
+    desc_vn:
+      "Lọt Top 200 đội thi xuất sắc toàn quốc tại cuộc thi AI Riser Vietnam 2026 do Google tổ chức với giải pháp tác tử AI tạo sinh thực tiễn.",
+    category: "Certificate",
+    links: "https://google.com",
+    images: [],
+    tags: ["Google", "Generative AI", "Hackathon", "AI Agents"],
+    project_date: { start: "2026-05-12", end: null },
+  },
+  {
+    id: "demo-cert-2",
+    status: "Published",
+    title_en: "Google People Management Essentials",
+    title_vn: "Chứng Chỉ Quản Trị Đội Ngũ Cốt Lõi Google",
+    desc_en:
+      "Credential covering high-performing team leadership, goal setting, and structured individual growth coaching.",
+    desc_vn:
+      "Chứng chỉ về dẫn dắt đội ngũ hiệu suất cao, thiết lập mục tiêu OKRs và huấn luyện phát triển cá nhân bài bản.",
+    category: "Certificate",
+    links: "https://coursera.org",
+    images: [],
+    tags: ["Google", "Leadership", "Management"],
+    project_date: { start: "2026-02-18", end: null },
+  },
+];
+
+function MagneticTabButton({
+  active,
+  onClick,
+  count,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  const { onPointerMove, onPointerLeave } = useMagneticHandlers(6, active);
+
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={() => onClick()}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      data-cursor="magnetic"
+      className={`magnetic-target relative shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[9px] text-[13.5px] font-semibold transition-all cursor-pointer ${
+        active
+          ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs cursor-default"
+          : "bg-transparent text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+      }`}
+    >
+      <span>{children}</span>
+      {typeof count === "number" && (
+        <span
+          className={`px-1.5 py-0.2 rounded-full text-[11px] tabular-nums ${
+            active
+              ? "bg-[var(--pill-bg)] text-[var(--ink-primary)]"
+              : "text-[var(--ink-muted)]"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function buildPageNumbers(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) pages.push("ellipsis");
+  for (let p = start; p <= end; p++) pages.push(p);
+  if (end < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
+
 export default function PortfolioUI({
-  projects = [],
-  profileData = null,
+  projects: incomingProjects = [],
+  profileData: incomingProfile = null,
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
+  const [activeView, setActiveView] = useState<ActiveView>("showcase");
+  const [macroTab, setMacroTab] = useState<MacroTab>("projects");
+  const [selectedProjectCategory, setSelectedProjectCategory] = useState<string | null>(null);
+  const [selectedCertCategory, setSelectedCertCategory] = useState<string | null>(null);
+  const [layoutMode, setLayoutMode] = useState<ShowcaseLayout>("stage");
+  const [showAllTags, setShowAllTags] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  // Dedicated Tag Filters for Projects & Certificates
   const [selectedProjectTag, setSelectedProjectTag] = useState<string | null>(null);
   const [selectedCertTag, setSelectedCertTag] = useState<string | null>(null);
-
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Sorting States
   const [projectSort, setProjectSort] = useState<SortOrder>("newest");
   const [certSort, setCertSort] = useState<SortOrder>("newest");
-
-  // Pagination States
   const [projectPage, setProjectPage] = useState<number>(1);
   const [certPage, setCertPage] = useState<number>(1);
 
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const demoMode = useSyncExternalStore(
+    noopSubscribe,
+    () =>
+      process.env.NODE_ENV === "development" &&
+      new URLSearchParams(window.location.search).get("__demo") === "1",
+    () => false
+  );
+
+  const [vnTime, setVnTime] = useState<string>("");
+  const pageWrapperRef = useRef<HTMLDivElement | null>(null);
+  const gridTopRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    setMounted(true);
+    const syncFromLocation = () => {
+      setActiveView(window.location.hash === "#more-info" ? "more-info" : "showcase");
+    };
+
+    const rafId = requestAnimationFrame(syncFromLocation);
+    window.addEventListener("hashchange", syncFromLocation);
+    window.addEventListener("popstate", syncFromLocation);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("hashchange", syncFromLocation);
+      window.removeEventListener("popstate", syncFromLocation);
+    };
   }, []);
 
-  // Separate Projects vs Certificates dynamically from Notion DB
-  const { rawProjects, rawCertificates, projectTags, certTags } = useMemo(() => {
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === "VN" ? "vi" : "en";
+    }
+  }, [lang]);
+
+  useEffect(() => {
+    const updateClock = () => {
+      try {
+        const now = new Date();
+        const timeStr = now.toLocaleString("en-US", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+        setVnTime(`${timeStr} • ${lang === "VN" ? "Việt Nam" : "Vietnam"}`);
+      } catch {
+        setVnTime("");
+      }
+    };
+
+    const rafId = requestAnimationFrame(updateClock);
+    const timer = setInterval(updateClock, 1000);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearInterval(timer);
+    };
+  }, [lang]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const motionOk = window.matchMedia("(prefers-reduced-motion: no-preference)").matches;
+    if (!finePointer || !motionOk) return;
+
+    let overscrollY = 0;
+    let snapRaf: number | null = null;
+    let dragState: { startY: number; startScrollY: number; dragging: boolean } | null = null;
+
+    const applyOverscroll = (val: number) => {
+      overscrollY = val;
+      const el = pageWrapperRef.current;
+      if (el) {
+        el.style.transform = Math.abs(val) > 0.4 ? `translate3d(0, ${val.toFixed(1)}px, 0)` : "";
+      }
+    };
+
+    const rubberBand = (over: number, dim: number) =>
+      Math.sign(over) * dim * (1 - 1 / ((Math.abs(over) * 0.18) / dim + 1));
+
+    const springBack = () => {
+      if (snapRaf) cancelAnimationFrame(snapRaf);
+      let pos = overscrollY;
+      let vel = 0;
+      const stiffness = 170;
+      const damping = 2 * Math.sqrt(stiffness);
+      const dt = 1 / 60;
+
+      const step = () => {
+        const accel = -stiffness * pos - damping * vel;
+        vel += accel * dt;
+        pos += vel * dt;
+        if (Math.abs(pos) < 0.5 && Math.abs(vel) < 4) {
+          applyOverscroll(0);
+          snapRaf = null;
+          return;
+        }
+        applyOverscroll(pos);
+        snapRaf = requestAnimationFrame(step);
+      };
+      snapRaf = requestAnimationFrame(step);
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        !t ||
+        t.closest(
+          "a, button, input, textarea, select, [role='dialog'], [aria-roledescription='carousel']"
+        )
+      ) {
+        return;
+      }
+      if (snapRaf) {
+        cancelAnimationFrame(snapRaf);
+        snapRaf = null;
+      }
+      dragState = {
+        startY: e.clientY,
+        startScrollY: window.scrollY,
+        dragging: false,
+      };
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragState) return;
+      const dy = e.clientY - dragState.startY;
+      if (!dragState.dragging && Math.abs(dy) > 10) {
+        dragState.dragging = true;
+        document.body.classList.add("is-dragging");
+      }
+      if (dragState.dragging) {
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const targetY = dragState.startScrollY - dy;
+        if (targetY < 0) {
+          window.scrollTo(0, 0);
+          applyOverscroll(rubberBand(-targetY, window.innerHeight));
+        } else if (targetY > maxScroll) {
+          window.scrollTo(0, maxScroll);
+          applyOverscroll(-rubberBand(targetY - maxScroll, window.innerHeight));
+        } else {
+          if (overscrollY !== 0) applyOverscroll(0);
+          window.scrollTo(0, targetY);
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      if (!dragState) return;
+      if (dragState.dragging) {
+        document.body.classList.remove("is-dragging");
+        if (overscrollY !== 0) springBack();
+      }
+      dragState = null;
+    };
+
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      if (snapRaf) cancelAnimationFrame(snapRaf);
+      document.body.classList.remove("is-dragging");
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  const projects = demoMode && incomingProjects.length === 0 ? DEV_DEMO_PROJECTS : incomingProjects;
+  const profileData = demoMode && !incomingProfile ? DEV_DEMO_PROFILE : incomingProfile;
+
+  const switchView = useCallback((next: ActiveView) => {
+    setActiveView(next);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      const nextUrl =
+        next === "more-info"
+          ? `${window.location.pathname}${window.location.search}#more-info`
+          : `${window.location.pathname}${window.location.search}`;
+      window.history.pushState({ view: next }, "", nextUrl);
+    }
+  }, []);
+
+  const {
+    rawProjects,
+    rawCertificates,
+    projectTags,
+    certTags,
+    projectCategories,
+    certCategories,
+  } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
     const pTagSet = new Set<string>();
     const cTagSet = new Set<string>();
+    const pCatCounts = new Map<string, number>();
+    const cCatCounts = new Map<string, number>();
 
     projects.forEach((item) => {
-      const cat = (item.category || "").toLowerCase();
-      if (cat.includes("certificate") || cat.includes("chứng chỉ")) {
+      const rawCat = (item.category || "").trim();
+      const lowerCat = rawCat.toLowerCase();
+      if (lowerCat.includes("certificate") || lowerCat.includes("chứng chỉ")) {
         cert.push(item);
-        if (Array.isArray(item.tags)) {
-          item.tags.forEach((t) => cTagSet.add(t));
+        if (Array.isArray(item.tags)) item.tags.forEach((t) => cTagSet.add(t));
+        if (rawCat && rawCat !== "Uncategorized") {
+          cCatCounts.set(rawCat, (cCatCounts.get(rawCat) || 0) + 1);
         }
       } else {
         feat.push(item);
-        if (Array.isArray(item.tags)) {
-          item.tags.forEach((t) => pTagSet.add(t));
+        if (Array.isArray(item.tags)) item.tags.forEach((t) => pTagSet.add(t));
+        if (rawCat && rawCat !== "Uncategorized") {
+          pCatCounts.set(rawCat, (pCatCounts.get(rawCat) || 0) + 1);
         }
       }
     });
@@ -526,182 +869,76 @@ export default function PortfolioUI({
       rawCertificates: cert,
       projectTags: Array.from(pTagSet),
       certTags: Array.from(cTagSet),
+      projectCategories: Array.from(pCatCounts.entries()).map(([name, count]) => ({
+        name,
+        count,
+      })),
+      certCategories: Array.from(cCatCounts.entries()).map(([name, count]) => ({
+        name,
+        count,
+      })),
     };
   }, [projects]);
 
-  // Parse Notion Profile Config Dynamic Sections
   const aboutParagraphs = useMemo(() => {
     if (!profileData) return [];
-    const raw = lang === "VN" ? profileData.about_vn : profileData.about_en;
-    return parseParagraphs(raw || "");
+    const raw =
+      lang === "VN"
+        ? profileData.about_vn || profileData.about_en
+        : profileData.about_en || profileData.about_vn;
+    const paras = parseParagraphs(raw || "");
+    if (paras.length > 0) return paras;
+    const fallbackBio =
+      lang === "VN"
+        ? profileData.bio_vn || profileData.bio_en
+        : profileData.bio_en || profileData.bio_vn;
+    return fallbackBio ? [cleanText(fallbackBio)] : [];
   }, [profileData, lang]);
 
   const parsedSkills = useMemo(() => {
     if (!profileData) return [];
-    const raw = lang === "VN" ? profileData.skills_vn : profileData.skills_en;
+    const raw =
+      lang === "VN"
+        ? profileData.skills_vn || profileData.skills_en
+        : profileData.skills_en || profileData.skills_vn;
     return parseSkills(raw || "");
   }, [profileData, lang]);
 
   const parsedExperiences = useMemo(() => {
     if (!profileData) return [];
-    const raw = lang === "VN" ? profileData.experience_vn : profileData.experience_en;
+    const raw =
+      lang === "VN"
+        ? profileData.experience_vn || profileData.experience_en
+        : profileData.experience_en || profileData.experience_vn;
     return parseExperiences(raw || "");
   }, [profileData, lang]);
 
   const parsedEducations = useMemo(() => {
     if (!profileData) return [];
-    const raw = lang === "VN" ? profileData.education_vn : profileData.education_en;
+    const raw =
+      lang === "VN"
+        ? profileData.education_vn || profileData.education_en
+        : profileData.education_en || profileData.education_vn;
     return parseEducation(raw || "");
   }, [profileData, lang]);
 
   const profileName = useMemo(() => {
     return (
       (lang === "VN" ? profileData?.name_vn : profileData?.name_en) ||
-      profileData?.name_vn ||
       profileData?.name_en ||
+      profileData?.name_vn ||
       "Nguyen Chi Thang"
     );
   }, [profileData, lang]);
 
-  const brandInitials = useMemo(() => {
-    const raw = profileData?.name_en || profileData?.name_vn || "Chi Thang";
-    const parts = raw.trim().split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return (parts[0]?.slice(0, 2) || "CT").toUpperCase();
-  }, [profileData]);
-
-  // Navigation items for header and mobile nav
-  const navItems = useMemo(() => {
-    const items: { id: string; label: string }[] = [];
-    if (aboutParagraphs.length > 0) {
-      items.push({ id: "about", label: lang === "EN" ? "About" : "Giới thiệu" });
-    }
-    if (parsedSkills.length > 0 || projectTags.length > 0) {
-      items.push({ id: "skills", label: lang === "EN" ? "Skills" : "Kỹ năng" });
-    }
-    if (parsedExperiences.length > 0) {
-      items.push({ id: "experience", label: lang === "EN" ? "Experience" : "Kinh nghiệm" });
-    }
-    if (parsedEducations.length > 0) {
-      items.push({ id: "education", label: lang === "EN" ? "Education" : "Học vấn" });
-    }
-    items.push({ id: "projects", label: lang === "EN" ? "Projects" : "Dự án" });
-    if (rawCertificates.length > 0) {
-      items.push({ id: "certificates", label: lang === "EN" ? "Certificates" : "Chứng chỉ" });
-    }
-    return items;
-  }, [aboutParagraphs, parsedSkills, projectTags, parsedExperiences, parsedEducations, rawCertificates, lang]);
-
-  // Active section tracking for navbar scroll spy & smooth scrolling
-  const [activeSection, setActiveSection] = useState<string>("hero");
-  const isManualScroll = useRef(false);
-  const manualScrollTimer = useRef<NodeJS.Timeout | null>(null);
-
-  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    setActiveSection(id);
-    isManualScroll.current = true;
-    if (manualScrollTimer.current) clearTimeout(manualScrollTimer.current);
-
-    const element = document.getElementById(id);
-    if (element) {
-      const yOffset = -75; // fixed header height offset
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
-    }
-
-    manualScrollTimer.current = setTimeout(() => {
-      isManualScroll.current = false;
-    }, 850);
-  };
-
-  useEffect(() => {
-    const sectionIds = ["hero", "about", "skills", "experience", "education", "projects", "certificates"];
-    
-    const handleScroll = () => {
-      if (isManualScroll.current) return;
-
-      const scrollPosition = window.scrollY + 140;
-      for (let i = sectionIds.length - 1; i >= 0; i--) {
-        const id = sectionIds[i];
-        const el = document.getElementById(id);
-        if (el && el.offsetTop <= scrollPosition) {
-          setActiveSection(id);
-          break;
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (manualScrollTimer.current) clearTimeout(manualScrollTimer.current);
-    };
-  }, [aboutParagraphs, parsedSkills, parsedExperiences, parsedEducations, rawCertificates]);
-
-  // Filtered & Sorted Projects
-  const filteredProjects = useMemo(() => {
-    if (!selectedProjectTag) return rawProjects;
-    return rawProjects.filter((p) => p.tags && p.tags.includes(selectedProjectTag));
-  }, [rawProjects, selectedProjectTag]);
-
-  const sortedProjects = useMemo(() => {
-    return [...filteredProjects].sort((a, b) => {
-      const timeA = getTimeValue(a);
-      const timeB = getTimeValue(b);
-      return projectSort === "newest" ? timeB - timeA : timeA - timeB;
-    });
-  }, [filteredProjects, projectSort]);
-
-  // Filtered & Sorted Certificates
-  const filteredCertificates = useMemo(() => {
-    if (!selectedCertTag) return rawCertificates;
-    return rawCertificates.filter((c) => c.tags && c.tags.includes(selectedCertTag));
-  }, [rawCertificates, selectedCertTag]);
-
-  const sortedCertificates = useMemo(() => {
-    return [...filteredCertificates].sort((a, b) => {
-      const timeA = getTimeValue(a);
-      const timeB = getTimeValue(b);
-      return certSort === "newest" ? timeB - timeA : timeA - timeB;
-    });
-  }, [filteredCertificates, certSort]);
-
-  // Paginated Slices (6 items max per page)
-  const totalProjectPages = Math.max(1, Math.ceil(sortedProjects.length / ITEMS_PER_PAGE));
-  const paginatedProjects = useMemo(() => {
-    const start = (projectPage - 1) * ITEMS_PER_PAGE;
-    return sortedProjects.slice(start, start + ITEMS_PER_PAGE);
-  }, [sortedProjects, projectPage]);
-
-  const totalCertPages = Math.max(1, Math.ceil(sortedCertificates.length / ITEMS_PER_PAGE));
-  const paginatedCertificates = useMemo(() => {
-    const start = (certPage - 1) * ITEMS_PER_PAGE;
-    return sortedCertificates.slice(start, start + ITEMS_PER_PAGE);
-  }, [sortedCertificates, certPage]);
-
-  const handleProjectTagClick = (tag: string | null) => {
-    setSelectedProjectTag(tag);
-    setProjectPage(1);
-  };
-
-  const handleCertTagClick = (tag: string | null) => {
-    setSelectedCertTag(tag);
-    setCertPage(1);
-  };
-
-  const handleProjectSortChange = (order: SortOrder) => {
-    setProjectSort(order);
-    setProjectPage(1);
-  };
-
-  const handleCertSortChange = (order: SortOrder) => {
-    setCertSort(order);
-    setCertPage(1);
-  };
+  const profileRole = useMemo(() => {
+    const raw =
+      (lang === "VN" ? profileData?.role_vn : profileData?.role_en) ||
+      profileData?.role_en ||
+      profileData?.role_vn ||
+      "";
+    return splitPhrases(raw)[0] || "";
+  }, [profileData, lang]);
 
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
@@ -741,946 +978,921 @@ export default function PortfolioUI({
     return links;
   }, [profileData]);
 
-  const formatDate = (dateString: string | null) => {
+  const showcaseTabs = useMemo(() => {
+    const tabs: { id: MacroTab; label: string; count: number }[] = [
+      {
+        id: "projects",
+        label: lang === "EN" ? "Projects" : "Dự án",
+        count: rawProjects.length,
+      },
+    ];
+    if (rawCertificates.length > 0) {
+      tabs.push({
+        id: "certificates",
+        label: lang === "EN" ? "Certificates" : "Chứng chỉ",
+        count: rawCertificates.length,
+      });
+    }
+    return tabs;
+  }, [rawProjects.length, rawCertificates.length, lang]);
+
+  const effectiveMacroTab: MacroTab =
+    macroTab === "certificates" && rawCertificates.length > 0 ? "certificates" : "projects";
+  const isCertTab = effectiveMacroTab === "certificates";
+
+  const activeProjectCategory = useMemo(
+    () =>
+      selectedProjectCategory &&
+      projectCategories.some((c) => c.name === selectedProjectCategory)
+        ? selectedProjectCategory
+        : null,
+    [selectedProjectCategory, projectCategories]
+  );
+
+  const activeCertCategory = useMemo(
+    () =>
+      selectedCertCategory &&
+      certCategories.some((c) => c.name === selectedCertCategory)
+        ? selectedCertCategory
+        : null,
+    [selectedCertCategory, certCategories]
+  );
+
+  const activeProjectPool = useMemo(() => {
+    let base = rawProjects;
+    if (activeProjectCategory) {
+      base = base.filter((p) => p.category === activeProjectCategory);
+    }
+    if (selectedProjectTag) {
+      base = base.filter((p) => p.tags && p.tags.includes(selectedProjectTag));
+    }
+    return [...base].sort((a, b) => {
+      const tA = getTimeValue(a);
+      const tB = getTimeValue(b);
+      return projectSort === "newest" ? tB - tA : tA - tB;
+    });
+  }, [rawProjects, activeProjectCategory, selectedProjectTag, projectSort]);
+
+  const activeCertPool = useMemo(() => {
+    let base = rawCertificates;
+    if (activeCertCategory) {
+      base = base.filter((c) => c.category === activeCertCategory);
+    }
+    if (selectedCertTag) {
+      base = base.filter((c) => c.tags && c.tags.includes(selectedCertTag));
+    }
+    return [...base].sort((a, b) => {
+      const tA = getTimeValue(a);
+      const tB = getTimeValue(b);
+      return certSort === "newest" ? tB - tA : tA - tB;
+    });
+  }, [rawCertificates, activeCertCategory, selectedCertTag, certSort]);
+
+  const currentItems = isCertTab ? activeCertPool : activeProjectPool;
+  const currentCategories = isCertTab ? certCategories : projectCategories;
+  const currentSelectedCategory = isCertTab ? activeCertCategory : activeProjectCategory;
+  const currentTags = isCertTab ? certTags : projectTags;
+  const currentSelectedTag = isCertTab ? selectedCertTag : selectedProjectTag;
+  const currentSort = isCertTab ? certSort : projectSort;
+  const rawPage = isCertTab ? certPage : projectPage;
+  const totalPages = Math.max(1, Math.ceil(currentItems.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(rawPage, totalPages);
+
+  const paginatedGridItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return currentItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentItems, currentPage]);
+
+  const visibleTags = useMemo(() => {
+    if (showAllTags || currentTags.length <= INITIAL_VISIBLE_TAGS) {
+      return currentTags;
+    }
+    const base = currentTags.slice(0, INITIAL_VISIBLE_TAGS);
+    if (currentSelectedTag && !base.includes(currentSelectedTag)) {
+      return [...base, currentSelectedTag];
+    }
+    return base;
+  }, [currentTags, showAllTags, currentSelectedTag]);
+
+  const changePage = useCallback(
+    (nextPage: number) => {
+      if (isCertTab) {
+        setCertPage(nextPage);
+      } else {
+        setProjectPage(nextPage);
+      }
+      if (gridTopRef.current) {
+        const y = gridTopRef.current.getBoundingClientRect().top + window.scrollY - 20;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      }
+    },
+    [isCertTab]
+  );
+
+  const formatDate = useCallback((dateString: string | null) => {
     if (!dateString) return "";
     const parts = dateString.split("-");
     if (parts.length !== 3) return dateString;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  };
+  }, []);
 
-  const renderDateRange = (dateRange: Project["project_date"]) => {
-    if (!dateRange || !dateRange.start) return null;
-    const startFormatted = formatDate(dateRange.start);
-    const endFormatted = dateRange.end ? formatDate(dateRange.end) : null;
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-        <Calendar className="h-3.5 w-3.5 opacity-75" />
-        <span>{endFormatted ? `${startFormatted} – ${endFormatted}` : startFormatted}</span>
-      </span>
-    );
-  };
+  const formatDateRangeString = useCallback(
+    (dateRange: Project["project_date"]): string | null => {
+      if (!dateRange || !dateRange.start) return null;
+      const s = formatDate(dateRange.start);
+      const e = dateRange.end ? formatDate(dateRange.end) : null;
+      return e ? `${s} – ${e}` : s;
+    },
+    [formatDate]
+  );
 
-  // Helper Pagination Controls
-  const renderPagination = (
-    currentPage: number,
-    totalPages: number,
-    onPageChange: (page: number) => void
-  ) => {
-    if (totalPages <= 1) return null;
-
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pageNumbers.push(i);
+  const formatYearOrDate = useCallback((item: Project): string => {
+    if (item.project_date?.start) {
+      return item.project_date.start.slice(0, 4);
     }
+    if (item.last_edited_time) {
+      const d = new Date(item.last_edited_time);
+      if (!isNaN(d.getFullYear())) return String(d.getFullYear());
+    }
+    return "";
+  }, []);
 
-    return (
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-        <button
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>{lang === "EN" ? "Prev" : "Trước"}</span>
-        </button>
+  const renderLinkified = useCallback(
+    (text: string, className?: string) => (
+      <LinkifiedText text={text} className={className} />
+    ),
+    []
+  );
 
-        <div className="flex items-center gap-1.5">
-          {pageNumbers.map((page) => (
-            <button
-              key={page}
-              onClick={() => onPageChange(page)}
-              className={`h-9 w-9 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-                page === currentPage
-                  ? "bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20"
-                  : "border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400"
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
+  const navLeftMagnetic = useMagneticHandlers(6);
+  const navRightMagnetic = useMagneticHandlers(6);
+  const footerEmailMagnetic = useMagneticHandlers(4);
 
-        <button
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-          className="flex h-9 items-center gap-1 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
-        >
-          <span>{lang === "EN" ? "Next" : "Sau"}</span>
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-    );
-  };
+  const activeTypingRole = profileData
+    ? (lang === "VN" ? profileData.role_vn : profileData.role_en) ||
+      profileData.role_en ||
+      profileData.role_vn ||
+      ""
+    : "";
+  const activeTypingBio = profileData
+    ? (lang === "VN" ? profileData.bio_vn : profileData.bio_en) ||
+      profileData.bio_en ||
+      profileData.bio_vn ||
+      ""
+    : "";
+
+  const hasCenterTabs = activeView === "showcase" && showcaseTabs.length > 0;
+  const showCategoryPills = isCertTab
+    ? currentCategories.length > 1
+    : currentCategories.length >= 1;
 
   return (
-    <div className="relative min-h-screen bg-slate-50 dark:bg-[#090D14] text-slate-900 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-500 font-sans overflow-x-hidden">
-      
-      {/* ── SOFT MINT & SKY AMBIENT GLOWS ─────────────────────────────────── */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-[130px] transform-gpu" />
-        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-sky-500/10 dark:bg-sky-500/15 rounded-full blur-[140px] transform-gpu" />
-        <div className="absolute bottom-10 left-1/4 w-[28rem] h-[28rem] bg-teal-500/10 dark:bg-teal-500/10 rounded-full blur-[130px] transform-gpu" />
-      </div>
+    <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] selection:bg-[#FFD433] selection:text-black">
+      <CustomCursor />
 
-      {/* ── FIXED GLASS HEADER ──────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-xl bg-white/80 dark:bg-[#090D14]/80 border-b border-slate-200/80 dark:border-slate-800/80 transition-all duration-300 shadow-xs">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          
-          {/* Brand Name (Only user's name, no logo icon) */}
-          <a
-            href="#hero"
-            onClick={(e) => scrollToSection(e, "hero")}
-            className="group flex items-center transition-transform duration-300 hover:scale-105 cursor-pointer select-none"
-          >
-            <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-              {profileName}
-            </span>
-          </a>
-
-          {/* Quick Nav Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-1 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md text-xs font-semibold tracking-wider">
-            {navItems.map((item) => {
-              const isActive = activeSection === item.id;
-              return (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  onClick={(e) => scrollToSection(e, item.id)}
-                  className={`relative px-3.5 py-1.5 rounded-xl transition-colors duration-200 cursor-pointer ${
-                    isActive
-                      ? "text-white font-bold"
-                      : "text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/40"
-                  }`}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="activeDesktopNavPill"
-                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm shadow-emerald-500/25 z-0"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10">{item.label}</span>
-                </a>
-              );
-            })}
-          </nav>
-
-          {/* Controls: Theme & Language */}
-          <div className="flex items-center gap-3">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm cursor-pointer"
-              aria-label="Toggle theme"
+      <div ref={pageWrapperRef} className="flex-1 flex flex-col will-change-transform">
+        {/* Symmetric Top Header with Unified Margin Rails */}
+        <header className="relative z-40 w-full pt-4 sm:pt-5 pb-2">
+          <div className="apple-shell">
+            <div
+              className={
+                hasCenterTabs
+                  ? "flex items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4"
+                  : "flex items-center justify-between gap-3"
+              }
             >
-              {mounted ? (
-                theme === "dark" ? (
-                  <svg className="h-4 w-4 fill-amber-400" viewBox="0 0 20 20">
-                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4 fill-emerald-600" viewBox="0 0 24 24">
-                    <path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10C2.2 6.8 6.5 2.5 11.9 2.2c.5 0 .9.3 1.1.8s-.1.9-.5 1.2C11 5.4 10 7.2 10 9.2c0 3.8 3.1 6.9 6.9 6.9 2 0 3.8-1 5-2.5.3-.4.8-.5 1.2-.3s.7.7.5 1.2c-.8 3.8-3.9 6.6-7.8 7.4-.5.1-1 .1-1.5.1z" />
-                  </svg>
-                )
-              ) : (
-                <div className="h-4 w-4 rounded-full bg-slate-300 dark:bg-slate-700 animate-pulse" />
-              )}
-            </button>
-
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLang(lang === "EN" ? "VN" : "EN")}
-              className="relative inline-flex h-9 w-22 cursor-pointer items-center rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 p-1 transition-all duration-300 shadow-sm"
-              aria-label="Toggle language"
-            >
-              <span
-                className={`${
-                  lang === "VN" ? "translate-x-10" : "translate-x-0"
-                } absolute left-1 top-1 h-7 w-10 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md transition-transform duration-300`}
-              />
-              <span className="relative z-10 flex w-full justify-between px-1 text-[11px] font-bold uppercase tracking-wider select-none pointer-events-none">
-                <span className={`w-10 text-center transition-colors duration-300 ${lang === "EN" ? "text-white" : "text-slate-500"}`}>
-                  EN
-                </span>
-                <span className={`w-10 text-center transition-colors duration-300 ${lang === "VN" ? "text-white" : "text-slate-500"}`}>
-                  VN
-                </span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* ── MOBILE HORIZONTAL QUICK NAVIGATION STRIP ─────────────────────── */}
-      <div className="md:hidden fixed top-16 left-0 right-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#090D14]/90 border-b border-slate-200/80 dark:border-slate-800/80 py-2 px-4 overflow-x-auto hide-scrollbar shadow-xs">
-        <div className="flex items-center gap-1.5 w-max mx-auto">
-          {navItems.map((item) => {
-            const isActive = activeSection === item.id;
-            return (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                onClick={(e) => scrollToSection(e, item.id)}
-                className={`relative px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors duration-200 cursor-pointer ${
-                  isActive
-                    ? "text-white font-bold"
-                    : "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="activeMobileNavPill"
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-sm z-0"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">{item.label}</span>
-              </a>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── 1. HERO SECTION (100% DYNAMIC FROM NOTION PROFILE DB) ────────── */}
-      <section id="hero" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pt-28 sm:pt-28 md:pt-24 pb-8 text-center">
-        {profileData && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="flex flex-col items-center"
-          >
-            {/* Name from Notion Profile */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 dark:from-white dark:via-slate-100 dark:to-emerald-200">
-                {lang === "VN" ? profileData.name_vn : profileData.name_en}
-              </span>
-            </h1>
-
-            {/* Single-Line Typewriter Animation (Dynamic from Notion Role & Bio) */}
-            <TerminalTyping
-              role={lang === "VN" ? profileData.role_vn : profileData.role_en}
-              bio={lang === "VN" ? profileData.bio_vn : profileData.bio_en}
-            />
-
-            {/* Date of Birth (from Notion Profile if configured) */}
-            {profileData.dob && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 mt-2">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>
-                  {lang === "VN"
-                    ? `Ngày sinh: ${formatDate(profileData.dob)}`
-                    : `Born: ${formatDate(profileData.dob)}`}
-                </span>
-              </p>
-            )}
-
-            {/* Social & Contact Buttons (from Notion Profile) */}
-            {socialLinks.length > 0 && (
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                {socialLinks.map((link) => {
-                  const Icon = link.icon;
-                  return (
-                    <a
-                      key={link.type}
-                      href={link.href}
-                      target={link.type === "email" ? undefined : "_blank"}
-                      rel={link.type === "email" ? undefined : "noopener noreferrer"}
-                      className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                    >
-                      <Icon className="h-4 w-4 text-slate-500 group-hover:text-emerald-500 transition-colors" />
-                      <span>{link.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </section>
-
-      {/* ── 2. ABOUT ME SECTION (DYNAMIC FROM NOTION PROFILE DB) ─────────── */}
-      {aboutParagraphs.length > 0 && (
-        <section id="about" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.45 }}
-            className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-none relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <User className="h-5 w-5" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "About Me" : "Về Tôi"}
-              </h2>
-            </div>
-
-            <div className="space-y-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-              {aboutParagraphs.map((para, idx) => (
-                <p key={idx}>
-                  <LinkifiedText text={para} />
-                </p>
-              ))}
-            </div>
-          </motion.div>
-        </section>
-      )}
-
-      {/* ── 3. TECHNICAL SKILLS SECTION (DYNAMIC FROM NOTION PROFILE DB) ─── */}
-      {(parsedSkills.length > 0 || projectTags.length > 0) && (
-        <section id="skills" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-              <Cpu className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Technical Skills" : "Kỹ Năng Công Nghệ"}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                {lang === "EN" ? "Categorized technology stack & specialized tools" : "Ngăn xếp công nghệ và công cụ chuyên môn"}
-              </p>
-            </div>
-          </div>
-
-          {parsedSkills.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {parsedSkills.map((group, idx) => {
-                const Icon = getCategoryIcon(group.category);
-                return (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: idx * 0.06 }}
-                    className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md p-5 shadow-sm hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+              {/* Left Zone: Brand or Back to Showcase */}
+              <div className="flex items-center min-w-0 lg:justify-self-start">
+                {activeView === "more-info" ? (
+                  <button
+                    type="button"
+                    onClick={() => switchView("showcase")}
+                    onPointerMove={navLeftMagnetic.onPointerMove}
+                    onPointerLeave={navLeftMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3.5 rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13.5px] sm:text-[14px] font-semibold text-[var(--ink-primary)] hover:opacity-80 hover:scale-[1.03] transition-all cursor-pointer"
                   >
-                    <div className="flex items-center gap-2.5 mb-3.5">
-                      <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      <h3 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-200">
-                        {group.category}
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {group.skills.map((skill, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs group-hover:border-emerald-400/40 transition-colors"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            // Fallback: Dynamic Tag Cloud from Notion Projects
-            <div className="flex flex-wrap gap-2 p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60">
-              {projectTags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${getTagStyle(tag)}`}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── 4. EXPERIENCE SECTION (DYNAMIC FROM NOTION PROFILE DB) ───────── */}
-      {parsedExperiences.length > 0 && (
-        <section id="experience" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
-              <Briefcase className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Experience" : "Kinh Nghiệm"}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                {lang === "EN" ? "Work experience & professional background" : "Quá trình làm việc và kinh nghiệm chuyên môn"}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {parsedExperiences.map((exp, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.45, delay: idx * 0.08 }}
-                className="relative rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
-              >
-                {/* Top Header: Tên Công ty / Tên hoạt động (Lớn, đậm) & Badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                    {exp.org || exp.role}
-                  </h3>
-                  {exp.badge && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                      {exp.badge}
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>{lang === "EN" ? "Portfolio" : "Trang chủ"}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMacroTab("projects");
+                      setSelectedProjectCategory(null);
+                      setSelectedProjectTag(null);
+                      setProjectPage(1);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    onPointerMove={navLeftMagnetic.onPointerMove}
+                    onPointerLeave={navLeftMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-10 items-center gap-2.5 text-left min-w-0 cursor-pointer group"
+                  >
+                    <span className="text-[15px] sm:text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-primary)] group-hover:opacity-70 transition-opacity truncate">
+                      {profileName}
                     </span>
-                  )}
-                </div>
-
-                {/* Sub-Header: Vị trí (Position/Role) bên trái & Thời gian hoạt động (Period) ngang hàng bên phải */}
-                {(exp.role || exp.period) && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-1 text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">
-                      {exp.org ? exp.role : ""}
-                    </p>
-                    {exp.period && (
-                      <span className="text-xs sm:text-sm font-mono font-bold text-slate-500 dark:text-slate-400 shrink-0">
-                        {exp.period}
+                    {profileRole && (
+                      <span className="hidden 2xl:inline text-[13.5px] font-normal text-[var(--ink-meta)] truncate max-w-[230px]">
+                        {profileRole}
                       </span>
                     )}
-                  </div>
+                  </button>
                 )}
-
-                {/* Bullet Points */}
-                {exp.bullets.length > 0 && (
-                  <ul className="space-y-2 mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80">
-                    {exp.bullets.map((bullet, bIdx) => (
-                      <li key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 mt-2" />
-                        <span><LinkifiedText text={bullet} /></span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── 5. EDUCATION SECTION (DYNAMIC FROM NOTION PROFILE DB) ────────── */}
-      {parsedEducations.length > 0 && (
-        <section id="education" className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <GraduationCap className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Education" : "Học Vấn"}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                {lang === "EN" ? "Academic background & foundational studies" : "Nền tảng học thuật và đào tạo chính quy"}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {parsedEducations.map((edu, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.45, delay: idx * 0.08 }}
-                className="rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-lg shadow-slate-900/5 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                      {edu.school}
-                    </h3>
-                    {edu.major && (
-                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        {edu.major}
-                      </p>
-                    )}
-                    {edu.notes && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {edu.notes}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-left sm:text-right">
-                    {edu.gpa && (
-                      <span className="inline-block px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                        {edu.gpa}
-                      </span>
-                    )}
-                    {edu.period && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono">
-                        {edu.period}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── 6. PROJECTS SECTION (100% DYNAMIC FROM NOTION PORTFOLIO DB) ──── */}
-      <section id="projects" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Code className="h-5 w-5" />
               </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                {lang === "EN" ? "Projects" : "Dự Án"}
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-              {lang === "EN"
-                ? `Showing ${paginatedProjects.length} of ${sortedProjects.length} items (${ITEMS_PER_PAGE} per page)`
-                : `Hiển thị ${paginatedProjects.length} trên tổng số ${sortedProjects.length} mục (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
-            </p>
-          </div>
 
-          {/* Sort Controls for Projects */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <span>{lang === "EN" ? "Sort:" : "Sắp xếp:"}</span>
-            </span>
-            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
-              <button
-                onClick={() => handleProjectSortChange("newest")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  projectSort === "newest"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                {lang === "EN" ? "Newest" : "Mới nhất"}
-              </button>
-              <button
-                onClick={() => handleProjectSortChange("oldest")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  projectSort === "oldest"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                {lang === "EN" ? "Oldest" : "Cũ nhất"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Dedicated Projects Tag Filter Bar */}
-        {projectTags.length > 0 && (
-          <div className="mb-6 flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => handleProjectTagClick(null)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedProjectTag === null
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
-              }`}
-            >
-              {lang === "EN" ? "All" : "Tất cả"}
-            </button>
-            {projectTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleProjectTagClick(selectedProjectTag === tag ? null : tag)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                  selectedProjectTag === tag
-                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                    : `${getTagStyle(tag)} hover:opacity-80`
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Project Grid */}
-        {sortedProjects.length === 0 ? (
-          <div className="text-center py-16 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500">
-            {lang === "EN" ? "No projects found matching the criteria." : "Không tìm thấy dự án nào phù hợp."}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedProjects.map((project, index) => {
-              const title =
-                (lang === "EN" ? project.title_en : project.title_vn) ||
-                project.title_en ||
-                project.title_vn ||
-                "Untitled Project";
-
-              const desc =
-                (lang === "EN" ? project.desc_en || project.desc_vn : project.desc_vn || project.desc_en) || "";
-
-              const hasImage = project.images && project.images[0];
-
-              return (
-                <motion.div
-                  key={project.id}
-                  onClick={() => setSelectedProject(project)}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-emerald-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
+              {/* Center Zone (Desktop >= 1024px): True Optical Center Segmented Bar */}
+              {hasCenterTabs && (
+                <nav
+                  role="tablist"
+                  aria-label={lang === "EN" ? "Portfolio sections" : "Phân mục hồ sơ"}
+                  className="hidden lg:inline-flex lg:justify-self-center items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
                 >
-                  {/* Image Cover */}
-                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                    {hasImage ? (
-                      <Image
-                        src={project.images[0]}
-                        alt={title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                        priority={index < 3}
-                        quality={85}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-sky-500/10">
-                        <Code className="h-10 w-10 text-emerald-500/40" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      {renderDateRange(project.project_date)}
-                      {project.links && (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                          <span>{lang === "EN" ? "View Details" : "Xem Chi Tiết"}</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
-                      {title}
-                    </h3>
-
-                    <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
-                      <LinkifiedText text={desc} />
-                    </div>
-
-                    {/* Tags */}
-                    {project.tags && project.tags.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                        {project.tags.slice(0, 4).map((tag) => (
-                          <span
-                            key={tag}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {project.tags.length > 4 && (
-                          <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
-                            +{project.tags.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Pagination Controls */}
-        {renderPagination(projectPage, totalProjectPages, setProjectPage)}
-      </section>
-
-      {/* ── 7. CERTIFICATES SECTION (DYNAMIC CARD GALLERY FROM NOTION CMS) ─ */}
-      {rawCertificates.length > 0 && (
-        <section id="certificates" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                  <Award className="h-5 w-5" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                  {lang === "EN" ? "Certificates & Accreditations" : "Chứng Chỉ & Thành Tựu"}
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-                {lang === "EN"
-                  ? `Showing ${paginatedCertificates.length} of ${sortedCertificates.length} credentials (${ITEMS_PER_PAGE} per page)`
-                  : `Hiển thị ${paginatedCertificates.length} trên tổng số ${sortedCertificates.length} chứng chỉ (tối đa ${ITEMS_PER_PAGE} mục/trang)`}
-              </p>
-            </div>
-
-            {/* Sort Controls for Certificates */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                <span>{lang === "EN" ? "Sort:" : "Sắp xếp:"}</span>
-              </span>
-              <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700/80 shadow-2xs">
-                <button
-                  onClick={() => handleCertSortChange("newest")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    certSort === "newest"
-                      ? "bg-teal-600 text-white shadow-xs"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {lang === "EN" ? "Newest" : "Mới nhất"}
-                </button>
-                <button
-                  onClick={() => handleCertSortChange("oldest")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    certSort === "oldest"
-                      ? "bg-teal-600 text-white shadow-xs"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  {lang === "EN" ? "Oldest" : "Cũ nhất"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Dedicated Certificates Tag Filter Bar */}
-          {certTags.length > 0 && (
-            <div className="mb-6 flex flex-wrap items-center gap-1.5">
-              <button
-                onClick={() => handleCertTagClick(null)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  selectedCertTag === null
-                    ? "bg-teal-600 text-white shadow-xs"
-                    : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/60"
-                }`}
-              >
-                {lang === "EN" ? "All" : "Tất cả"}
-              </button>
-              {certTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleCertTagClick(selectedCertTag === tag ? null : tag)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                    selectedCertTag === tag
-                      ? "bg-teal-600 text-white border-teal-600 shadow-xs"
-                      : `${getTagStyle(tag)} hover:opacity-80`
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Certificate Cards Gallery */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedCertificates.map((cert, index) => {
-              const title =
-                (lang === "EN" ? cert.title_en : cert.title_vn) ||
-                cert.title_en ||
-                cert.title_vn ||
-                "Certificate";
-
-              const desc =
-                (lang === "EN" ? cert.desc_en || cert.desc_vn : cert.desc_vn || cert.desc_en) || "";
-
-              const hasImage = cert.images && cert.images[0];
-
-              return (
-                <motion.div
-                  key={cert.id}
-                  onClick={() => setSelectedProject(cert)}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className="group relative flex flex-col rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:border-teal-500/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
-                >
-                  {/* Certificate Image Cover Preview */}
-                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                    {hasImage ? (
-                      <Image
-                        src={cert.images[0]}
-                        alt={title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                        priority={index < 3}
-                        quality={85}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-sky-500/10">
-                        <Award className="h-12 w-12 text-teal-500/40" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      {renderDateRange(cert.project_date)}
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform">
-                        <span>{lang === "EN" ? "View Certificate" : "Xem Chứng Chỉ"}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors line-clamp-1">
-                      {title}
-                    </h3>
-
-                    <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
-                      <LinkifiedText text={desc} />
-                    </div>
-
-                    {/* Tags */}
-                    {cert.tags && cert.tags.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                        {cert.tags.slice(0, 4).map((tag) => (
-                          <span
-                            key={tag}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getTagStyle(tag)}`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {cert.tags.length > 4 && (
-                          <span className="px-1.5 py-0.5 rounded-md text-[10px] text-slate-400">
-                            +{cert.tags.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Pagination Controls */}
-          {renderPagination(certPage, totalCertPages, setCertPage)}
-        </section>
-      )}
-
-      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-slate-200/80 dark:border-slate-800/80 mt-16 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-        <p>
-          © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
-        </p>
-      </footer>
-
-      {/* ── DETAIL MODAL ─────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {selectedProject && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md overflow-y-auto"
-            onClick={() => setSelectedProject(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedProject(null)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              {/* Modal Header Image */}
-              {selectedProject.images && selectedProject.images[0] && (
-                <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-6 bg-slate-100 dark:bg-slate-800">
-                  <Image
-                    src={selectedProject.images[0]}
-                    alt={selectedProject.title_en || selectedProject.title_vn}
-                    fill
-                    priority
-                    quality={90}
-                    className="object-cover"
-                  />
-                </div>
+                  {showcaseTabs.map((tab) => (
+                    <MagneticTabButton
+                      key={tab.id}
+                      active={effectiveMacroTab === tab.id}
+                      count={tab.count}
+                      onClick={() => setMacroTab(tab.id)}
+                    >
+                      {tab.label}
+                    </MagneticTabButton>
+                  ))}
+                </nav>
               )}
 
-              {/* Title & Metadata */}
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                {selectedProject.category && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                    {selectedProject.category}
+              {/* Right Zone: Uniform 40px Utility Controls */}
+              <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 lg:justify-self-end">
+                {activeView === "more-info" && mounted && vnTime && (
+                  <span className="hidden md:inline text-[13.5px] font-normal tabular-nums text-[var(--ink-muted)] mr-1.5">
+                    {vnTime}
                   </span>
                 )}
-                {renderDateRange(selectedProject.project_date)}
-              </div>
 
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-4">
-                {(lang === "EN" ? selectedProject.title_en : selectedProject.title_vn) ||
-                  selectedProject.title_en ||
-                  selectedProject.title_vn}
-              </h2>
+                <button
+                  type="button"
+                  onClick={() => setLang((prev) => (prev === "EN" ? "VN" : "EN"))}
+                  data-cursor="magnetic"
+                  className="inline-flex h-9 sm:h-10 min-w-[42px] sm:min-w-[46px] items-center justify-center px-2.5 sm:px-3 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[12px] font-bold tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
+                  aria-label={lang === "EN" ? "Switch to Vietnamese" : "Chuyển sang tiếng Anh"}
+                >
+                  {lang}
+                </button>
 
-              {/* Description & Links */}
-              <div className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4 mb-6">
-                <LinkifiedText
-                  text={
-                    (lang === "EN"
-                      ? selectedProject.desc_en || selectedProject.desc_vn
-                      : selectedProject.desc_vn || selectedProject.desc_en) || ""
-                  }
-                  className="block whitespace-pre-wrap"
-                />
-              </div>
+                <button
+                  type="button"
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  data-cursor="magnetic"
+                  className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
+                  aria-label={lang === "EN" ? "Toggle color theme" : "Đổi giao diện sáng/tối"}
+                >
+                  {mounted ? (
+                    resolvedTheme === "dark" ? (
+                      <Sun className="h-4 w-4" />
+                    ) : (
+                      <Moon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <span className="h-4 w-4 rounded-full bg-[var(--ink-decorative)] opacity-30" />
+                  )}
+                </button>
 
-              {/* Tags */}
-              {selectedProject.tags && selectedProject.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  {selectedProject.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium border ${getTagStyle(tag)}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              {selectedProject.links && (
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <a
-                    href={selectedProject.links}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 cursor-pointer"
+                {activeView === "showcase" && (
+                  <button
+                    type="button"
+                    onClick={() => switchView("more-info")}
+                    onPointerMove={navRightMagnetic.onPointerMove}
+                    onPointerLeave={navRightMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target inline-flex h-9 sm:h-10 items-center gap-1.5 px-3 sm:px-3.5 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[13px] sm:text-[13.5px] font-semibold text-[var(--ink-primary)] hover:opacity-80 hover:scale-[1.03] transition-all cursor-pointer"
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>{lang === "EN" ? "Open Live Link" : "Xem Trực Tiếp"}</span>
-                  </a>
-                </div>
-              )}
-            </motion.div>
+                    <span>{lang === "EN" ? "More Info" : "Thông tin"}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 opacity-80" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile & Tablet (< 1024px) Segmented Section Row (safe horizontal scroll without left clipping) */}
+            {hasCenterTabs && (
+              <div className="lg:hidden mt-3 w-full overflow-x-auto hide-scrollbar">
+                <nav
+                  role="tablist"
+                  aria-label={lang === "EN" ? "Portfolio sections" : "Phân mục hồ sơ"}
+                  className="mx-auto flex w-max items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline"
+                >
+                  {showcaseTabs.map((tab) => (
+                    <MagneticTabButton
+                      key={tab.id}
+                      active={effectiveMacroTab === tab.id}
+                      count={tab.count}
+                      onClick={() => setMacroTab(tab.id)}
+                    >
+                      {tab.label}
+                    </MagneticTabButton>
+                  ))}
+                </nav>
+              </div>
+            )}
           </div>
-        )}
-      </AnimatePresence>
+        </header>
+
+        <main className="flex-1 flex flex-col justify-center">
+          <AnimatePresence mode="wait">
+            {activeView === "showcase" ? (
+              <motion.div
+                key={`showcase-${effectiveMacroTab}-${layoutMode}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className="w-full"
+              >
+                {/* Full Classification, Layout & Sort Toolbar */}
+                {projects.length > 0 && (
+                  <div className="apple-shell mt-1.5 sm:mt-2 space-y-2.5">
+                    {/* Row 1: Count Summary + Stage/Grid Toggle + Newest/Oldest Sort */}
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <p className="text-xs sm:text-[13px] font-medium tabular-nums text-[var(--ink-meta)]">
+                        {layoutMode === "grid"
+                          ? lang === "EN"
+                            ? `Showing ${paginatedGridItems.length} of ${currentItems.length} ${
+                                isCertTab ? "credentials" : "projects"
+                              }`
+                            : `Hiển thị ${paginatedGridItems.length} / ${currentItems.length} ${
+                                isCertTab ? "chứng chỉ" : "dự án"
+                              }`
+                          : lang === "EN"
+                          ? `${currentItems.length} ${
+                              isCertTab ? "credentials" : "projects"
+                            }`
+                          : `${currentItems.length} ${
+                              isCertTab ? "chứng chỉ" : "dự án"
+                            }`}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Stage / Grid Switch */}
+                        <div className="inline-flex h-9 sm:h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                          <button
+                            type="button"
+                            onClick={() => setLayoutMode("stage")}
+                            data-cursor="magnetic"
+                            className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                              layoutMode === "stage"
+                                ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <GalleryHorizontalEnd className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLayoutMode("grid")}
+                            data-cursor="magnetic"
+                            className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                              layoutMode === "grid"
+                                ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
+                          </button>
+                        </div>
+
+                        {/* Sort Newest / Oldest Switch (Directly Visible) */}
+                        <div className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                          <span className="hidden sm:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
+                            <ArrowUpDown className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Sort" : "Xếp"}</span>
+                          </span>
+                          {(["newest", "oldest"] as const).map((ord) => (
+                            <button
+                              key={ord}
+                              type="button"
+                              onClick={() => {
+                                if (isCertTab) {
+                                  setCertSort(ord);
+                                  setCertPage(1);
+                                } else {
+                                  setProjectSort(ord);
+                                  setProjectPage(1);
+                                }
+                              }}
+                              className={`h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                                currentSort === ord
+                                  ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                  : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                              }`}
+                            >
+                              {ord === "newest"
+                                ? lang === "EN"
+                                  ? "Newest"
+                                  : "Mới nhất"
+                                : lang === "EN"
+                                ? "Oldest"
+                                : "Cũ nhất"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Notion Category Classification Pills (unconditional for >= 1 project categories) */}
+                    {showCategoryPills && (
+                      <div className="w-full overflow-x-auto hide-scrollbar">
+                        <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 pr-1 text-[11.5px] font-semibold text-[var(--ink-meta)]">
+                            <FolderKanban className="h-3.5 w-3.5 opacity-75" />
+                            <span>{lang === "EN" ? "Category:" : "Danh mục:"}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isCertTab) {
+                                setSelectedCertCategory(null);
+                                setCertPage(1);
+                              } else {
+                                setSelectedProjectCategory(null);
+                                setProjectPage(1);
+                              }
+                            }}
+                            className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              !currentSelectedCategory
+                                ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <span>{lang === "EN" ? "All" : "Tất cả"}</span>
+                            <span className="opacity-75 tabular-nums text-[11px]">
+                              ({isCertTab ? rawCertificates.length : rawProjects.length})
+                            </span>
+                          </button>
+
+                          {currentCategories.map((cat) => {
+                            const active = currentSelectedCategory === cat.name;
+                            return (
+                              <button
+                                key={cat.name}
+                                type="button"
+                                onClick={() => {
+                                  if (isCertTab) {
+                                    setSelectedCertCategory(active ? null : cat.name);
+                                    setCertPage(1);
+                                  } else {
+                                    setSelectedProjectCategory(active ? null : cat.name);
+                                    setProjectPage(1);
+                                  }
+                                }}
+                                className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  active
+                                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                    : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                }`}
+                              >
+                                <span>{cat.name}</span>
+                                <span className="opacity-75 tabular-nums text-[11px]">
+                                  ({cat.count})
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 3: Tech Stack / Credential Tag Filter Pills (Directly Visible) */}
+                    {currentTags.length > 0 && (
+                      <div className="w-full overflow-x-auto hide-scrollbar">
+                        <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 pr-1 text-[11.5px] font-semibold text-[var(--ink-meta)]">
+                            <Tag className="h-3.5 w-3.5 opacity-75" />
+                            <span>{lang === "EN" ? "Tags:" : "Thẻ:"}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isCertTab) {
+                                setSelectedCertTag(null);
+                                setCertPage(1);
+                              } else {
+                                setSelectedProjectTag(null);
+                                setProjectPage(1);
+                              }
+                            }}
+                            className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                              !currentSelectedTag
+                                ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            {lang === "EN" ? "All" : "Tất cả"}
+                          </button>
+
+                          {visibleTags.map((tag) => {
+                            const active = currentSelectedTag === tag;
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  if (isCertTab) {
+                                    setSelectedCertTag(active ? null : tag);
+                                    setCertPage(1);
+                                  } else {
+                                    setSelectedProjectTag(active ? null : tag);
+                                    setProjectPage(1);
+                                  }
+                                }}
+                                className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                                  active
+                                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                    : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+
+                          {currentTags.length > INITIAL_VISIBLE_TAGS && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllTags((prev) => !prev)}
+                              className="h-7 px-2.5 rounded-full text-xs font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
+                            >
+                              {showAllTags
+                                ? lang === "EN"
+                                  ? "Show less"
+                                  : "Thu gọn"
+                                : lang === "EN"
+                                ? `+${currentTags.length - INITIAL_VISIBLE_TAGS} more`
+                                : `+${currentTags.length - INITIAL_VISIBLE_TAGS} thẻ`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {projects.length === 0 ? (
+                  <div className="apple-shell py-20 text-center">
+                    <div className="mx-auto max-w-xl">
+                      <p className="apple-h2 text-2xl font-normal text-[var(--ink-primary)] mb-2">
+                        {profileName}
+                      </p>
+                      <p className="text-sm text-[var(--ink-meta)] mb-6">
+                        {lang === "EN"
+                          ? "Published Notion portfolio entries will appear on this stage automatically."
+                          : "Các dự án đã xuất bản trên Notion sẽ tự động xuất hiện trên sân khấu này."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => switchView("more-info")}
+                        data-cursor="magnetic"
+                        className="inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--pill-bg)] apple-hairline text-sm font-medium text-[var(--ink-primary)] hover:scale-[1.03] transition-transform cursor-pointer"
+                      >
+                        <span>{lang === "EN" ? "Explore More Info" : "Xem hồ sơ chi tiết"}</span>
+                        <ArrowUpRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : layoutMode === "stage" ? (
+                  <ShowcaseCarousel
+                    key={`${effectiveMacroTab}-${currentSelectedCategory ?? "all"}-${
+                      currentSelectedTag ?? "all"
+                    }-${currentSort}`}
+                    items={currentItems}
+                    lang={lang}
+                    isCertificateReel={isCertTab}
+                    onSelectProject={setSelectedProject}
+                    formatYearOrDate={formatYearOrDate}
+                    formatDateRange={formatDateRangeString}
+                    renderLinkifiedText={renderLinkified}
+                  />
+                ) : (
+                  <section ref={gridTopRef} className="apple-shell py-6 sm:py-8">
+                    {paginatedGridItems.length === 0 ? (
+                      <div className="mx-auto max-w-2xl px-6 py-16 text-center rounded-[26px] apple-hairline bg-[var(--surface-elevated)] text-[var(--ink-meta)] text-sm">
+                        {lang === "EN"
+                          ? "No items match the selected filter."
+                          : "Không có mục nào khớp bộ lọc đang chọn."}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {paginatedGridItems.map((item, idx) => {
+                          const title =
+                            (lang === "EN" ? item.title_en : item.title_vn) ||
+                            item.title_en ||
+                            item.title_vn ||
+                            "Untitled";
+                          const desc =
+                            (lang === "EN"
+                              ? item.desc_en || item.desc_vn
+                              : item.desc_vn || item.desc_en) || "";
+                          const hasImage = Boolean(item.images && item.images[0]);
+                          const dateStr =
+                            formatDateRangeString(item.project_date) || formatYearOrDate(item);
+                          const badgeCategory =
+                            item.category && item.category !== "Uncategorized"
+                              ? item.category
+                              : isCertTab
+                              ? lang === "EN"
+                                ? "Certificate"
+                                : "Chứng chỉ"
+                              : "";
+
+                          return (
+                            <motion.article
+                              key={item.id}
+                              onClick={() => setSelectedProject(item)}
+                              data-cursor="magnetic"
+                              initial={{ opacity: 0, y: 16 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35, delay: idx * 0.04 }}
+                              className="group flex h-full flex-col rounded-[24px] apple-hairline bg-[var(--background)] hover:bg-[var(--surface-elevated)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
+                              style={{ boxShadow: "var(--card-shadow)" }}
+                            >
+                              <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
+                                {hasImage ? (
+                                  <Image
+                                    src={item.images[0]}
+                                    alt={title}
+                                    fill
+                                    unoptimized={
+                                      /(\.gif|\.svg)(\?|$)/i.test(item.images[0]) ||
+                                      item.images[0].startsWith("data:")
+                                    }
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    className={`${
+                                      isCertTab ? "object-contain p-3" : "object-cover object-top"
+                                    } transition-transform duration-500 group-hover:scale-[1.03]`}
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-[var(--pill-bg)]">
+                                    {isCertTab ? (
+                                      <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
+                                    ) : (
+                                      <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
+                                    )}
+                                  </div>
+                                )}
+
+                                {badgeCategory && (
+                                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold text-[var(--ink-primary)]">
+                                    {badgeCategory}
+                                  </span>
+                                )}
+
+                                {item.images && item.images.length > 1 && (
+                                  <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold tabular-nums text-[var(--ink-primary)]">
+                                    1 / {item.images.length}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  {dateStr ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                                      <Calendar className="h-3.5 w-3.5 opacity-75" />
+                                      <span>{dateStr}</span>
+                                    </span>
+                                  ) : (
+                                    <span />
+                                  )}
+
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-primary)] group-hover:translate-x-0.5 transition-transform">
+                                    <span>
+                                      {isCertTab
+                                        ? lang === "EN"
+                                          ? "View Certificate"
+                                          : "Xem Chứng Chỉ"
+                                        : lang === "EN"
+                                        ? "View Details"
+                                        : "Xem Chi Tiết"}
+                                    </span>
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                  </span>
+                                </div>
+
+                                <h3 className="text-[17.5px] sm:text-[18.5px] leading-[1.35] font-semibold text-[var(--ink-primary)] break-words">
+                                  {title}
+                                </h3>
+
+                                {desc && (
+                                  <div className="mt-2.5 text-[13.5px] sm:text-[14px] leading-[1.65] text-[var(--ink-secondary)] whitespace-pre-line flex-1">
+                                    <LinkifiedText text={desc} />
+                                  </div>
+                                )}
+
+                                {((item.tags && item.tags.length > 0) || item.links) && (
+                                  <div className="mt-auto pt-4 border-t border-[var(--card-border)] space-y-2.5">
+                                    {item.tags && item.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {item.tags.map((t) => (
+                                          <span
+                                            key={t}
+                                            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-secondary)]"
+                                          >
+                                            {t}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {item.links && (
+                                      <div className="pt-0.5">
+                                        <a
+                                          href={item.links}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] text-xs font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity"
+                                        >
+                                          <span>
+                                            {lang === "EN" ? "Open Live Link" : "Xem Trực Tiếp"}
+                                          </span>
+                                          <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </motion.article>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {totalPages > 1 && (
+                      <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+                        <button
+                          type="button"
+                          onClick={() => changePage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                          aria-label={lang === "EN" ? "Previous page" : "Trang trước"}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+
+                        {buildPageNumbers(currentPage, totalPages).map((entry, i) =>
+                          entry === "ellipsis" ? (
+                            <span
+                              key={`ellipsis-${i}`}
+                              className="px-1.5 text-xs font-semibold text-[var(--ink-meta)]"
+                            >
+                              …
+                            </span>
+                          ) : (
+                            <button
+                              key={entry}
+                              type="button"
+                              onClick={() => changePage(entry)}
+                              className={`h-10 min-w-[40px] px-3 rounded-full text-xs font-semibold tabular-nums transition-all cursor-pointer ${
+                                currentPage === entry
+                                  ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                  : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                              }`}
+                            >
+                              {entry}
+                            </button>
+                          )
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => changePage(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                          aria-label={lang === "EN" ? "Next page" : "Trang tiếp"}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </section>
+                )}
+              </motion.div>
+            ) : (
+              <MoreInfoView
+                key="more-info-view"
+                lang={lang}
+                profileName={profileName}
+                profileData={profileData}
+                aboutParagraphs={aboutParagraphs}
+                parsedExperiences={parsedExperiences}
+                parsedSkills={parsedSkills}
+                parsedEducations={parsedEducations}
+                certificates={rawCertificates}
+                projectTags={projectTags}
+                socialLinks={socialLinks}
+                formatDate={formatDate}
+                formatDateRange={formatDateRangeString}
+                formatYearOrDate={formatYearOrDate}
+                onSelectProject={setSelectedProject}
+                onOpenCertificatesShowcase={() => {
+                  setMacroTab("certificates");
+                  switchView("showcase");
+                }}
+                renderLinkifiedText={renderLinkified}
+                renderTypingSubtitle={() =>
+                  profileData ? (
+                    <TerminalTyping
+                      key={`${lang}-${activeTypingRole}-${activeTypingBio}`}
+                      role={activeTypingRole}
+                      bio={activeTypingBio}
+                    />
+                  ) : null
+                }
+              />
+            )}
+          </AnimatePresence>
+        </main>
+
+        {/* Grounded Symmetric 3-Column Footer on Shared Margin Rails */}
+        <footer className="w-full mt-auto pt-2 pb-4 text-[12px]">
+          <div className="apple-shell">
+            <div className="pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+              <nav
+                aria-label="Social links"
+                className="flex flex-wrap items-center justify-center md:justify-start gap-4"
+              >
+                {socialLinks
+                  .filter((s) => s.type !== "email")
+                  .map((s) => (
+                    <FooterMagneticLink key={s.type} href={s.href}>
+                      {s.label}
+                    </FooterMagneticLink>
+                  ))}
+                {profileData?.email && (
+                  <a
+                    href={`mailto:${profileData.email}`}
+                    className="md:hidden font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors"
+                  >
+                    E-mail
+                  </a>
+                )}
+              </nav>
+
+              <p className="text-center font-semibold text-[var(--ink-muted)] md:justify-self-center">
+                &copy; {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
+              </p>
+
+              <div className="hidden md:flex items-center justify-end md:justify-self-end">
+                {profileData?.email && (
+                  <a
+                    href={`mailto:${profileData.email}`}
+                    onPointerMove={footerEmailMagnetic.onPointerMove}
+                    onPointerLeave={footerEmailMagnetic.onPointerLeave}
+                    data-cursor="magnetic"
+                    className="magnetic-target py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+                  >
+                    E-mail
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+
+      <ProjectDetailModal
+        project={selectedProject}
+        lang={lang}
+        onClose={() => setSelectedProject(null)}
+        formatDateRange={formatDateRangeString}
+        renderLinkifiedText={renderLinkified}
+      />
     </div>
+  );
+}
+
+function FooterMagneticLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  const { onPointerMove, onPointerLeave } = useMagneticHandlers(4);
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      data-cursor="magnetic"
+      className="magnetic-target py-1 font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+    >
+      {children}
+    </a>
   );
 }
