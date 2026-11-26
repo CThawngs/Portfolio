@@ -3,46 +3,74 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #1d1d1f;
-  --surface-elevated: #f5f5f7;
-  --ink-primary: #1d1d1f;
-  --ink-secondary: #515154;
-  --ink-meta: #6b6b70;
-  --ink-muted: #75757a;
-  --ink-decorative: #c7c7cc;
-  --pill-bg: #f0f0f2;
+  --background: #f7f8fb;
+  --foreground: #141417;
+  --surface-elevated: #eef0f6;
+  --surface-card-bg: rgba(255, 255, 255, 0.78);
+  --surface-card-hover: rgba(255, 255, 255, 0.94);
+  --ink-primary: #141417;
+  --ink-secondary: #46464c;
+  --ink-meta: #636369;
+  --ink-muted: #727278;
+  --ink-decorative: #c5c5cc;
+  --pill-bg: rgba(235, 237, 244, 0.85);
   --pill-active-bg: #ffffff;
-  --row-hover-bg: #f2f2f5;
-  --glass-bg: rgba(255, 255, 255, 0.86);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-sub-ink: #48484a;
-  --glass-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --card-border: rgba(0, 0, 0, 0.09);
-  --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.07), 0 4px 14px rgba(0, 0, 0, 0.04);
+  --row-hover-bg: rgba(0, 113, 227, 0.055);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(15, 23, 42, 0.085);
+  --glass-sub-ink: #46464c;
+  --glass-shadow: 0 14px 36px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --card-border: rgba(15, 23, 42, 0.085);
+  --card-shadow: 0 18px 44px rgba(15, 23, 42, 0.065), 0 3px 10px rgba(15, 23, 42, 0.035);
+  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --focus-ring: #0071e3;
-  --page-gutter: clamp(16px, 4vw, 48px);
+  --page-gutter: clamp(14px, 4vw, 48px);
+
+  /* Apple Studio Pearl & Iridescent Ambient Light Tokens */
+  --ambient-orb-1: rgba(0, 113, 227, 0.11);
+  --ambient-orb-2: rgba(124, 58, 237, 0.085);
+  --ambient-orb-3: rgba(245, 158, 11, 0.075);
+  --accent-glow-a: #0071e3;
+  --accent-glow-b: #7c3aed;
+  --accent-glow-c: #06b6d4;
+  --vignette-edge: rgba(226, 231, 242, 0.48);
+  --grid-line: rgba(15, 23, 42, 0.045);
+  --glare-color: rgba(255, 255, 255, 0.55);
 }
 
 .dark {
-  --background: #0a0a0a;
+  --background: #06070b;
   --foreground: #f5f5f7;
-  --surface-elevated: #161618;
+  --surface-elevated: #11131a;
+  --surface-card-bg: rgba(18, 20, 28, 0.76);
+  --surface-card-hover: rgba(24, 27, 38, 0.92);
   --ink-primary: #f5f5f7;
-  --ink-secondary: #a1a1a6;
-  --ink-meta: #98989d;
-  --ink-muted: #8e8e93;
-  --ink-decorative: #48484a;
-  --pill-bg: #1c1c1e;
-  --pill-active-bg: #2c2c2e;
-  --row-hover-bg: #1c1c1e;
-  --glass-bg: rgba(24, 24, 26, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-sub-ink: #c7c7cc;
-  --glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
-  --card-border: rgba(255, 255, 255, 0.12);
-  --card-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ink-secondary: #a7a9b4;
+  --ink-meta: #9497a3;
+  --ink-muted: #868996;
+  --ink-decorative: #484a54;
+  --pill-bg: rgba(30, 33, 44, 0.88);
+  --pill-active-bg: #2c3040;
+  --row-hover-bg: rgba(41, 151, 255, 0.09);
+  --glass-bg: rgba(18, 20, 28, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-sub-ink: #c7c9d3;
+  --glass-shadow: 0 18px 44px rgba(0, 0, 0, 0.58), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --card-border: rgba(255, 255, 255, 0.11);
+  --card-shadow: 0 24px 56px rgba(0, 0, 0, 0.58), 0 4px 14px rgba(0, 0, 0, 0.36);
+  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --focus-ring: #2997ff;
+
+  /* Apple Space Titanium & Pro Midnight Ambient Light Tokens */
+  --ambient-orb-1: rgba(41, 151, 255, 0.16);
+  --ambient-orb-2: rgba(139, 92, 246, 0.135);
+  --ambient-orb-3: rgba(6, 182, 212, 0.1);
+  --accent-glow-a: #2997ff;
+  --accent-glow-b: #a78bfa;
+  --accent-glow-c: #22d3ee;
+  --vignette-edge: rgba(2, 3, 7, 0.65);
+  --grid-line: rgba(255, 255, 255, 0.042);
+  --glare-color: rgba(255, 255, 255, 0.11);
 }
 
 @theme inline {
@@ -59,38 +87,57 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: 5.5rem;
   background-color: var(--background);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 280ms ease, color 220ms ease;
 }
 
-/* Uniform Vietnamese Glyph Rendering (Inter Vietnamese Subset without Mixed Geist Fallback) */
+/* Uniform Vietnamese Glyph Rendering */
 :lang(vi) body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-body.is-dragging {
-  user-select: none !important;
 }
 
 body.lock-scroll {
   overflow-y: hidden !important;
 }
 
+/* Studio Multi-Tone Base Canvas */
+.apple-studio-canvas {
+  background:
+    radial-gradient(120% 80% at 50% 0%, var(--ambient-orb-1) 0%, transparent 62%),
+    linear-gradient(180deg, var(--background) 0%, var(--surface-elevated) 52%, var(--background) 100%);
+}
+
+/* Subtle Architectural Perspective Micro-Grid */
+.apple-architectural-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 84% 68% at 50% 24%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(ellipse 84% 68% at 50% 24%, #000 12%, transparent 78%);
+}
+
+@media (max-width: 640px) {
+  .apple-architectural-grid {
+    background-size: 36px 36px;
+  }
+}
+
 /* Unified Page Container & Margin Rails */
 .apple-shell {
   width: 100%;
-  max-width: 1380px;
+  max-width: 1400px;
   margin-inline: auto;
   padding-inline: var(--page-gutter);
 }
@@ -102,7 +149,6 @@ body.lock-scroll {
   border-radius: 10px;
 }
 
-/* Tabular Numbers for Live Clock & Counters */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
@@ -117,30 +163,73 @@ body.lock-scroll {
   }
 }
 
-/* Frosted Glass Surface with Fallback */
+/* Elevated Studio Surface Card (Lightweight GPU compositing, no heavy per-card blur cost) */
+.apple-surface-card {
+  background: var(--surface-card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow), var(--specular-rim);
+}
+@media (min-resolution: 2dppx) {
+  .apple-surface-card {
+    border-width: 0.5px;
+  }
+}
+
+/* Frosted Glass Surface (Used selectively on sticky header, floating pills & modals) */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-shadow), var(--specular-rim);
 }
 .dark .apple-glass {
-  background: rgba(24, 24, 26, 0.96);
+  background: rgba(18, 20, 28, 0.94);
 }
 @supports (backdrop-filter: blur(1px)) {
   .apple-glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(175%);
   }
+}
+
+/* 3D Perspective Stage & Specular Tilt Cards */
+.apple-perspective-stage {
+  perspective: 1200px;
+}
+
+.apple-3d-tilt-card {
+  transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms ease,
+    box-shadow 260ms ease,
+    border-color 220ms ease;
+  will-change: transform;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .apple-3d-tilt-card:active {
+    transform: scale(0.986) translateZ(0);
+  }
+}
+
+.apple-3d-glare {
+  opacity: var(--glare-opacity, 0);
+  background: radial-gradient(
+    360px circle at var(--gx, 50%) var(--gy, 50%),
+    var(--glare-color),
+    transparent 68%
+  );
+  transition: opacity 240ms ease;
 }
 
 /* Vietnamese Diacritic Safe Headings */
 .apple-h1 {
-  line-height: 1.24;
-  letter-spacing: -0.02em;
+  line-height: 1.2;
+  letter-spacing: -0.024em;
 }
 .apple-h2 {
-  line-height: 1.28;
-  letter-spacing: -0.015em;
+  line-height: 1.26;
+  letter-spacing: -0.016em;
 }
 :lang(vi) .apple-h1 {
   letter-spacing: -0.01em;
@@ -158,16 +247,6 @@ body.lock-scroll {
   html.custom-cursor-active [role="button"],
   html.custom-cursor-active [role="tab"] {
     cursor: none !important;
-  }
-
-  /* Yield cleanly to native OS pointer inside dense frosted summary card */
-  html.custom-cursor-active .carousel-overlay-surface {
-    cursor: auto !important;
-  }
-  html.custom-cursor-active .carousel-overlay-surface.cursor-pointer,
-  html.custom-cursor-active .carousel-overlay-surface a,
-  html.custom-cursor-active .carousel-overlay-surface button {
-    cursor: pointer !important;
   }
 }
 
@@ -241,90 +320,23 @@ body.lock-scroll {
   will-change: transform;
 }
 
-/* Showcase Stage Carousel */
-.apple-carousel-track {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  will-change: transform;
-}
-.apple-carousel-track.is-animated {
-  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.apple-carousel-card {
-  flex: 0 0 auto;
-  position: relative;
-  overflow: hidden;
-  width: min(60vw, 760px);
-  aspect-ratio: 16 / 10;
-  max-height: min(48vh, 450px);
-  border-radius: 28px;
-  opacity: 0.22;
-  filter: blur(6px);
-  transform: translateZ(0) scale(0.965);
-  will-change: opacity, filter, transform, margin;
-}
-.apple-carousel-card.is-animated {
-  transition:
-    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 500ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
-    margin 500ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.apple-carousel-card.is-active {
-  opacity: 1;
-  filter: blur(0px);
-  transform: translateZ(0) scale(1);
-}
-
-@media (max-width: 920px) {
-  .apple-carousel-card {
-    width: min(82vw, 540px);
-    aspect-ratio: 16 / 10;
-    max-height: 350px;
-    border-radius: 22px;
-    opacity: 0.2;
-    filter: none;
-    transform: translateZ(0) scale(0.96);
-  }
-  .apple-carousel-card.is-active {
-    opacity: 1;
-    filter: none;
-    transform: translateZ(0) scale(1);
-  }
-  .apple-glass {
-    backdrop-filter: blur(12px) saturate(160%);
-  }
-}
-
-@media (max-width: 420px) {
-  .apple-carousel-card {
-    border-radius: 20px;
-  }
-}
-
-/* Apple Editorial List Row Hover Physics (Zero Text Reflow) */
+/* Apple Editorial List Row Hover Physics */
 .apple-list-row {
   position: relative;
   border-radius: 14px;
   background-color: transparent;
   transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1);
   transition:
-    background-color 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    color 240ms ease;
+    background-color 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 200ms ease;
   will-change: transform, background-color;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .apple-list-row:hover {
     background-color: var(--row-hover-bg);
-    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.01);
-    transition:
-      background-color 150ms ease-out,
-      transform 150ms ease-out,
-      color 150ms ease-out;
+    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.006);
   }
 }
 
@@ -337,7 +349,17 @@ body.lock-scroll {
   display: none;
 }
 
-/* Reduced Motion Accessibility Guard (Preserves Carousel Track & Overlay Layout Transforms) */
+/* Compact mobile polish for small phones (iPhone 7 375px, iPhone X 375px, iPhone mini 360px) */
+@media (max-width: 390px) {
+  :root {
+    --page-gutter: 14px;
+  }
+  .apple-glass {
+    backdrop-filter: blur(12px) saturate(155%);
+  }
+}
+
+/* Reduced Motion Accessibility Guard */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -346,17 +368,12 @@ body.lock-scroll {
     display: none !important;
   }
   .magnetic-target,
-  .apple-list-row {
+  .apple-list-row,
+  .apple-3d-tilt-card {
     --px: 0px !important;
     --py: 0px !important;
-    transition-duration: 0ms !important;
-  }
-  .apple-list-row:hover {
-    transform: none !important;
-  }
-  .apple-carousel-track,
-  .apple-carousel-card {
-    filter: none !important;
-    transition-duration: 0ms !important;
+    --rx: 0deg !important;
+    --ry: 0deg !important;
+    transition: none !important;
   }
 }
