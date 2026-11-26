@@ -3,10 +3,18 @@
 import React, { useEffect, useRef } from "react";
 
 /**
- * Apple Studio Ambient Backdrop
- * Pure GPU-composited multi-stop radial light washes + subtle architectural grid + top scroll progress beam.
- * Avoids runtime CSS `filter: blur(...)` on moving layers so integrated GPUs and older mobile devices
- * (iPhone 7, iPhone X, iPhone mini, low-spec laptops) maintain a locked 60fps during scroll.
+ * Tactile Analog Film Grain (Data URI SVG feTurbulence)
+ * Eliminates digital banding and gives smoked-titanium physicality without network requests.
+ */
+const ANALOG_GRAIN_SVG =
+  "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
+/**
+ * Architectural Studio Backdrop
+ * Crafted after Raycast Pro, Resend & Apple Titanium Pro:
+ * - Overhead warm-pearl & champagne-gold softbox illumination over deep velvet onyx (#060608)
+ * - Masked precision micro-dot field that catches light inside the spotlight cone
+ * - Subtle scroll-coupled depth parallax + tactile analog film grain
  */
 export default function AmbientBackdrop() {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -14,7 +22,6 @@ export default function AmbientBackdrop() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let rafId: number | null = null;
 
     const updateScrollVars = () => {
@@ -30,15 +37,10 @@ export default function AmbientBackdrop() {
       const progress = Math.max(0, Math.min(1, scrollY / docHeight));
 
       el.style.setProperty("--scroll-progress", progress.toFixed(4));
-
-      if (!reducedMotion) {
-        const shiftA = (progress * -110).toFixed(1);
-        const shiftB = (progress * 95).toFixed(1);
-        const shiftC = Math.sin(progress * Math.PI) * 55;
-        el.style.setProperty("--orb-a-y", `${shiftA}px`);
-        el.style.setProperty("--orb-b-y", `${shiftB}px`);
-        el.style.setProperty("--orb-c-x", `${shiftC.toFixed(1)}px`);
-      }
+      el.style.setProperty(
+        "--beam-shift-y",
+        `${Math.min(48, scrollY * 0.04).toFixed(1)}px`
+      );
     };
 
     const onScroll = () => {
@@ -64,56 +66,45 @@ export default function AmbientBackdrop() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
     >
-      {/* Top 2px Apple Luminous Scroll Progress Hairline */}
+      {/* Warm-Champagne & Pearl Scroll Progress Hairline */}
       <div
-        className="fixed top-0 left-0 right-0 z-50 h-[2px] origin-left will-change-transform"
+        className="fixed top-0 left-0 right-0 z-50 h-[1.5px] origin-left will-change-transform"
         style={{
           transform: "scaleX(var(--scroll-progress, 0))",
-          background:
-            "linear-gradient(90deg, var(--accent-glow-a), var(--accent-glow-b), var(--accent-glow-c))",
+          background: "var(--scroll-beam)",
         }}
       />
 
-      {/* Base Studio Surface Gradient */}
+      {/* Base Velvet Obsidian & Multi-Point Studio Wash */}
       <div className="absolute inset-0 apple-studio-canvas" />
 
-      {/* GPU-Composited Ambient Light Orbs (Pre-feathered radial gradients — zero runtime CSS blur lag) */}
+      {/* Overhead Architectural Conic Softbox Caustics */}
       <div
-        className="absolute -top-[18%] -left-[12%] h-[72vw] w-[72vw] max-h-[820px] max-w-[820px] rounded-full will-change-transform"
+        className="absolute -top-24 left-1/2 -translate-x-1/2 w-[140vw] max-w-[1800px] h-[540px] apple-studio-rays will-change-transform"
         style={{
-          transform: "translate3d(var(--orb-c-x, 0px), var(--orb-a-y, 0px), 0)",
-          background:
-            "radial-gradient(circle at 50% 50%, var(--ambient-orb-1) 0%, transparent 68%)",
+          transform:
+            "translate3d(0, calc(var(--beam-shift-y, 0px) * -0.5), 0)",
         }}
       />
 
+      {/* Precision Architectural Micro-Dot Matrix Masked Inside Spotlight Cone */}
+      <div className="absolute inset-0 apple-studio-dots" />
+
+      {/* Top Horizon Specular Rim Line */}
       <div
-        className="absolute top-[16%] -right-[16%] h-[68vw] w-[68vw] max-h-[780px] max-w-[780px] rounded-full will-change-transform"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(92vw,1120px)] h-px"
         style={{
-          transform: "translate3d(calc(var(--orb-c-x, 0px) * -0.6), var(--orb-b-y, 0px), 0)",
           background:
-            "radial-gradient(circle at 50% 50%, var(--ambient-orb-2) 0%, transparent 68%)",
+            "linear-gradient(90deg, transparent 0%, var(--studio-horizon-line) 50%, transparent 100%)",
         }}
       />
 
+      {/* Subtle Tactile Analog Film Grain */}
       <div
-        className="absolute -bottom-[22%] left-[18%] h-[70vw] w-[70vw] max-h-[860px] max-w-[860px] rounded-full will-change-transform"
+        className="absolute inset-0 opacity-[0.022] dark:opacity-[0.032] mix-blend-overlay"
         style={{
-          transform: "translate3d(0, calc(var(--orb-a-y, 0px) * -0.55), 0)",
-          background:
-            "radial-gradient(circle at 50% 50%, var(--ambient-orb-3) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* Subtle Apple Architectural Dot/Line Perspective Mesh (Masked cleanly toward edges) */}
-      <div className="absolute inset-0 apple-architectural-grid opacity-70 dark:opacity-55" />
-
-      {/* Soft Studio Edge Vignette for Elevated Card Contrast */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 75% at 50% 45%, transparent 52%, var(--vignette-edge) 100%)",
+          backgroundImage: `url("${ANALOG_GRAIN_SVG}")`,
+          backgroundSize: "180px 180px",
         }}
       />
     </div>
