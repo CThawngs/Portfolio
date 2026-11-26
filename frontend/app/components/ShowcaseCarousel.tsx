@@ -164,7 +164,7 @@ export default function ShowcaseCarousel({
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
-          target.closest("[role='dialog']"))
+          target.closest("[role='dialog'], [role='tablist']"))
       ) {
         return;
       }
@@ -461,7 +461,9 @@ export default function ShowcaseCarousel({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.2, 0.6, 0.2, 1] }}
             className={`overflow-hidden ${
-              isMobile ? "max-h-[42dvh] overflow-y-auto overscroll-contain" : ""
+              isMobile
+                ? "max-h-[42dvh] overflow-y-auto overscroll-contain"
+                : "max-h-[min(48vh,360px)] overflow-y-auto overscroll-contain"
             }`}
           >
             <div className="pt-3.5 mt-3 border-t border-[var(--card-border)] space-y-3.5 py-[0.12em]">
@@ -533,12 +535,12 @@ export default function ShowcaseCarousel({
       }
       className="relative w-full select-none focus:outline-none my-3 sm:my-4"
     >
-      {/* Main Horizontal Stage */}
+      {/* Main Horizontal Stage (overflow-x-clip prevents vertical clipping of expanded desktop frosted overlay) */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        className="relative w-full overflow-hidden py-2.5 sm:py-4"
+        className="relative w-full overflow-x-clip py-2.5 sm:py-4"
         style={{
           touchAction: "pan-y",
         }}

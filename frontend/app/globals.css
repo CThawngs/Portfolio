@@ -321,7 +321,7 @@ body.lock-scroll {
   display: none;
 }
 
-/* Reduced Motion Accessibility Guard */
+/* Reduced Motion Accessibility Guard (Preserves Carousel Track & Overlay Layout Transforms) */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -330,11 +330,17 @@ body.lock-scroll {
     display: none !important;
   }
   .magnetic-target,
-  .apple-list-row,
+  .apple-list-row {
+    --px: 0px !important;
+    --py: 0px !important;
+    transition-duration: 0ms !important;
+  }
+  .apple-list-row:hover {
+    transform: none !important;
+  }
   .apple-carousel-track,
   .apple-carousel-card {
-    transform: none !important;
     filter: none !important;
-    transition-duration: 120ms !important;
+    transition-duration: 0ms !important;
   }
 }

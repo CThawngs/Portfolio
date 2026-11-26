@@ -31,22 +31,28 @@ export default function ProjectDetailModal({
   });
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
-
-  const imgIdx = imgState.projectId === project?.id ? imgState.idx : 0;
+  const onCloseRef = useRef(onClose);
 
   useEffect(() => {
-    if (!project) return;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const projectId = project?.id;
+  const imgIdx = imgState.projectId === projectId ? imgState.idx : 0;
+
+  useEffect(() => {
+    if (!projectId) return;
 
     const prevActive = document.activeElement as HTMLElement | null;
     document.body.classList.add("lock-scroll");
     const focusTimer = setTimeout(() => {
       closeBtnRef.current?.focus();
-    }, 50);
+    }, 30);
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab" && dialogRef.current) {
@@ -56,12 +62,19 @@ export default function ProjectDetailModal({
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
+        const active = document.activeElement as HTMLElement | null;
+        const inside = active && dialogRef.current.contains(active);
+
+        if (e.shiftKey) {
+          if (!inside || active === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (!inside || active === last) {
+            e.preventDefault();
+            first.focus();
+          }
         }
       }
     };
@@ -73,7 +86,7 @@ export default function ProjectDetailModal({
       window.removeEventListener("keydown", onKeyDown);
       prevActive?.focus?.();
     };
-  }, [project, onClose]);
+  }, [projectId]);
 
   const images = project?.images?.filter(Boolean) ?? [];
   const activeImgSrc = images[imgIdx] || images[0] || "";
