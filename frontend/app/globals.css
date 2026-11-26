@@ -245,7 +245,8 @@ body.lock-scroll {
   html.custom-cursor-active a,
   html.custom-cursor-active button,
   html.custom-cursor-active [role="button"],
-  html.custom-cursor-active [role="tab"] {
+  html.custom-cursor-active [role="tab"],
+  html.custom-cursor-active [data-cursor="magnetic"] {
     cursor: none !important;
   }
 }

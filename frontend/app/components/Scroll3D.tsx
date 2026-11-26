@@ -3,23 +3,31 @@
 import React, { useRef, useCallback, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 
-function subscribeReducedMotion(callback: () => void): () => void {
+export function subscribeReducedMotion(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
   mq.addEventListener("change", callback);
   return () => mq.removeEventListener("change", callback);
 }
 
-function getReducedMotionSnapshot(): boolean {
+export function getReducedMotionSnapshot(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+export function useReducedMotionPreference(): boolean {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    () => false
+  );
 }
 
 /**
  * Scroll3DSection
  * Apple-style scroll-triggered 3D spatial reveal using IntersectionObserver + GPU transform only.
- * Works smoothly across desktop and small mobile screens (iPhone 7 / iPhone X / iPhone mini)
- * with zero per-frame JS scroll layout thrashing.
+ * Uses `once: true` + `amount: "some"` so tall multi-card mobile sections (~3,000px+) trigger
+ * immediately upon entering view and never vanish while scrolling through cards or pagination.
  */
 export function Scroll3DSection({
   id,
@@ -32,32 +40,28 @@ export function Scroll3DSection({
   children: React.ReactNode;
   delay?: number;
 }) {
-  const reducedMotion = useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    () => false
-  );
-
-  if (reducedMotion) {
-    return (
-      <section id={id} className={className}>
-        {children}
-      </section>
-    );
-  }
+  const reducedMotion = useReducedMotionPreference();
 
   return (
     <section id={id} className={`apple-perspective-stage ${className}`}>
       <motion.div
-        initial={{ opacity: 0, y: 26, scale: 0.978, rotateX: 4.5 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
-        viewport={{ once: false, amount: 0.08, margin: "0px 0px -36px 0px" }}
+        initial={
+          reducedMotion
+            ? false
+            : { opacity: 0, y: 24, scale: 0.984, rotateX: 3.5 }
+        }
+        whileInView={
+          reducedMotion
+            ? undefined
+            : { opacity: 1, y: 0, scale: 1, rotateX: 0 }
+        }
+        viewport={{ once: true, amount: "some", margin: "0px 0px -20px 0px" }}
         transition={{
-          duration: 0.62,
+          duration: 0.58,
           delay,
           ease: [0.22, 1, 0.36, 1],
         }}
-        style={{ transformOrigin: "50% 18%" }}
+        style={{ transformOrigin: "50% 12%" }}
         className="will-change-transform"
       >
         {children}
@@ -89,11 +93,7 @@ export function Tilt3DCard({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  const reducedMotion = useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    () => false
-  );
+  const reducedMotion = useReducedMotionPreference();
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -139,23 +139,23 @@ export function Tilt3DCard({
     el.style.setProperty("--glare-opacity", "0");
   }, []);
 
-  const staggerDelay = Math.min(index % 6, 5) * 0.045;
+  const staggerDelay = Math.min(index % 6, 5) * 0.04;
 
   return (
     <motion.div
       initial={
         reducedMotion
           ? false
-          : { opacity: 0, y: 22, scale: 0.968, rotateX: 5 }
+          : { opacity: 0, y: 20, scale: 0.972, rotateX: 4 }
       }
       whileInView={
         reducedMotion
           ? undefined
           : { opacity: 1, y: 0, scale: 1, rotateX: 0 }
       }
-      viewport={{ once: false, amount: 0.1, margin: "0px 0px -24px 0px" }}
+      viewport={{ once: true, amount: "some", margin: "0px 0px -16px 0px" }}
       transition={{
-        duration: 0.52,
+        duration: 0.48,
         delay: staggerDelay,
         ease: [0.22, 1, 0.36, 1],
       }}

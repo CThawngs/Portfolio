@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -12,8 +11,10 @@ import {
   FolderKanban,
   Tag,
   Award,
+  Code,
   Layers,
 } from "lucide-react";
+import SafePortfolioImage from "./SafePortfolioImage";
 import type { Project } from "../PortfolioUI";
 
 interface ProjectDetailModalProps {
@@ -22,10 +23,6 @@ interface ProjectDetailModalProps {
   onClose: () => void;
   formatDateRange: (dateRange: Project["project_date"]) => string | null;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
-}
-
-function isUnoptimizedAsset(src: string): boolean {
-  return /(\.gif|\.svg)(\?|$)/i.test(src) || src.startsWith("data:");
 }
 
 /**
@@ -152,6 +149,16 @@ export default function ProjectDetailModal({
     ? "Open Live Project"
     : "Mở Xem Trực Tiếp";
 
+  const modalMediaFallback = (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--surface-elevated)] to-[var(--pill-bg)]">
+      {isCertificate ? (
+        <Award className="h-12 w-12 text-[var(--ink-meta)] opacity-60" />
+      ) : (
+        <Code className="h-12 w-12 text-[var(--ink-meta)] opacity-60" />
+      )}
+    </div>
+  );
+
   return (
     <AnimatePresence>
       {project && (
@@ -232,12 +239,12 @@ export default function ProjectDetailModal({
 
                   {/* Uncropped Artwork Canvas */}
                   <div className="relative z-10 w-full aspect-[16/10] lg:aspect-auto lg:flex-1 lg:min-h-[320px] rounded-[18px] sm:rounded-[22px] overflow-hidden bg-[var(--background)]/65 apple-hairline">
-                    <Image
+                    <SafePortfolioImage
                       src={activeImgSrc}
                       alt={title}
                       fill
                       priority
-                      unoptimized={isUnoptimizedAsset(activeImgSrc)}
+                      fallback={modalMediaFallback}
                       sizes="(max-width: 1024px) 95vw, 580px"
                       className="object-contain p-2 sm:p-3.5"
                     />
@@ -293,11 +300,13 @@ export default function ProjectDetailModal({
                             }`}
                             aria-label={`${lang === "EN" ? "Image" : "Ảnh"} ${idx + 1}`}
                           >
-                            <Image
+                            <SafePortfolioImage
                               src={thumb}
                               alt=""
                               fill
-                              unoptimized={isUnoptimizedAsset(thumb)}
+                              fallback={
+                                <div className="h-full w-full bg-[var(--pill-bg)]" />
+                              }
                               sizes="64px"
                               className="object-cover"
                             />

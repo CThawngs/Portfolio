@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useSyncExternalStore } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
   ArrowUpRight,
@@ -12,7 +12,11 @@ import {
   Cpu,
 } from "lucide-react";
 import { useMagneticHandlers } from "./Magnetic";
-import { Scroll3DSection, Tilt3DCard } from "./Scroll3D";
+import {
+  Scroll3DSection,
+  Tilt3DCard,
+  useReducedMotionPreference,
+} from "./Scroll3D";
 import type { ProfileData } from "../PortfolioUI";
 
 export interface SkillGroupItem {
@@ -59,18 +63,6 @@ interface MoreInfoViewProps {
   onJumpToSection: (sectionId: string) => void;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
   renderTypingSubtitle: () => React.ReactNode;
-}
-
-function subscribeReducedMotion(callback: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mq.addEventListener("change", callback);
-  return () => mq.removeEventListener("change", callback);
-}
-
-function getReducedMotionSnapshot(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function AppleHoverRow({
@@ -132,18 +124,14 @@ export default function MoreInfoView({
 }: MoreInfoViewProps) {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [openExpIdx, setOpenExpIdx] = useState<number | null>(0);
-  const heroRef = useRef<HTMLDivElement | null>(null);
+  const heroRef = useRef<HTMLElement | null>(null);
 
   const ctaMagnetic = useMagneticHandlers(5);
   const readMoreMagnetic = useMagneticHandlers(4);
 
-  const reducedMotion = useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    () => false
-  );
+  const reducedMotion = useReducedMotionPreference();
 
-  // Continuous GPU-only 3D Hero Parallax on scroll (1 lightweight ScrollObserver for Hero)
+  // Continuous GPU-only 3D Hero Parallax on scroll (target has explicit `relative` positioning)
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -205,7 +193,11 @@ export default function MoreInfoView({
   return (
     <div className="apple-shell pt-3 sm:pt-6 pb-6 space-y-6 sm:space-y-9">
       {/* 1. HERO & ABOUT 3D STUDIO CARD (#about) */}
-      <section id="about" ref={heroRef} className="apple-perspective-stage">
+      <section
+        id="about"
+        ref={heroRef}
+        className="relative apple-perspective-stage"
+      >
         <motion.div
           style={
             reducedMotion

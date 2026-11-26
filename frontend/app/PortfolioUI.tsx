@@ -8,7 +8,6 @@ import React, {
   useCallback,
   useSyncExternalStore,
 } from "react";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import {
   Briefcase,
@@ -32,25 +31,18 @@ import {
 
 import CustomCursor from "./components/CustomCursor";
 import AmbientBackdrop from "./components/AmbientBackdrop";
-import { Scroll3DSection, Tilt3DCard } from "./components/Scroll3D";
+import {
+  Scroll3DSection,
+  Tilt3DCard,
+  useReducedMotionPreference,
+} from "./components/Scroll3D";
+import SafePortfolioImage from "./components/SafePortfolioImage";
 import { useMagneticHandlers } from "./components/Magnetic";
 import ShowcaseCarousel from "./components/ShowcaseCarousel";
 import MoreInfoView from "./components/MoreInfoView";
 import ProjectDetailModal from "./components/ProjectDetailModal";
 
 const noopSubscribe = () => () => {};
-
-function subscribeReducedMotion(callback: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mq.addEventListener("change", callback);
-  return () => mq.removeEventListener("change", callback);
-}
-
-function getReducedMotionSnapshot(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -114,15 +106,27 @@ function LinkifiedText({
   );
 }
 
-const TYPING_SPEED = 42;
-const DELETING_SPEED = 18;
-const PAUSE_TIME = 2400;
+const TYPING_SPEED = 36;
+const DELETING_SPEED = 16;
+const PAUSE_TIME = 2600;
 const GAP_TIME = 280;
 
+/**
+ * Splits multi-phrase subtitle text on explicit `|` or blank-line paragraph breaks
+ * or sentence-ending punctuation, while normalizing soft single line-breaks (`\n`)
+ * into spaces so multi-line Notion sentences are never chopped mid-clause.
+ */
 function splitPhrases(text: string): string[] {
   if (!text) return [];
   return text
-    .split(/\n+|\||(?<=[.!?])\s+/)
+    .split(/\r?\n\s*\r?\n+|\|/)
+    .flatMap((block) =>
+      block
+        .replace(/\s*\r?\n\s*/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+        .split(/(?<=[.!?])\s+/)
+    )
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -131,14 +135,11 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
   const items = useMemo(() => {
     const roleItems = role ? splitPhrases(role) : [];
     const bioItems = bio ? splitPhrases(bio) : [];
-    return [...roleItems, ...bioItems].filter(Boolean);
+    const merged = [...roleItems, ...bioItems].filter(Boolean);
+    return Array.from(new Set(merged));
   }, [role, bio]);
 
-  const reducedMotion = useSyncExternalStore(
-    subscribeReducedMotion,
-    getReducedMotionSnapshot,
-    () => false
-  );
+  const reducedMotion = useReducedMotionPreference();
 
   const [itemIdx, setItemIdx] = useState(0);
   const [displayText, setDisplayText] = useState("");
@@ -155,25 +156,27 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
           setDisplayText(currentItem.slice(0, displayText.length + 1));
         }, TYPING_SPEED);
         return () => clearTimeout(timeout);
-      } else {
-        const timeout = setTimeout(() => {
-          setIsDeleting(true);
-        }, PAUSE_TIME);
-        return () => clearTimeout(timeout);
       }
+      if (items.length <= 1) {
+        // Keep single phrase steady once fully typed instead of endlessly erasing and retyping
+        return;
+      }
+      const timeout = setTimeout(() => {
+        setIsDeleting(true);
+      }, PAUSE_TIME);
+      return () => clearTimeout(timeout);
     } else {
       if (displayText.length > 0) {
         const timeout = setTimeout(() => {
           setDisplayText(currentItem.slice(0, displayText.length - 1));
         }, DELETING_SPEED);
         return () => clearTimeout(timeout);
-      } else {
-        const timeout = setTimeout(() => {
-          setIsDeleting(false);
-          setItemIdx((prev) => (prev + 1) % items.length);
-        }, GAP_TIME);
-        return () => clearTimeout(timeout);
       }
+      const timeout = setTimeout(() => {
+        setIsDeleting(false);
+        setItemIdx((prev) => (prev + 1) % items.length);
+      }, GAP_TIME);
+      return () => clearTimeout(timeout);
     }
   }, [displayText, isDeleting, itemIdx, items, reducedMotion]);
 
@@ -757,9 +760,8 @@ function ShowcaseSectionBlock({
     }
   };
 
-  const showCategoryPills = isCertificateSection
-    ? categories.length > 1
-    : categories.length >= 1;
+  // Show category filter bar only when there are 2+ distinct categories to filter between
+  const showCategoryPills = categories.length > 1;
 
   return (
     <Scroll3DSection id={sectionId} className="apple-shell py-4 sm:py-6">
@@ -1021,6 +1023,16 @@ function ShowcaseSectionBlock({
                         : "Chứng chỉ"
                       : "";
 
+                  const cardFallback = (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--surface-elevated)] to-[var(--pill-bg)]">
+                      {isCertificateSection ? (
+                        <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
+                      ) : (
+                        <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
+                      )}
+                    </div>
+                  );
+
                   return (
                     <Tilt3DCard
                       key={item.id}
@@ -1031,14 +1043,11 @@ function ShowcaseSectionBlock({
                     >
                       <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
                         {hasImage ? (
-                          <Image
+                          <SafePortfolioImage
                             src={item.images[0]}
                             alt={title}
                             fill
-                            unoptimized={
-                              /(\.gif|\.svg)(\?|$)/i.test(item.images[0]) ||
-                              item.images[0].startsWith("data:")
-                            }
+                            fallback={cardFallback}
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className={`${
                               isCertificateSection
@@ -1047,13 +1056,7 @@ function ShowcaseSectionBlock({
                             } transition-transform duration-500 group-hover:scale-[1.03]`}
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--surface-elevated)] to-[var(--pill-bg)]">
-                            {isCertificateSection ? (
-                              <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
-                            ) : (
-                              <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
-                            )}
-                          </div>
+                          cardFallback
                         )}
 
                         {badgeCategory && (
@@ -1334,6 +1337,15 @@ export default function PortfolioUI({
     };
   }, [projects]);
 
+  const hasExplicitAbout = useMemo(() => {
+    if (!profileData) return false;
+    const raw =
+      lang === "VN"
+        ? profileData.about_vn || profileData.about_en
+        : profileData.about_en || profileData.about_vn;
+    return parseParagraphs(raw || "").length > 0;
+  }, [profileData, lang]);
+
   const aboutParagraphs = useMemo(() => {
     if (!profileData) return [];
     const raw =
@@ -1559,12 +1571,15 @@ export default function PortfolioUI({
       profileData.role_vn ||
       ""
     : "";
-  const activeTypingBio = profileData
+  const rawTypingBio = profileData
     ? (lang === "VN" ? profileData.bio_vn : profileData.bio_en) ||
       profileData.bio_en ||
       profileData.bio_vn ||
       ""
     : "";
+  // Avoid repeating `bio` in TerminalTyping when `about` is empty and `bio` is already shown as the Hero paragraph
+  const activeTypingBio =
+    hasExplicitAbout || !activeTypingRole ? rawTypingBio : "";
 
   return (
     <div className="relative min-h-screen flex flex-col text-[var(--foreground)] selection:bg-[#FFD433] selection:text-black">

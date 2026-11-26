@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Award,
@@ -13,6 +12,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import { Tilt3DCard } from "./Scroll3D";
+import SafePortfolioImage from "./SafePortfolioImage";
 import type { Project } from "../PortfolioUI";
 
 interface ShowcaseCarouselProps {
@@ -23,10 +23,6 @@ interface ShowcaseCarouselProps {
   formatYearOrDate: (project: Project) => string;
   formatDateRange: (dateRange: Project["project_date"]) => string | null;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
-}
-
-function isUnoptimizedAsset(src: string): boolean {
-  return /(\.gif|\.svg)(\?|$)/i.test(src) || src.startsWith("data:");
 }
 
 /**
@@ -69,13 +65,17 @@ export default function ShowcaseCarousel({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
+      if (typeof document !== "undefined" && document.querySelector("[role='dialog']")) {
+        return;
+      }
+
+      const target = e.target;
       if (
-        target &&
+        target instanceof Element &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
-          target.closest("[role='dialog']"))
+          Boolean(target.closest("[role='dialog']")))
       ) {
         return;
       }
@@ -173,6 +173,24 @@ export default function ShowcaseCarousel({
     : lang === "EN"
     ? "View Details"
     : "Xem Chi Tiết";
+
+  const artworkPlaceholder = (
+    <div className="relative flex h-full w-full flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)] text-center">
+      <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-[22px] sm:rounded-[26px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] mb-3.5">
+        {isCertificateReel ? (
+          <Award className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
+        ) : (
+          <Code className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
+        )}
+      </div>
+      <span className="px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--ink-meta)]">
+        {activeCategory}
+      </span>
+      <p className="mt-3 max-w-md text-sm sm:text-base font-medium text-[var(--ink-primary)] line-clamp-2">
+        {activeTitle}
+      </p>
+    </div>
+  );
 
   return (
     <div
@@ -301,12 +319,12 @@ export default function ShowcaseCarousel({
                 >
                   {coverSrc ? (
                     <div className="relative h-full w-full bg-[var(--surface-elevated)]">
-                      <Image
+                      <SafePortfolioImage
                         src={coverSrc}
                         alt={activeTitle}
                         fill
                         priority
-                        unoptimized={isUnoptimizedAsset(coverSrc)}
+                        fallback={artworkPlaceholder}
                         sizes="(max-width: 1024px) 94vw, 760px"
                         className="object-contain p-2 sm:p-3.5"
                       />
@@ -317,21 +335,7 @@ export default function ShowcaseCarousel({
                       )}
                     </div>
                   ) : (
-                    <div className="relative flex h-full w-full flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)] text-center">
-                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-[22px] sm:rounded-[26px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] mb-3.5">
-                        {isCertificateReel ? (
-                          <Award className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
-                        ) : (
-                          <Code className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
-                        )}
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--ink-meta)]">
-                        {activeCategory}
-                      </span>
-                      <p className="mt-3 max-w-md text-sm sm:text-base font-medium text-[var(--ink-primary)] line-clamp-2">
-                        {activeTitle}
-                      </p>
-                    </div>
+                    artworkPlaceholder
                   )}
                 </motion.div>
               </AnimatePresence>
