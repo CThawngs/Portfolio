@@ -66,7 +66,7 @@ function AppleHoverRow({
 }) {
   const { onPointerMove, onPointerLeave } = useMagneticHandlers(3);
   const sharedClass =
-    "apple-list-row group block -mx-2.5 px-2.5 sm:-mx-3.5 sm:px-3.5 py-3.5 text-left";
+    "apple-list-row group block -mx-2 px-2 sm:-mx-3.5 sm:px-3.5 py-3 sm:py-3.5 text-left";
 
   if (onClick) {
     return (
@@ -77,7 +77,7 @@ function AppleHoverRow({
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         data-cursor="magnetic"
-        className={`${sharedClass} w-[calc(100%+1.25rem)] sm:w-[calc(100%+1.75rem)] cursor-pointer`}
+        className={`${sharedClass} w-[calc(100%+1rem)] sm:w-[calc(100%+1.75rem)] cursor-pointer`}
       >
         {children}
       </button>
@@ -154,8 +154,8 @@ export default function MoreInfoView({
   );
 
   return (
-    <div className="apple-shell pt-2 sm:pt-5 pb-6 space-y-6 sm:space-y-9">
-      {/* 1. HERO & ABOUT CARD (#about) */}
+    <div className="apple-shell pt-2 sm:pt-5 pb-4 sm:pb-6 space-y-5 sm:space-y-8">
+      {/* 1. HERO & ABOUT CARD (#about) — Centered & Evenly Aligned */}
       <section
         id="about"
         ref={heroRef}
@@ -173,19 +173,21 @@ export default function MoreInfoView({
                   transformOrigin: "50% 0%",
                 }
           }
-          className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
+          className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8 lg:p-10 will-change-transform"
         >
-          {/* Editorial Headline & Classic Single-Phrase Typing Loop */}
-          <div className="max-w-3xl">
-            <h1 className="apple-h1 text-[28px] sm:text-[40px] lg:text-[46px] font-semibold text-[var(--ink-primary)] mb-2 break-words">
+          {/* Centered & Symmetrically Balanced Personal Info Block */}
+          <div className="mx-auto max-w-3xl flex flex-col items-center text-center">
+            <h1 className="apple-h1 text-[24px] min-[380px]:text-[28px] sm:text-[40px] lg:text-[46px] font-semibold text-[var(--ink-primary)] mb-2 text-balance break-words">
               {profileName}
             </h1>
 
-            {renderTypingSubtitle()}
+            <div className="w-full flex justify-center">
+              {renderTypingSubtitle()}
+            </div>
 
             {profileData?.dob && (
-              <p className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[12px] sm:text-[12.5px] font-medium tabular-nums text-[var(--ink-meta)]">
-                <Calendar className="h-3.5 w-3.5" />
+              <p className="mt-3 mx-auto inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-[12px] sm:text-[12.5px] font-medium tabular-nums text-[var(--ink-meta)]">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
                 <span>
                   {lang === "VN"
                     ? `Ngày sinh: ${formatDate(profileData.dob)}`
@@ -195,7 +197,7 @@ export default function MoreInfoView({
             )}
 
             {firstAbout && (
-              <div className="mt-5 sm:mt-6 text-[15.5px] sm:text-[17.5px] leading-[1.7] text-[var(--ink-primary)]">
+              <div className="mt-5 sm:mt-6 w-full max-w-[64ch] mx-auto text-[14.5px] sm:text-[17px] leading-[1.72] text-[var(--ink-primary)] text-center sm:text-justify sm:[text-align-last:center]">
                 <p>{renderLinkifiedText(firstAbout)}</p>
 
                 {extraAbout.length > 0 && (
@@ -206,7 +208,7 @@ export default function MoreInfoView({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
                           <div className="pt-4 space-y-4 text-[var(--ink-secondary)]">
@@ -218,31 +220,33 @@ export default function MoreInfoView({
                       )}
                     </AnimatePresence>
 
-                    <button
-                      type="button"
-                      onClick={() => setAboutExpanded((prev) => !prev)}
-                      onPointerMove={readMoreMagnetic.onPointerMove}
-                      onPointerLeave={readMoreMagnetic.onPointerLeave}
-                      data-cursor="magnetic"
-                      className="magnetic-target mt-3 inline-flex min-h-[38px] items-center text-[14px] sm:text-[15px] font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
-                    >
-                      {aboutExpanded
-                        ? lang === "EN"
-                          ? "Read Less"
-                          : "Thu gọn"
-                        : lang === "EN"
-                        ? "Read More"
-                        : "Đọc thêm"}
-                    </button>
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setAboutExpanded((prev) => !prev)}
+                        onPointerMove={readMoreMagnetic.onPointerMove}
+                        onPointerLeave={readMoreMagnetic.onPointerLeave}
+                        data-cursor="magnetic"
+                        className="magnetic-target mt-3 inline-flex min-h-[38px] items-center justify-center text-[14px] sm:text-[15px] font-semibold text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+                      >
+                        {aboutExpanded
+                          ? lang === "EN"
+                            ? "Read Less"
+                            : "Thu gọn"
+                          : lang === "EN"
+                          ? "Read More"
+                          : "Đọc thêm"}
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
             )}
           </div>
 
-          {/* Bottom Contact & Social Media Icon Links (GitHub, Email, LinkedIn, Instagram) */}
+          {/* Centered & Evenly Spaced Bottom Contact & Social Media Icon Links */}
           {socialLinks.length > 0 && (
-            <div className="mt-6 sm:mt-7 pt-5 border-t border-[var(--card-border)] flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <div className="mt-5 sm:mt-7 pt-5 w-full max-w-md mx-auto border-t border-[var(--card-border)] flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               {socialLinks.map((link) => (
                 <HeroSocialIconButton key={link.type} link={link} />
               ))}
@@ -254,12 +258,12 @@ export default function MoreInfoView({
       {/* 2. EXPERIENCE SECTION (#experience) */}
       {parsedExperiences.length > 0 && (
         <Scroll3DSection id="experience">
-          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
-            <div className="flex items-baseline justify-between gap-3 mb-4">
-              <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)]">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-4 sm:p-8">
+            <div className="flex items-baseline justify-between gap-3 mb-3.5 sm:mb-4">
+              <h2 className="apple-h2 text-[20px] sm:text-[26px] font-semibold text-[var(--ink-primary)]">
                 {lang === "EN" ? "Experience" : "Kinh nghiệm"}
               </h2>
-              <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+              <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)] shrink-0">
                 {parsedExperiences.length}{" "}
                 {lang === "EN" ? "roles" : "vị trí"}
               </span>
@@ -279,13 +283,13 @@ export default function MoreInfoView({
                       }
                       ariaExpanded={hasBullets ? isOpen : undefined}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 sm:gap-4">
                         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 min-w-0">
-                          <span className="text-[16px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)]">
+                          <span className="text-[15.5px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)] break-words">
                             {exp.org || exp.role}
                           </span>
                           {exp.org && exp.role && (
-                            <span className="text-[14px] sm:text-[15.5px] text-[var(--ink-meta)]">
+                            <span className="text-[13.5px] sm:text-[15.5px] text-[var(--ink-meta)] break-words">
                               {exp.role}
                             </span>
                           )}
@@ -298,7 +302,7 @@ export default function MoreInfoView({
 
                         <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                           {exp.period && (
-                            <span className="text-[13px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
+                            <span className="text-[12.5px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
                               {exp.period}
                             </span>
                           )}
@@ -327,14 +331,16 @@ export default function MoreInfoView({
                           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
-                          <ul className="pl-2.5 sm:pl-4 pr-2 pb-4 pt-1 space-y-2 text-[14px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
+                          <ul className="pl-2 sm:pl-4 pr-1 sm:pr-2 pb-3.5 sm:pb-4 pt-1 space-y-2 text-[13.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
                             {exp.bullets.map((b, bIdx) => (
                               <li key={bIdx} className="flex items-start gap-2.5">
                                 <span
                                   className="mt-2.5 h-1.5 w-1.5 rounded-full bg-[var(--ink-meta)] shrink-0"
                                   aria-hidden="true"
                                 />
-                                <span>{renderLinkifiedText(b)}</span>
+                                <span className="break-words">
+                                  {renderLinkifiedText(b)}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -352,8 +358,8 @@ export default function MoreInfoView({
       {/* 3. TECHNICAL SKILLS SECTION (#skills) */}
       {(parsedSkills.length > 0 || projectTags.length > 0) && (
         <Scroll3DSection id="skills">
-          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
-            <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-4">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-4 sm:p-8">
+            <h2 className="apple-h2 text-[20px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-3.5 sm:mb-4">
               {lang === "EN" ? "Technical Skills" : "Kỹ năng công nghệ"}
             </h2>
 
@@ -363,10 +369,10 @@ export default function MoreInfoView({
                   <div key={idx} className="py-0.5">
                     <AppleHoverRow>
                       <div className="grid grid-cols-1 sm:grid-cols-[210px_minmax(0,1fr)] gap-1 sm:gap-6 items-baseline">
-                        <span className="text-[15.5px] sm:text-[16.5px] font-semibold text-[var(--ink-primary)]">
+                        <span className="text-[15px] sm:text-[16.5px] font-semibold text-[var(--ink-primary)] break-words">
                           {group.category}
                         </span>
-                        <span className="text-[14px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)]">
+                        <span className="text-[13.5px] sm:text-[15px] leading-[1.65] text-[var(--ink-secondary)] break-words">
                           {group.skills.join(" · ")}
                         </span>
                       </div>
@@ -381,7 +387,7 @@ export default function MoreInfoView({
                   return (
                     <span
                       key={tag}
-                      className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold border ${scheme.pill}`}
+                      className={`px-3 py-1.5 rounded-xl text-[12.5px] sm:text-[13px] font-semibold border ${scheme.pill}`}
                     >
                       {tag}
                     </span>
@@ -396,8 +402,8 @@ export default function MoreInfoView({
       {/* 4. EDUCATION SECTION (#education) */}
       {parsedEducations.length > 0 && (
         <Scroll3DSection id="education">
-          <div className="mx-auto w-full max-w-[1040px] rounded-[24px] sm:rounded-[30px] apple-surface-card p-5 sm:p-8">
-            <h2 className="apple-h2 text-[22px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-4">
+          <div className="mx-auto w-full max-w-[1040px] rounded-[22px] sm:rounded-[30px] apple-surface-card p-4 sm:p-8">
+            <h2 className="apple-h2 text-[20px] sm:text-[26px] font-semibold text-[var(--ink-primary)] mb-3.5 sm:mb-4">
               {lang === "EN" ? "Education" : "Học vấn"}
             </h2>
 
@@ -405,31 +411,31 @@ export default function MoreInfoView({
               {parsedEducations.map((edu, idx) => (
                 <div key={idx} className="py-0.5">
                   <AppleHoverRow>
-                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 sm:gap-4">
                       <div className="min-w-0">
-                        <span className="text-[16px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)]">
+                        <span className="text-[15.5px] sm:text-[17.5px] font-semibold text-[var(--ink-primary)] break-words">
                           {edu.school}
                         </span>
                         {edu.major && (
-                          <span className="block sm:inline sm:ml-2.5 text-[14px] sm:text-[15.5px] text-[var(--ink-meta)]">
+                          <span className="block sm:inline sm:ml-2.5 text-[13.5px] sm:text-[15.5px] text-[var(--ink-meta)] break-words">
                             {edu.major}
                           </span>
                         )}
                         {edu.notes && (
-                          <p className="text-[13.5px] text-[var(--ink-meta)] mt-0.5">
+                          <p className="text-[13px] sm:text-[13.5px] text-[var(--ink-meta)] mt-0.5 break-words">
                             {edu.notes}
                           </p>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
                         {edu.gpa && (
                           <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)]">
                             {edu.gpa}
                           </span>
                         )}
                         {edu.period && (
-                          <span className="text-[13px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
+                          <span className="text-[12.5px] sm:text-[14px] tabular-nums text-[var(--ink-meta)]">
                             {edu.period}
                           </span>
                         )}

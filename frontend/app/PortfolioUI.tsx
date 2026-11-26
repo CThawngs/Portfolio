@@ -9,6 +9,7 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { useTheme } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   ExternalLink,
@@ -25,6 +26,8 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Menu,
 } from "lucide-react";
 
 import CustomCursor from "./components/CustomCursor";
@@ -34,7 +37,7 @@ import {
   Tilt3DCard,
   useReducedMotionPreference,
 } from "./components/Scroll3D";
-import SafePortfolioImage from "./components/SafePortfolioImage";
+import { AdaptiveGridCover } from "./components/SafePortfolioImage";
 import {
   preloadImagesPriority,
   preloadImagesBackground,
@@ -214,8 +217,8 @@ function TerminalTyping({ role, bio }: { role: string; bio: string }) {
   if (!items.length) return null;
 
   return (
-    <div className="w-full min-h-[1.85rem] py-[0.12em]">
-      <p className="text-[15.5px] sm:text-[18px] font-normal text-[var(--ink-secondary)] leading-[1.55]">
+    <div className="w-full min-h-[3.1rem] sm:min-h-[2rem] py-[0.1em] flex items-center justify-center">
+      <p className="text-center text-[14.5px] min-[380px]:text-[15.5px] sm:text-[18px] font-normal text-[var(--ink-secondary)] leading-[1.52] max-w-2xl mx-auto">
         <span>{reducedMotion ? items.join(" · ") : displayText}</span>
         {!reducedMotion && (
           <span
@@ -647,7 +650,7 @@ function NavPillButton({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className={`magnetic-target relative shrink-0 inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] sm:rounded-[9px] text-[12px] sm:text-[13px] font-semibold transition-all cursor-pointer ${
+      className={`magnetic-target relative shrink-0 inline-flex items-center justify-center gap-1.5 h-8 px-2.5 lg:px-3.5 rounded-[9px] text-[12.5px] lg:text-[13px] font-semibold transition-all cursor-pointer ${
         active
           ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
           : "bg-transparent text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
@@ -656,7 +659,7 @@ function NavPillButton({
       <span>{children}</span>
       {typeof count === "number" && (
         <span
-          className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-[10.5px] tabular-nums ${
+          className={`px-1.5 py-0.2 rounded-full text-[10.5px] tabular-nums ${
             active
               ? "bg-[var(--pill-bg)] text-[var(--ink-primary)]"
               : "text-[var(--ink-muted)]"
@@ -812,11 +815,11 @@ function ShowcaseSectionBlock({
   return (
     <Scroll3DSection id={sectionId} className="apple-shell py-4 sm:py-6">
       <div ref={sectionTopRef} className="space-y-4 sm:space-y-5">
-        {/* Section Header + Shared Grid / Stage Switch + Independent Newest / Oldest Sort */}
+        {/* Section Header + Evenly Balanced Responsive Switches (50/50 Split on Mobile, Clean Row on Desktop) */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="apple-h2 text-[24px] sm:text-[30px] font-semibold text-[var(--ink-primary)]">
+              <h2 className="apple-h2 text-[22px] sm:text-[30px] font-semibold text-[var(--ink-primary)]">
                 {lang === "EN" ? headingEn : headingVn}
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)]">
@@ -842,42 +845,46 @@ function ShowcaseSectionBlock({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
             {/* Shared Global Grid / Stage Switch */}
-            <div className="inline-flex h-9 sm:h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+            <div className="flex h-9 sm:h-10 items-center p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
               <button
                 type="button"
                 onClick={() => onLayoutModeChange("grid")}
                 data-cursor="magnetic"
                 aria-pressed={layoutMode === "grid"}
-                className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial inline-flex h-7 sm:h-8 items-center justify-center gap-1.5 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer ${
                   layoutMode === "grid"
                     ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
                     : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
                 }`}
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
+                <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {lang === "EN" ? "Grid" : "Lưới"}
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => onLayoutModeChange("stage")}
                 data-cursor="magnetic"
                 aria-pressed={layoutMode === "stage"}
-                className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial inline-flex h-7 sm:h-8 items-center justify-center gap-1.5 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer ${
                   layoutMode === "stage"
                     ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
                     : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
                 }`}
               >
-                <GalleryHorizontalEnd className="h-3.5 w-3.5" />
-                <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
+                <GalleryHorizontalEnd className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {lang === "EN" ? "Stage" : "Sân khấu"}
+                </span>
               </button>
             </div>
 
             {/* Independent Section Sort: Newest / Oldest */}
-            <div className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
+            <div className="flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+              <span className="hidden md:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span>{lang === "EN" ? "Sort" : "Xếp"}</span>
               </span>
@@ -889,7 +896,7 @@ function ShowcaseSectionBlock({
                     onSortOrderChange(ord);
                     onPageChange(1);
                   }}
-                  className={`h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial h-7 sm:h-8 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer truncate ${
                     sortOrder === ord
                       ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
                       : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
@@ -1041,7 +1048,7 @@ function ShowcaseSectionBlock({
             renderLinkifiedText={renderLinkified}
           />
         ) : (
-          <div className="pt-2">
+          <div className="pt-1 sm:pt-2">
             {paginatedGridItems.length === 0 ? (
               <div className="mx-auto max-w-2xl px-6 py-14 text-center rounded-[24px] apple-surface-card text-[var(--ink-meta)] text-sm">
                 {lang === "EN"
@@ -1060,18 +1067,28 @@ function ShowcaseSectionBlock({
                     (lang === "EN"
                       ? item.desc_en || item.desc_vn
                       : item.desc_vn || item.desc_en) || "";
-                  const hasImage = Boolean(item.images && item.images[0]);
+                  const primarySrc =
+                    item.images && item.images[0] ? item.images[0] : "";
                   const dateStr =
                     formatDateRangeString(item.project_date) ||
                     formatYearOrDate(item);
 
                   const cardFallback = (
-                    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-elevated)]">
-                      {isCertificateSection ? (
-                        <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
-                      ) : (
-                        <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-55" />
-                      )}
+                    <div className="relative flex h-full w-full flex-col items-center justify-center p-4 text-center bg-[var(--surface-elevated)] overflow-hidden">
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 apple-studio-dots opacity-45"
+                      />
+                      <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] mb-2">
+                        {isCertificateSection ? (
+                          <Award className="h-5 w-5 opacity-80" />
+                        ) : (
+                          <Code className="h-5 w-5 opacity-80" />
+                        )}
+                      </div>
+                      <span className="relative z-10 text-xs font-medium text-[var(--ink-meta)] line-clamp-2 max-w-[24ch]">
+                        {title}
+                      </span>
                     </div>
                   );
 
@@ -1081,41 +1098,30 @@ function ShowcaseSectionBlock({
                       index={idx}
                       maxTilt={3.8}
                       onClick={() => onSelectProject(item)}
-                      className="group flex flex-col rounded-[22px] sm:rounded-[24px] apple-surface-card hover:bg-[var(--surface-card-hover)] overflow-hidden cursor-pointer"
+                      className="group flex flex-col rounded-[20px] sm:rounded-[24px] apple-surface-card overflow-hidden cursor-pointer"
                     >
-                      {/* Clean Image Cover — Zero Category/Certificate/Project Badge Overlay */}
+                      {/* Adaptive Portrait / Square / Landscape / No-Image Cover — Zero Overlay Badges */}
                       <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
-                        {hasImage ? (
-                          <SafePortfolioImage
-                            src={item.images[0]}
-                            alt={title}
-                            fill
-                            priority={idx < 3}
-                            fallback={cardFallback}
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            className={`${
-                              isCertificateSection
-                                ? "object-contain p-2.5"
-                                : "object-cover object-top"
-                            } transition-transform duration-500 group-hover:scale-[1.03]`}
-                          />
-                        ) : (
-                          cardFallback
-                        )}
+                        <AdaptiveGridCover
+                          src={primarySrc}
+                          alt={title}
+                          isCertificate={isCertificateSection}
+                          fallback={cardFallback}
+                        />
                       </div>
 
                       <div className="flex flex-1 flex-col p-4 sm:p-6">
                         <div className="flex items-center justify-between gap-2 mb-2">
                           {dateStr ? (
                             <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                              <Calendar className="h-3.5 w-3.5 opacity-75" />
+                              <Calendar className="h-3.5 w-3.5 opacity-75 shrink-0" />
                               <span>{dateStr}</span>
                             </span>
                           ) : (
                             <span />
                           )}
 
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-primary)] group-hover:translate-x-0.5 transition-transform">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-primary)] group-hover:translate-x-0.5 transition-transform shrink-0">
                             <span>
                               {isCertificateSection
                                 ? lang === "EN"
@@ -1129,12 +1135,12 @@ function ShowcaseSectionBlock({
                           </span>
                         </div>
 
-                        <h3 className="text-[16.5px] sm:text-[18px] leading-[1.35] font-semibold text-[var(--ink-primary)] break-words">
+                        <h3 className="text-[16px] sm:text-[18px] leading-[1.35] font-semibold text-[var(--ink-primary)] break-words">
                           {title}
                         </h3>
 
                         {desc && (
-                          <div className="mt-2 text-[13.5px] sm:text-[14px] leading-[1.64] text-[var(--ink-secondary)] line-clamp-4 whitespace-pre-line flex-1">
+                          <div className="mt-2 text-[13.5px] sm:text-[14px] leading-[1.64] text-[var(--ink-secondary)] line-clamp-4 whitespace-pre-line flex-1 break-words">
                             <LinkifiedText text={desc} />
                           </div>
                         )}
@@ -1186,7 +1192,7 @@ function ShowcaseSectionBlock({
             )}
 
             {totalPages > 1 && (
-              <div className="mt-7 sm:mt-8 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+              <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
@@ -1270,6 +1276,8 @@ export default function PortfolioUI({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeSection, setActiveSection] = useState<string>("about");
   const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -1281,37 +1289,36 @@ export default function PortfolioUI({
     () => false
   );
 
-  const [vnTime, setVnTime] = useState<string>("");
-
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang === "VN" ? "vi" : "en";
     }
   }, [lang]);
 
+  // Close compact mobile navigation drawer on outside click or Escape
   useEffect(() => {
-    const updateClock = () => {
-      try {
-        const now = new Date();
-        const timeStr = now.toLocaleString("en-US", {
-          timeZone: "Asia/Ho_Chi_Minh",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        });
-        setVnTime(`${timeStr} • ${lang === "VN" ? "Việt Nam" : "Vietnam"}`);
-      } catch {
-        setVnTime("");
+    if (!mobileNavOpen) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        mobileNavRef.current &&
+        e.target instanceof Node &&
+        !mobileNavRef.current.contains(e.target)
+      ) {
+        setMobileNavOpen(false);
       }
     };
-
-    const rafId = requestAnimationFrame(updateClock);
-    const timer = setInterval(updateClock, 15000);
-    return () => {
-      cancelAnimationFrame(rafId);
-      clearInterval(timer);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
     };
-  }, [lang]);
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileNavOpen]);
 
   const projects =
     demoMode && incomingProjects.length === 0
@@ -1392,13 +1399,11 @@ export default function PortfolioUI({
       .flatMap((c) => c.images || [])
       .filter(Boolean);
 
-    // Immediately warm first 2 pages of Projects & Certificates
     preloadImagesPriority([
       ...sortedProjImgs.slice(0, 12),
       ...sortedCertImgs.slice(0, 12),
     ]);
 
-    // Queue all remaining images in background right after initial paint
     const timer = window.setTimeout(() => {
       preloadImagesBackground([
         ...sortedProjImgs.slice(12),
@@ -1575,13 +1580,14 @@ export default function PortfolioUI({
 
   const jumpToSection = useCallback((sectionId: string) => {
     setActiveSection(sectionId);
+    setMobileNavOpen(false);
     if (sectionId === "about") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     const el = document.getElementById(sectionId);
     if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 72;
+      const y = el.getBoundingClientRect().top + window.scrollY - 68;
       window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     }
   }, []);
@@ -1636,32 +1642,104 @@ export default function PortfolioUI({
       ""
     : "";
 
+  const activeNavEntry =
+    navSections.find((s) => s.id === activeSection) || navSections[0];
+
   return (
     <div className="relative min-h-screen flex flex-col text-[var(--foreground)]">
-      {/* Matte Editorial Backdrop */}
+      {/* Architectural Studio Backdrop */}
       <AmbientBackdrop />
       <CustomCursor />
 
       <div className="relative z-10 flex-1 flex flex-col">
-        {/* Borderless Minimalist Sticky Header (Clean Empty Left, Centered Nav, Dual EN|VN Toggle) */}
+        {/* Borderless Symmetrical Sticky Header — Zero Time Tracking, Evenly Aligned Dock & Small-Screen Responsive */}
         <header
           className={`sticky top-0 z-40 w-full border-0 shadow-none transition-[background-color,padding] duration-200 ${
             isScrolled
-              ? "py-2 sm:py-2.5 apple-header-scrim"
-              : "pt-3 sm:pt-4 pb-2 bg-transparent"
+              ? "py-2 md:py-2.5 apple-header-scrim"
+              : "pt-2.5 sm:pt-4 pb-2 bg-transparent"
           }`}
         >
           <div className="apple-shell">
-            <div className="flex items-center justify-between gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
-              {/* Intentionally Clean Empty Left Space on Desktop */}
-              <div aria-hidden="true" className="hidden lg:block" />
+            <div
+              ref={mobileNavRef}
+              className="relative mx-auto flex w-full max-w-[1040px] items-center justify-between md:justify-center gap-2 md:gap-3"
+            >
+              {/* MOBILE & COMPACT VIEWPORTS (< 768px): Evenly Aligned Section Switcher Pill + Floating 2-Col Drawer */}
+              <div className="md:hidden flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen((prev) => !prev)}
+                  aria-expanded={mobileNavOpen}
+                  aria-haspopup="menu"
+                  aria-label={
+                    lang === "EN" ? "Navigation menu" : "Menu điều hướng"
+                  }
+                  className="flex h-9 w-full items-center justify-between gap-2 px-3 rounded-[11px] bg-[var(--pill-bg)] apple-hairline text-[12.5px] font-semibold text-[var(--ink-primary)] cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2 min-w-0 truncate">
+                    <Menu className="h-3.5 w-3.5 shrink-0 text-[var(--ink-meta)]" />
+                    <span className="truncate">{activeNavEntry?.label}</span>
+                    {typeof activeNavEntry?.count === "number" && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] tabular-nums bg-[var(--pill-active-bg)] text-[var(--ink-meta)] shrink-0">
+                        {activeNavEntry.count}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-[var(--ink-meta)] transition-transform duration-200 ${
+                      mobileNavOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              {/* Single-Page Jump-Link Bar (Centered on Desktop, Smooth Scrollable Strip on Mobile) */}
+                <AnimatePresence>
+                  {mobileNavOpen && (
+                    <motion.nav
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                      aria-label={
+                        lang === "EN"
+                          ? "Portfolio mobile navigation"
+                          : "Điều hướng trên điện thoại"
+                      }
+                      className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-50 grid grid-cols-2 gap-1.5 p-2 rounded-[16px] apple-glass"
+                    >
+                      {navSections.map((sec) => {
+                        const active = activeSection === sec.id;
+                        return (
+                          <button
+                            key={sec.id}
+                            type="button"
+                            onClick={() => jumpToSection(sec.id)}
+                            className={`flex items-center justify-between gap-1.5 h-9 px-3 rounded-[10px] text-[12.5px] font-semibold transition-colors cursor-pointer ${
+                              active
+                                ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                : "text-[var(--ink-secondary)] hover:bg-[var(--row-hover-bg)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <span className="truncate">{sec.label}</span>
+                            {typeof sec.count === "number" && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[10px] tabular-nums bg-[var(--pill-bg)] text-[var(--ink-meta)] shrink-0">
+                                {sec.count}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </motion.nav>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* DESKTOP & TABLET (>= 768px): Centered Symmetrical Jump-Link Bar */}
               <nav
                 aria-label={
                   lang === "EN" ? "Portfolio navigation" : "Điều hướng trang"
                 }
-                className="flex-1 min-w-0 lg:flex-initial lg:justify-self-center flex items-center gap-0.5 p-1 h-9 sm:h-10 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
+                className="hidden md:flex items-center justify-center gap-0.5 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
               >
                 {navSections.map((sec) => (
                   <NavPillButton
@@ -1675,74 +1753,66 @@ export default function PortfolioUI({
                 ))}
               </nav>
 
-              {/* Right Utility Controls (Clock + Dual EN | VN Segmented Toggle + Theme) */}
-              <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 lg:justify-self-end">
-                {mounted && vnTime && (
-                  <span className="hidden xl:inline text-[12.5px] font-medium tabular-nums text-[var(--ink-muted)] mr-1">
-                    {vnTime}
-                  </span>
-                )}
-
-                {/* Dual-Option Language Toggle Showing Both EN & VN */}
-                <div
-                  role="group"
-                  aria-label={
-                    lang === "EN" ? "Select language" : "Chọn ngôn ngữ"
-                  }
-                  className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline"
-                >
-                  {(["EN", "VN"] as const).map((code) => {
-                    const active = lang === code;
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        onClick={() => setLang(code)}
-                        aria-pressed={active}
-                        data-cursor="magnetic"
-                        className={`h-7 sm:h-8 min-w-[30px] sm:min-w-[34px] px-2 sm:px-2.5 rounded-[8px] text-[11px] sm:text-[11.5px] font-bold tracking-wider transition-all cursor-pointer ${
-                          active
-                            ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
-                        }`}
-                      >
-                        {code}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTheme(resolvedTheme === "dark" ? "light" : "dark")
-                  }
-                  data-cursor="magnetic"
-                  className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all cursor-pointer"
-                  aria-label={
-                    lang === "EN"
-                      ? "Toggle color theme"
-                      : "Đổi giao diện sáng/tối"
-                  }
-                >
-                  {mounted ? (
-                    resolvedTheme === "dark" ? (
-                      <Sun className="h-4 w-4" />
-                    ) : (
-                      <Moon className="h-4 w-4" />
-                    )
-                  ) : (
-                    <span className="h-4 w-4 rounded-full bg-[var(--ink-decorative)] opacity-30" />
-                  )}
-                </button>
+              {/* Evenly Matched Dual Language Toggle (EN | VN) */}
+              <div
+                role="group"
+                aria-label={
+                  lang === "EN" ? "Select language" : "Chọn ngôn ngữ"
+                }
+                className="inline-flex h-9 md:h-10 items-center gap-0.5 p-1 rounded-[11px] md:rounded-[12px] bg-[var(--pill-bg)] apple-hairline shrink-0"
+              >
+                {(["EN", "VN"] as const).map((code) => {
+                  const active = lang === code;
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setLang(code)}
+                      aria-pressed={active}
+                      data-cursor="magnetic"
+                      className={`h-7 md:h-8 min-w-[30px] md:min-w-[34px] px-2 md:px-2.5 rounded-[8px] text-[11px] md:text-[11.5px] font-bold tracking-wider transition-all cursor-pointer ${
+                        active
+                          ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                          : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
+                      }`}
+                    >
+                      {code}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Evenly Matched Theme Toggle */}
+              <button
+                type="button"
+                onClick={() =>
+                  setTheme(resolvedTheme === "dark" ? "light" : "dark")
+                }
+                data-cursor="magnetic"
+                className="inline-flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-[11px] md:rounded-[12px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:scale-[1.04] transition-all shrink-0 cursor-pointer"
+                aria-label={
+                  lang === "EN"
+                    ? "Toggle color theme"
+                    : "Đổi giao diện sáng/tối"
+                }
+              >
+                {mounted ? (
+                  resolvedTheme === "dark" ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )
+                ) : (
+                  <span className="h-4 w-4 rounded-full bg-[var(--ink-decorative)] opacity-30" />
+                )}
+              </button>
             </div>
           </div>
         </header>
 
         {/* UNIFIED SINGLE-PAGE FLOW: Profile Info -> Projects -> Certificates */}
         <main className="flex-1 flex flex-col pb-10">
-          {/* 1. Profile Hero (with Bottom 4 Social Icons), Experience, Technical Skills & Education */}
+          {/* 1. Centered Profile Hero (with Bottom 4 Social Icons), Experience, Technical Skills & Education */}
           <MoreInfoView
             lang={lang}
             profileName={profileName}
@@ -1826,7 +1896,7 @@ export default function PortfolioUI({
         {/* Grounded Symmetric 3-Column Footer */}
         <footer className="w-full mt-auto pt-4 pb-6 text-[12px]">
           <div className="apple-shell">
-            <div className="pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className="mx-auto max-w-[1040px] pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
               <nav
                 aria-label="Social links"
                 className="flex flex-wrap items-center justify-center md:justify-start gap-3"
@@ -1862,7 +1932,7 @@ export default function PortfolioUI({
                     onPointerMove={footerEmailMagnetic.onPointerMove}
                     onPointerLeave={footerEmailMagnetic.onPointerLeave}
                     data-cursor="magnetic"
-                    className="magnetic-target text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors break-all"
+                    className="magnetic-target text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors break-all text-center"
                   >
                     {profileData.email}
                   </a>
@@ -1873,7 +1943,7 @@ export default function PortfolioUI({
         </footer>
       </div>
 
-      {/* Seamless Unified Apple Split-Inspector Modal */}
+      {/* Seamless Full-Bleed Split-Inspector Modal (Strictly 2 Close Paths) */}
       <ProjectDetailModal
         project={selectedProject}
         lang={lang}

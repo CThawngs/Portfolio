@@ -3,70 +3,79 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f6f6f7;
+  --background: #f5f5f7;
   --foreground: #141416;
-  --surface-elevated: #ededf0;
-  --surface-card-bg: #ffffff;
-  --surface-card-hover: #fcfcfd;
+  --surface-elevated: #ececf0;
+  --surface-card-bg: rgba(255, 255, 255, 0.92);
+  --surface-card-hover: #ffffff;
   --surface-modal: #ffffff;
   --ink-primary: #141416;
-  --ink-secondary: #45454b;
-  --ink-meta: #65656d;
-  --ink-muted: #787880;
-  --ink-decorative: #c8c8d0;
-  --pill-bg: rgba(232, 232, 237, 0.9);
+  --ink-secondary: #43434a;
+  --ink-meta: #63636b;
+  --ink-muted: #76767f;
+  --ink-decorative: #c6c6cf;
+  --pill-bg: rgba(229, 229, 235, 0.88);
   --pill-active-bg: #ffffff;
   --row-hover-bg: rgba(20, 20, 22, 0.04);
-  --glass-bg: rgba(246, 246, 247, 0.84);
+  --glass-bg: rgba(245, 245, 247, 0.84);
   --glass-border: rgba(20, 20, 22, 0.08);
-  --glass-sub-ink: #45454b;
+  --glass-sub-ink: #43434a;
   --glass-shadow: 0 12px 32px rgba(15, 15, 20, 0.07), 0 2px 6px rgba(15, 15, 20, 0.03);
   --card-border: rgba(20, 20, 22, 0.08);
-  --card-shadow: 0 10px 28px rgba(15, 15, 20, 0.045), 0 2px 6px rgba(15, 15, 20, 0.025);
-  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --card-shadow: 0 12px 30px rgba(15, 15, 20, 0.045), 0 2px 6px rgba(15, 15, 20, 0.025);
+  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --focus-ring: #0071e3;
-  --page-gutter: clamp(14px, 4vw, 48px);
+  --page-gutter: clamp(12px, 3.8vw, 48px);
 
-  /* Subtle Human-Crafted Daylight Wash */
-  --canvas-top-wash: rgba(255, 255, 255, 0.7);
-  --scroll-beam: rgba(20, 20, 22, 0.22);
-  --glare-color: rgba(255, 255, 255, 0.5);
+  /* Daylight Architectural Studio Lighting */
+  --studio-key-light: rgba(255, 255, 255, 0.92);
+  --studio-warm-wash: rgba(245, 208, 162, 0.16);
+  --studio-cool-wash: rgba(186, 206, 238, 0.18);
+  --studio-dot-color: rgba(20, 20, 26, 0.07);
+  --studio-horizon-line: rgba(20, 20, 26, 0.07);
+  --scroll-beam: linear-gradient(90deg, #141416 0%, #52525b 100%);
+  --glare-color: rgba(255, 255, 255, 0.52);
 }
 
 /*
- * Human-Crafted Achromatic Matte Dark Mode
- * Inspired by Rauno Freiberg (rauno.me), Paco Coursey (paco.me), Vercel Geist & Apple Pro Dark:
- * Pure perceptual neutral/warm obsidian steps (#0d0d0e -> #151517 -> #1d1d20),
- * crisp 1px translucent hairlines, zero neon blue/purple/cyan "AI gradient" glow.
+ * Luxury Smoked-Obsidian & Warm-Champagne Titanium Studio Dark Mode
+ * Crafted after Raycast Pro, Resend & Apple Titanium Pro:
+ * - Deep velvet onyx canvas (#060608) lit from overhead by warm-pearl & champagne-gold
+ *   softbox beams, masked architectural micro-dot perspective, and tactile analog film grain.
+ * - Zero generic neon purple/cyan "AI gradient" orbs; zero flat lifeless grey.
  */
 .dark {
-  --background: #0d0d0e;
-  --foreground: #ededef;
-  --surface-elevated: #141416;
-  --surface-card-bg: #151517;
-  --surface-card-hover: #1b1b1e;
-  --surface-modal: #141416;
-  --ink-primary: #ededef;
-  --ink-secondary: #a1a1a8;
-  --ink-meta: #86868e;
-  --ink-muted: #66666e;
-  --ink-decorative: #3f3f46;
-  --pill-bg: #1d1d20;
-  --pill-active-bg: #2a2a2f;
+  --background: #060608;
+  --foreground: #f2f2f5;
+  --surface-elevated: #111216;
+  --surface-card-bg: linear-gradient(180deg, rgba(23, 24, 30, 0.86) 0%, rgba(14, 15, 19, 0.92) 100%);
+  --surface-card-hover: linear-gradient(180deg, rgba(29, 31, 38, 0.92) 0%, rgba(18, 19, 24, 0.96) 100%);
+  --surface-modal: #111216;
+  --ink-primary: #f3f3f6;
+  --ink-secondary: #a9abb6;
+  --ink-meta: #8a8d99;
+  --ink-muted: #696c78;
+  --ink-decorative: #3d404b;
+  --pill-bg: rgba(28, 30, 37, 0.9);
+  --pill-active-bg: rgba(45, 48, 58, 0.96);
   --row-hover-bg: rgba(255, 255, 255, 0.042);
-  --glass-bg: rgba(13, 13, 14, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-sub-ink: #c4c4cc;
-  --glass-shadow: 0 20px 48px rgba(0, 0, 0, 0.62), 0 2px 8px rgba(0, 0, 0, 0.36);
-  --card-border: rgba(255, 255, 255, 0.075);
-  --card-shadow: 0 12px 32px rgba(0, 0, 0, 0.38), 0 2px 6px rgba(0, 0, 0, 0.24);
-  --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.045);
-  --focus-ring: #3291ff;
+  --glass-bg: rgba(8, 9, 12, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-sub-ink: #c9cbd4;
+  --glass-shadow: 0 22px 52px rgba(0, 0, 0, 0.7), 0 2px 10px rgba(0, 0, 0, 0.45);
+  --card-border: rgba(255, 255, 255, 0.085);
+  --card-shadow: 0 20px 46px -12px rgba(0, 0, 0, 0.72), 0 2px 10px rgba(0, 0, 0, 0.42);
+  --specular-rim: inset 0 1px 0 rgba(255, 248, 236, 0.095);
+  --focus-ring: #5ca8ff;
 
-  /* Calm Matte Studio Top Falloff (Zero AI Neon Gradient) */
-  --canvas-top-wash: rgba(255, 255, 255, 0.022);
-  --scroll-beam: rgba(255, 255, 255, 0.26);
-  --glare-color: rgba(255, 255, 255, 0.06);
+  /* Overhead Warm-Pearl + Champagne Gold + Silver-Slate Studio Softbox */
+  --studio-key-light: rgba(242, 235, 222, 0.135);
+  --studio-warm-wash: rgba(235, 192, 134, 0.078);
+  --studio-cool-wash: rgba(172, 198, 242, 0.072);
+  --studio-dot-color: rgba(255, 250, 242, 0.115);
+  --studio-horizon-line: rgba(255, 244, 224, 0.14);
+  --scroll-beam: linear-gradient(90deg, rgba(244, 214, 172, 0.75) 0%, rgba(242, 244, 250, 0.9) 55%, rgba(178, 204, 245, 0.75) 100%);
+  --glare-color: rgba(255, 248, 236, 0.075);
 }
 
 @theme inline {
@@ -82,13 +91,13 @@
 }
 
 .dark ::selection {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(244, 214, 172, 0.25);
   color: #ffffff;
 }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: 4.75rem;
   background-color: var(--background);
   overflow-x: clip;
 }
@@ -112,14 +121,42 @@ body.lock-scroll {
   overflow-y: hidden !important;
 }
 
-/* Human-Crafted Matte Editorial Canvas (No Neon Gradient Orbs) */
+/*
+ * Architectural Studio Canvas
+ * Combines an overhead warm-platinum softbox spotlight, subtle champagne & silver
+ * rim washes, and deep obsidian falloff for unmistakable human-crafted depth.
+ */
 .apple-studio-canvas {
   background-color: var(--background);
-  background-image: radial-gradient(
-    90% 42% at 50% 0%,
-    var(--canvas-top-wash) 0%,
-    transparent 100%
+  background-image:
+    radial-gradient(110% 56% at 50% -6%, var(--studio-key-light) 0%, transparent 72%),
+    radial-gradient(62% 46% at 14% 12%, var(--studio-warm-wash) 0%, transparent 70%),
+    radial-gradient(64% 48% at 86% 24%, var(--studio-cool-wash) 0%, transparent 72%),
+    radial-gradient(80% 50% at 50% 96%, var(--studio-warm-wash) 0%, transparent 78%);
+}
+
+/* Masked Architectural Precision Micro-Dot Matrix (Lit Only Inside Studio Cone) */
+.apple-studio-dots {
+  background-image: radial-gradient(var(--studio-dot-color) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 84% 56% at 50% 12%, #000 12%, rgba(0, 0, 0, 0.38) 52%, transparent 86%);
+  -webkit-mask-image: radial-gradient(ellipse 84% 56% at 50% 12%, #000 12%, rgba(0, 0, 0, 0.38) 52%, transparent 86%);
+}
+
+/* Overhead Architectural Conic Light Rays (Subtle Studio Softbox Caustics) */
+.apple-studio-rays {
+  background: conic-gradient(
+    from 180deg at 50% -10%,
+    transparent 0deg,
+    transparent 132deg,
+    var(--studio-warm-wash) 158deg,
+    var(--studio-key-light) 180deg,
+    var(--studio-cool-wash) 202deg,
+    transparent 228deg,
+    transparent 360deg
   );
+  filter: blur(44px);
+  opacity: 0.9;
 }
 
 /* Unified Page Container & Margin Rails */
@@ -151,11 +188,16 @@ body.lock-scroll {
   }
 }
 
-/* Elevated Matte Surface Card */
+/* Elevated Smoked-Titanium Surface Card */
 .apple-surface-card {
   background: var(--surface-card-bg);
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow), var(--specular-rim);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.apple-surface-card:hover {
+  background: var(--surface-card-hover);
 }
 @media (min-resolution: 2dppx) {
   .apple-surface-card {
@@ -166,26 +208,36 @@ body.lock-scroll {
 /* Seamless Sticky Header Scrim — Explicitly Zero Border & Zero White Outline on Scroll */
 .apple-header-scrim {
   background: var(--glass-bg);
-  backdrop-filter: blur(18px) saturate(165%);
-  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
   border: 0 solid transparent !important;
   box-shadow: none !important;
 }
 
-/* Frosted Glass Surface (Used selectively on floating pills) */
+/* Frosted Glass Surface (Used selectively on floating popovers & pills) */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--specular-rim);
 }
 .dark .apple-glass {
-  background: rgba(20, 20, 22, 0.94);
+  background: rgba(15, 16, 20, 0.95);
 }
 @supports (backdrop-filter: blur(1px)) {
   .apple-glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(18px) saturate(165%);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
   }
+}
+
+/* Subtle Hover Row */
+.apple-list-row {
+  border-radius: 14px;
+  transition: background-color 180ms ease;
+}
+.apple-list-row:hover {
+  background-color: var(--row-hover-bg);
 }
 
 /* 3D Perspective Stage & Specular Tilt Cards */
@@ -197,7 +249,7 @@ body.lock-scroll {
   transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
   transition:
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 220ms ease,
+    background 220ms ease,
     box-shadow 260ms ease,
     border-color 220ms ease;
   will-change: transform;
@@ -248,132 +300,22 @@ body.lock-scroll {
   }
 }
 
-.apple-cursor {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 9999px;
-  pointer-events: none;
-  z-index: 10001;
-  border: 1.5px solid rgba(0, 0, 0, 0.14);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(5px) saturate(160%);
-  transform: translate3d(var(--cx, -100px), var(--cy, -100px), 0) translate(-50%, -50%) scale(1);
-  transition:
-    width 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    height 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease,
-    filter 160ms ease;
-  will-change: transform, width, height, opacity;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #1d1d1f;
-}
-
-.dark .apple-cursor {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
-  color: #ededef;
-}
-
-.apple-cursor.is-pressing {
-  width: 32px;
-  height: 32px;
-}
-
-.apple-cursor.is-magnetic-target {
-  width: 12px;
-  height: 12px;
-  opacity: 0.45;
-  background: var(--ink-primary);
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.apple-cursor.is-overlay-hover {
-  width: 8px;
-  height: 8px;
-  opacity: 0;
-  filter: blur(4px);
-}
-
-/* Magnetic Parallax Utility */
-.magnetic-target {
-  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
-  transition:
-    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    background-color 160ms ease,
-    color 160ms ease,
-    box-shadow 180ms ease,
-    opacity 180ms ease,
-    border-color 180ms ease;
-  will-change: transform;
-}
-
-/* Apple Editorial List Row Hover Physics */
-.apple-list-row {
-  position: relative;
-  border-radius: 14px;
-  background-color: transparent;
-  transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1);
-  transition:
-    background-color 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    color 200ms ease;
-  will-change: transform, background-color;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .apple-list-row:hover {
-    background-color: var(--row-hover-bg);
-    transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.006);
-  }
-}
-
-/* Hide scrollbar while preserving scroll functionality */
-.hide-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+/* Hide Native Scrollbar on Horizontal Pill Strips */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-/* Compact mobile polish for small phones (iPhone 7 375px, iPhone X 375px, iPhone mini 360px) */
-@media (max-width: 390px) {
-  :root {
-    --page-gutter: 14px;
-  }
-  .apple-glass,
-  .apple-header-scrim {
-    backdrop-filter: blur(12px) saturate(155%);
-    -webkit-backdrop-filter: blur(12px) saturate(155%);
-  }
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Reduced Motion Accessibility Guard */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .apple-cursor {
-    display: none !important;
-  }
-  .magnetic-target,
-  .apple-list-row,
-  .apple-3d-tilt-card {
-    --px: 0px !important;
-    --py: 0px !important;
-    --rx: 0deg !important;
-    --ry: 0deg !important;
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
