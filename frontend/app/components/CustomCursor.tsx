@@ -1,29 +1,36 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 
-type CursorZone = "default" | "prev" | "next" | "magnetic" | "overlay";
+type CursorZone = "default" | "prev" | "next" | "magnetic" | "view" | "overlay";
 
+/**
+ * Reference-Portfolio Dual-Layer Custom Cursor (Zero React Re-renders, 0% Idle CPU)
+ * - `.apple-cursor-dot`: 1:1 zero-latency hardware dot so exact pointer position is always visible.
+ * - `.apple-cursor`: Smooth framerate-independent spring-trailing circle that morphs across
+ *   buttons/links (`magnetic`), project/certificate cards & Stage artwork (`view`), and prev/next controls.
+ * - Fail-safe: Only hides native OS cursor (`html.custom-cursor-active`) once real mouse movement
+ *   is confirmed and cursor DOM elements are mounted; immediately restores OS cursor on Tab/blur/touch.
+ */
 export default function CustomCursor() {
-  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const ringRef = useRef<HTMLDivElement | null>(null);
+  const dotRef = useRef<HTMLDivElement | null>(null);
   const [enabled, setEnabled] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [pressing, setPressing] = useState(false);
-  const [zone, setZone] = useState<CursorZone>("default");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mediaFine = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const mediaMotion = window.matchMedia("(prefers-reduced-motion: no-preference)");
+    const mediaMotion = window.matchMedia(
+      "(prefers-reduced-motion: no-preference)"
+    );
 
     const updateCapability = () => {
       const ok = mediaFine.matches && mediaMotion.matches;
       setEnabled(ok);
-      document.documentElement.classList.toggle("custom-cursor-active", ok);
       if (!ok) {
-        setVisible(false);
+        document.documentElement.classList.remove("custom-cursor-active");
       }
     };
 
@@ -41,106 +48,251 @@ export default function CustomCursor() {
   useEffect(() => {
     if (!enabled) return;
 
+    let targetX = -100;
+    let targetY = -100;
+    let ringX = -100;
+    let ringY = -100;
+    let initialized = false;
+    let isVisible = false;
+    let isPressing = false;
+    let currentZone: CursorZone = "default";
+    let rafId: number | null = null;
+    let lastTime = 0;
+
+    const syncAttributes = () => {
+      const ring = ringRef.current;
+      const dot = dotRef.current;
+      if (!ring || !dot) return;
+      const vis = isVisible ? "true" : "false";
+      const press = isPressing ? "true" : "false";
+      if (ring.getAttribute("data-visible") !== vis) {
+        ring.setAttribute("data-visible", vis);
+      }
+      if (dot.getAttribute("data-visible") !== vis) {
+        dot.setAttribute("data-visible", vis);
+      }
+      if (ring.getAttribute("data-pressing") !== press) {
+        ring.setAttribute("data-pressing", press);
+      }
+      if (dot.getAttribute("data-pressing") !== press) {
+        dot.setAttribute("data-pressing", press);
+      }
+      if (ring.getAttribute("data-zone") !== currentZone) {
+        ring.setAttribute("data-zone", currentZone);
+      }
+      if (dot.getAttribute("data-zone") !== currentZone) {
+        dot.setAttribute("data-zone", currentZone);
+      }
+    };
+
     const resolveZone = (target: EventTarget | null): CursorZone => {
       if (!(target instanceof Element)) return "default";
-      // Inside frosted summary card, fade out big glass ring and yield to crisp native OS cursor
       if (target.closest(".carousel-overlay-surface")) {
         return "overlay";
       }
+      // Check innermost interactive buttons/links BEFORE outer card `data-cursor="view"`
+      const directControl = target.closest(
+        "a, button, [role='tab'], input, select, textarea, [data-cursor='prev'], [data-cursor='next'], [data-cursor='magnetic']"
+      );
+      if (directControl) {
+        if (
+          directControl instanceof HTMLButtonElement &&
+          directControl.disabled
+        ) {
+          return "default";
+        }
+        const attr = directControl.getAttribute("data-cursor");
+        if (attr === "prev" || attr === "next" || attr === "view") {
+          return attr;
+        }
+        return "magnetic";
+      }
+
       const zoneEl = target.closest("[data-cursor]");
       if (zoneEl) {
         const attr = zoneEl.getAttribute("data-cursor");
-        if (attr === "prev" || attr === "next" || attr === "overlay" || attr === "magnetic") {
+        if (
+          attr === "view" ||
+          attr === "prev" ||
+          attr === "next" ||
+          attr === "overlay" ||
+          attr === "magnetic"
+        ) {
           return attr;
         }
-        if (attr === "disabled") return "default";
       }
-      if (target.closest("a, button, [role='button'], [role='tab'], input, select, textarea")) {
+
+      if (target.closest("[role='button']")) {
         return "magnetic";
       }
       return "default";
     };
 
-    const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch" || e.pointerType === "pen") {
-        document.documentElement.classList.remove("custom-cursor-active");
-        setVisible(false);
+    const stepRing = (now: number) => {
+      const ring = ringRef.current;
+      if (!ring) {
+        rafId = null;
         return;
       }
 
-      if (!document.documentElement.classList.contains("custom-cursor-active")) {
+      const dt = lastTime ? Math.min(0.05, (now - lastTime) / 1000) : 1 / 60;
+      lastTime = now;
+
+      // Framerate-independent spring glide (snappy like iPadOS / reference portfolio)
+      const alpha = 1 - Math.pow(0.00012, dt);
+      ringX += (targetX - ringX) * alpha;
+      ringY += (targetY - ringY) * alpha;
+
+      const dx = targetX - ringX;
+      const dy = targetY - ringY;
+      const dist = Math.hypot(dx, dy);
+
+      ring.style.transform = `translate3d(${ringX.toFixed(2)}px, ${ringY.toFixed(
+        2
+      )}px, 0) translate(-50%, -50%)`;
+
+      if (dist > 0.12 && isVisible) {
+        rafId = window.requestAnimationFrame(stepRing);
+      } else {
+        ringX = targetX;
+        ringY = targetY;
+        ring.style.transform = `translate3d(${ringX.toFixed(
+          2
+        )}px, ${ringY.toFixed(2)}px, 0) translate(-50%, -50%)`;
+        rafId = null;
+        lastTime = 0;
+      }
+    };
+
+    const hideCursorAndRestoreNative = () => {
+      isVisible = false;
+      isPressing = false;
+      document.documentElement.classList.remove("custom-cursor-active");
+      syncAttributes();
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch" || e.pointerType === "pen") {
+        hideCursorAndRestoreNative();
+        return;
+      }
+
+      const ring = ringRef.current;
+      const dot = dotRef.current;
+      if (!ring || !dot) return;
+
+      targetX = e.clientX;
+      targetY = e.clientY;
+
+      if (!initialized) {
+        initialized = true;
+        ringX = targetX;
+        ringY = targetY;
+        ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
+      }
+
+      // 1:1 instant zero-lag update on precision dot
+      dot.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) translate(-50%, -50%)`;
+
+      const nextZone = resolveZone(e.target);
+      if (nextZone === "overlay") {
+        document.documentElement.classList.remove("custom-cursor-active");
+      } else if (
+        !document.documentElement.classList.contains("custom-cursor-active")
+      ) {
         document.documentElement.classList.add("custom-cursor-active");
       }
 
-      const el = cursorRef.current;
-      if (el) {
-        el.style.setProperty("--cx", `${e.clientX}px`);
-        el.style.setProperty("--cy", `${e.clientY}px`);
-      }
+      isVisible = true;
+      currentZone = nextZone;
+      syncAttributes();
 
-      setVisible(true);
-      setZone(resolveZone(e.target));
+      if (rafId === null) {
+        lastTime = 0;
+        rafId = window.requestAnimationFrame(stepRing);
+      }
     };
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === "mouse") {
-        setPressing(true);
+        isPressing = true;
+        syncAttributes();
       }
     };
 
     const onPointerUp = () => {
-      setPressing(false);
+      if (isPressing) {
+        isPressing = false;
+        syncAttributes();
+      }
     };
 
     const onMouseLeaveWindow = (e: MouseEvent) => {
       if (!e.relatedTarget) {
-        setVisible(false);
+        isVisible = false;
+        syncAttributes();
       }
+    };
+
+    const onWindowBlur = () => {
+      isVisible = false;
+      isPressing = false;
+      syncAttributes();
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Tab") {
-        // Yield to native pointer/focus ring during keyboard navigation until mouse moves again
-        document.documentElement.classList.remove("custom-cursor-active");
-        setVisible(false);
+        hideCursorAndRestoreNative();
       }
     };
 
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
-    document.addEventListener("mouseout", onMouseLeaveWindow, { passive: true });
+    document.addEventListener("mouseout", onMouseLeaveWindow, {
+      passive: true,
+    });
+    window.addEventListener("blur", onWindowBlur, { passive: true });
     window.addEventListener("keydown", onKeyDown, { passive: true });
 
     return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      document.documentElement.classList.remove("custom-cursor-active");
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       document.removeEventListener("mouseout", onMouseLeaveWindow);
+      window.removeEventListener("blur", onWindowBlur);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [enabled]);
 
   if (!enabled) return null;
 
-  const stateClasses = [
-    "apple-cursor",
-    pressing ? "is-pressing" : "",
-    zone === "magnetic" ? "is-magnetic-target" : "",
-    zone === "overlay" ? "is-overlay-hover" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <div
-      ref={cursorRef}
-      aria-hidden="true"
-      className={stateClasses}
-      style={{ opacity: visible ? undefined : 0 }}
-    >
-      {zone === "prev" && <ChevronLeft className="h-4 w-4 stroke-[2.2] opacity-80" />}
-      {zone === "next" && <ChevronRight className="h-4 w-4 stroke-[2.2] opacity-80" />}
-    </div>
+    <>
+      <div
+        ref={dotRef}
+        aria-hidden="true"
+        data-testid="custom-cursor-dot"
+        data-visible="false"
+        data-zone="default"
+        data-pressing="false"
+        className="apple-cursor-dot"
+      />
+      <div
+        ref={ringRef}
+        aria-hidden="true"
+        data-testid="custom-cursor-ring"
+        data-visible="false"
+        data-zone="default"
+        data-pressing="false"
+        className="apple-cursor"
+      >
+        <ArrowUpRight className="cursor-icon cursor-icon-view h-4 w-4 stroke-[2.3]" />
+        <ChevronLeft className="cursor-icon cursor-icon-prev h-4 w-4 stroke-[2.3]" />
+        <ChevronRight className="cursor-icon cursor-icon-next h-4 w-4 stroke-[2.3]" />
+      </div>
+    </>
   );
 }

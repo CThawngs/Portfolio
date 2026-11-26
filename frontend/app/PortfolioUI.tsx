@@ -38,10 +38,7 @@ import {
   useReducedMotionPreference,
 } from "./components/Scroll3D";
 import { AdaptiveGridCover } from "./components/SafePortfolioImage";
-import {
-  preloadImagesPriority,
-  preloadImagesBackground,
-} from "./components/imagePreloader";
+import { preloadImagesBackground } from "./components/imagePreloader";
 import {
   buildTagColorMap,
   getTagColorScheme,
@@ -144,6 +141,7 @@ function LinkifiedText({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
+              data-cursor="magnetic"
               className="font-medium text-[var(--ink-primary)] underline decoration-[var(--ink-decorative)] hover:decoration-[var(--ink-primary)] underline-offset-4 transition-colors duration-150 break-all cursor-pointer"
             >
               {clean}
@@ -156,7 +154,6 @@ function LinkifiedText({
   );
 }
 
-// ── Classic Single-Phrase Typewriter Matching Original Notion Delimiter Conventions ──
 const TYPING_SPEED = 42;
 const DELETING_SPEED = 18;
 const PAUSE_TIME = 2200;
@@ -641,12 +638,16 @@ function NavPillButton({
   count?: number;
   children: React.ReactNode;
 }) {
-  const { onPointerMove, onPointerLeave } = useMagneticHandlers(5, active);
+  const { onPointerEnter, onPointerMove, onPointerLeave } = useMagneticHandlers(
+    5,
+    active
+  );
 
   return (
     <button
       type="button"
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
@@ -766,7 +767,10 @@ function ShowcaseSectionBlock({
     });
   }, [rawItems, activeCategory, selectedTag, sortOrder]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredItems.length / ITEMS_PER_PAGE)
+  );
   const currentPage = Math.min(page, totalPages);
 
   const paginatedGridItems = useMemo(() => {
@@ -774,21 +778,21 @@ function ShowcaseSectionBlock({
     return filteredItems.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredItems, currentPage]);
 
-  // High-priority preload of current, previous, and next 2 pagination pages for 0ms page transitions
+  // Politely warm ONLY the immediate next page (6 compact w=640 WebP thumbnails ~200KB) during idle time
   useEffect(() => {
-    if (!filteredItems.length) return;
-    const windowStart = Math.max(0, (currentPage - 2) * ITEMS_PER_PAGE);
-    const windowEnd = Math.min(
-      filteredItems.length,
-      (currentPage + 2) * ITEMS_PER_PAGE
-    );
-    const priorityUrls: string[] = [];
-    for (let i = windowStart; i < windowEnd; i++) {
-      const imgs = filteredItems[i]?.images;
-      if (imgs && imgs[0]) priorityUrls.push(imgs[0]);
+    if (!filteredItems.length || layoutMode !== "grid") return;
+    const nextStart = currentPage * ITEMS_PER_PAGE;
+    const nextEnd = Math.min(filteredItems.length, nextStart + ITEMS_PER_PAGE);
+    if (nextStart >= nextEnd) return;
+    const nextUrls: string[] = [];
+    for (let i = nextStart; i < nextEnd; i++) {
+      const cover = filteredItems[i]?.images?.[0];
+      if (cover) nextUrls.push(cover);
     }
-    preloadImagesPriority(priorityUrls);
-  }, [filteredItems, currentPage]);
+    if (nextUrls.length > 0) {
+      preloadImagesBackground(nextUrls, 640);
+    }
+  }, [filteredItems, currentPage, layoutMode]);
 
   const visibleTags = useMemo(() => {
     if (showAllTags || tags.length <= INITIAL_VISIBLE_TAGS) {
@@ -815,7 +819,7 @@ function ShowcaseSectionBlock({
   return (
     <Scroll3DSection id={sectionId} className="apple-shell py-4 sm:py-6">
       <div ref={sectionTopRef} className="space-y-4 sm:space-y-5">
-        {/* Section Header + Evenly Balanced Responsive Switches (50/50 Split on Mobile, Clean Row on Desktop) */}
+        {/* Section Header + Evenly Balanced Responsive Switches */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -846,7 +850,6 @@ function ShowcaseSectionBlock({
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
-            {/* Shared Global Grid / Stage Switch */}
             <div className="flex h-9 sm:h-10 items-center p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
               <button
                 type="button"
@@ -882,7 +885,6 @@ function ShowcaseSectionBlock({
               </button>
             </div>
 
-            {/* Independent Section Sort: Newest / Oldest */}
             <div className="flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
               <span className="hidden md:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
                 <ArrowUpDown className="h-3.5 w-3.5" />
@@ -896,6 +898,7 @@ function ShowcaseSectionBlock({
                     onSortOrderChange(ord);
                     onPageChange(1);
                   }}
+                  data-cursor="magnetic"
                   className={`flex-1 sm:flex-initial h-7 sm:h-8 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer truncate ${
                     sortOrder === ord
                       ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
@@ -915,7 +918,6 @@ function ShowcaseSectionBlock({
           </div>
         </div>
 
-        {/* Category Filter Pills (Only shown if 2+ distinct categories exist) */}
         {showCategoryPills && (
           <div className="w-full overflow-x-auto hide-scrollbar">
             <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
@@ -929,6 +931,7 @@ function ShowcaseSectionBlock({
                   onSelectCategory(null);
                   onPageChange(1);
                 }}
+                data-cursor="magnetic"
                 className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   !activeCategory
                     ? "bg-[var(--ink-primary)] text-[var(--background)]"
@@ -951,6 +954,7 @@ function ShowcaseSectionBlock({
                       onSelectCategory(active ? null : cat.name);
                       onPageChange(1);
                     }}
+                    data-cursor="magnetic"
                     className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       active
                         ? "bg-[var(--ink-primary)] text-[var(--background)]"
@@ -968,7 +972,6 @@ function ShowcaseSectionBlock({
           </div>
         )}
 
-        {/* Diverse Non-Repeating Multi-Color Tag Filter Bar */}
         {tags.length > 0 && (
           <div className="w-full overflow-x-auto hide-scrollbar">
             <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
@@ -982,6 +985,7 @@ function ShowcaseSectionBlock({
                   onSelectTag(null);
                   onPageChange(1);
                 }}
+                data-cursor="magnetic"
                 className={`h-7 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   !selectedTag
                     ? "bg-[var(--ink-primary)] text-[var(--background)] shadow-xs"
@@ -1002,6 +1006,7 @@ function ShowcaseSectionBlock({
                       onSelectTag(active ? null : tag);
                       onPageChange(1);
                     }}
+                    data-cursor="magnetic"
                     className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                       active
                         ? scheme.activePill
@@ -1017,6 +1022,7 @@ function ShowcaseSectionBlock({
                 <button
                   type="button"
                   onClick={() => setShowAllTags((prev) => !prev)}
+                  data-cursor="magnetic"
                   className="h-7 px-2.5 rounded-lg text-xs font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   {showAllTags
@@ -1032,7 +1038,6 @@ function ShowcaseSectionBlock({
           </div>
         )}
 
-        {/* Active View: Shared Grid OR Frameless 3-Column Stage */}
         {layoutMode === "stage" ? (
           <ShowcaseCarousel
             key={`${sectionId}-${activeCategory ?? "all"}-${
@@ -1096,16 +1101,21 @@ function ShowcaseSectionBlock({
                     <Tilt3DCard
                       key={item.id}
                       index={idx}
-                      maxTilt={3.8}
+                      maxTilt={3.2}
+                      cursorZone="view"
                       onClick={() => onSelectProject(item)}
                       className="group flex flex-col rounded-[20px] sm:rounded-[24px] apple-surface-card overflow-hidden cursor-pointer"
                     >
-                      {/* Adaptive Portrait / Square / Landscape / No-Image Cover — Zero Overlay Badges */}
                       <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
                         <AdaptiveGridCover
                           src={primarySrc}
                           alt={title}
                           isCertificate={isCertificateSection}
+                          priority={
+                            !isCertificateSection &&
+                            currentPage === 1 &&
+                            idx < 3
+                          }
                           fallback={cardFallback}
                         />
                       </div>
@@ -1173,10 +1183,13 @@ function ShowcaseSectionBlock({
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
+                                  data-cursor="magnetic"
                                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity"
                                 >
                                   <span>
-                                    {lang === "EN" ? "Open Live" : "Xem Trực Tiếp"}
+                                    {lang === "EN"
+                                      ? "Open Live"
+                                      : "Xem Trực Tiếp"}
                                   </span>
                                   <ExternalLink className="h-3 w-3" />
                                 </a>
@@ -1197,6 +1210,7 @@ function ShowcaseSectionBlock({
                   type="button"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
+                  data-cursor="magnetic"
                   className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
                   aria-label={lang === "EN" ? "Previous page" : "Trang trước"}
                 >
@@ -1216,6 +1230,7 @@ function ShowcaseSectionBlock({
                       key={entry}
                       type="button"
                       onClick={() => handlePageChange(entry)}
+                      data-cursor="magnetic"
                       className={`h-9 min-w-[36px] sm:h-10 sm:min-w-[40px] px-2.5 sm:px-3 rounded-full text-xs font-semibold tabular-nums transition-all cursor-pointer ${
                         currentPage === entry
                           ? "bg-[var(--ink-primary)] text-[var(--background)]"
@@ -1233,6 +1248,7 @@ function ShowcaseSectionBlock({
                     handlePageChange(Math.min(totalPages, currentPage + 1))
                   }
                   disabled={currentPage === totalPages}
+                  data-cursor="magnetic"
                   className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
                   aria-label={lang === "EN" ? "Next page" : "Trang tiếp"}
                 >
@@ -1252,12 +1268,9 @@ export default function PortfolioUI({
   profileData: incomingProfile = null,
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
-
-  // Single unified layout state shared across BOTH Projects and Certificates
   const [showcaseLayoutMode, setShowcaseLayoutMode] =
     useState<ShowcaseLayout>("grid");
 
-  // Independent filter, sort & pagination states per section
   const [selectedProjectCategory, setSelectedProjectCategory] = useState<
     string | null
   >(null);
@@ -1277,7 +1290,10 @@ export default function PortfolioUI({
   const [activeSection, setActiveSection] = useState<string>("about");
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
+  const isScrolledRef = useRef(false);
+  const activeSectionRef = useRef("about");
 
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -1295,7 +1311,6 @@ export default function PortfolioUI({
     }
   }, [lang]);
 
-  // Close compact mobile navigation drawer on outside click or Escape
   useEffect(() => {
     if (!mobileNavOpen) return;
 
@@ -1381,40 +1396,11 @@ export default function PortfolioUI({
     };
   }, [projects]);
 
-  // Collision-free multi-color palette map across all portfolio tags
   const tagColorMap = useMemo(
     () => buildTagColorMap([...projectTags, ...certTags]),
     [projectTags, certTags]
   );
 
-  // Warm & decode all portfolio images into browser memory so pagination & Stage switches are instant
-  useEffect(() => {
-    if (!projects.length) return;
-    const sortedProjImgs = [...rawProjects]
-      .sort((a, b) => getTimeValue(b) - getTimeValue(a))
-      .flatMap((p) => p.images || [])
-      .filter(Boolean);
-    const sortedCertImgs = [...rawCertificates]
-      .sort((a, b) => getTimeValue(b) - getTimeValue(a))
-      .flatMap((c) => c.images || [])
-      .filter(Boolean);
-
-    preloadImagesPriority([
-      ...sortedProjImgs.slice(0, 12),
-      ...sortedCertImgs.slice(0, 12),
-    ]);
-
-    const timer = window.setTimeout(() => {
-      preloadImagesBackground([
-        ...sortedProjImgs.slice(12),
-        ...sortedCertImgs.slice(12),
-      ]);
-    }, 120);
-
-    return () => window.clearTimeout(timer);
-  }, [projects.length, rawProjects, rawCertificates]);
-
-  // Only render explicit `about_vn` / `about_en` as static paragraphs; `bio` belongs in TerminalTyping
   const aboutParagraphs = useMemo(() => {
     if (!profileData) return [];
     const raw =
@@ -1460,7 +1446,6 @@ export default function PortfolioUI({
     );
   }, [profileData, lang]);
 
-  // Ordered strictly: GitHub, Email, LinkedIn, Instagram
   const socialLinks = useMemo(() => {
     if (!profileData) return [];
     const links = [];
@@ -1544,41 +1529,79 @@ export default function PortfolioUI({
     rawCertificates.length,
   ]);
 
-  // Passive Scroll-Spy for Single-Page Navigation Bar
+  // Zero-Reflow Scroll-Spy: Caches section offsetTop positions and only updates React state on boundary crossings
   useEffect(() => {
     if (typeof window === "undefined") return;
     let rafId: number | null = null;
+    let cachedOffsets: { id: string; top: number }[] = [];
 
-    const handleScroll = () => {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        const y = window.scrollY;
-        setIsScrolled(y > 12);
-
-        let current = navSections[0]?.id || "about";
-        for (const sec of navSections) {
-          const el = document.getElementById(sec.id);
-          if (el) {
-            const top = el.getBoundingClientRect().top;
-            if (top <= 150) {
-              current = sec.id;
-            }
-          }
-        }
-        setActiveSection(current);
+    const measureOffsets = () => {
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      cachedOffsets = navSections.map((sec) => {
+        const el = document.getElementById(sec.id);
+        return {
+          id: sec.id,
+          top: el ? el.getBoundingClientRect().top + scrollY : 0,
+        };
       });
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const evaluateScroll = () => {
+      rafId = null;
+      const y = window.scrollY || window.pageYOffset || 0;
+      const nextScrolled = y > 12;
+      if (nextScrolled !== isScrolledRef.current) {
+        isScrolledRef.current = nextScrolled;
+        setIsScrolled(nextScrolled);
+      }
+
+      if (!cachedOffsets.length) measureOffsets();
+
+      const triggerY = y + 150;
+      let current = cachedOffsets[0]?.id || "about";
+      for (let i = 0; i < cachedOffsets.length; i++) {
+        if (cachedOffsets[i].top <= triggerY) {
+          current = cachedOffsets[i].id;
+        }
+      }
+
+      if (current !== activeSectionRef.current) {
+        activeSectionRef.current = current;
+        setActiveSection(current);
+      }
+    };
+
+    const onScroll = () => {
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(evaluateScroll);
+      }
+    };
+
+    const onResize = () => {
+      measureOffsets();
+      onScroll();
+    };
+
+    measureOffsets();
+    evaluateScroll();
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize, { passive: true });
     return () => {
       if (rafId !== null) window.cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
     };
-  }, [navSections]);
+  }, [
+    navSections,
+    showcaseLayoutMode,
+    selectedProjectCategory,
+    selectedProjectTag,
+    projectPage,
+  ]);
 
   const jumpToSection = useCallback((sectionId: string) => {
+    activeSectionRef.current = sectionId;
     setActiveSection(sectionId);
     setMobileNavOpen(false);
     if (sectionId === "about") {
@@ -1647,12 +1670,11 @@ export default function PortfolioUI({
 
   return (
     <div className="relative min-h-screen flex flex-col text-[var(--foreground)]">
-      {/* Architectural Studio Backdrop */}
       <AmbientBackdrop />
       <CustomCursor />
 
       <div className="relative z-10 flex-1 flex flex-col">
-        {/* Borderless Symmetrical Sticky Header — Zero Time Tracking, Evenly Aligned Dock & Small-Screen Responsive */}
+        {/* Borderless Symmetrical Sticky Header */}
         <header
           className={`sticky top-0 z-40 w-full border-0 shadow-none transition-[background-color,padding] duration-200 ${
             isScrolled
@@ -1665,7 +1687,7 @@ export default function PortfolioUI({
               ref={mobileNavRef}
               className="relative mx-auto flex w-full max-w-[1040px] items-center justify-between md:justify-center gap-2 md:gap-3"
             >
-              {/* MOBILE & COMPACT VIEWPORTS (< 768px): Evenly Aligned Section Switcher Pill + Floating 2-Col Drawer */}
+              {/* MOBILE & COMPACT VIEWPORTS (< 768px) */}
               <div className="md:hidden flex-1 min-w-0">
                 <button
                   type="button"
@@ -1699,7 +1721,7 @@ export default function PortfolioUI({
                       initial={{ opacity: 0, y: -6, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                       aria-label={
                         lang === "EN"
                           ? "Portfolio mobile navigation"
@@ -1734,7 +1756,7 @@ export default function PortfolioUI({
                 </AnimatePresence>
               </div>
 
-              {/* DESKTOP & TABLET (>= 768px): Centered Symmetrical Jump-Link Bar */}
+              {/* DESKTOP & TABLET (>= 768px) */}
               <nav
                 aria-label={
                   lang === "EN" ? "Portfolio navigation" : "Điều hướng trang"
@@ -1753,7 +1775,7 @@ export default function PortfolioUI({
                 ))}
               </nav>
 
-              {/* Evenly Matched Dual Language Toggle (EN | VN) */}
+              {/* Dual Language Toggle (EN | VN) */}
               <div
                 role="group"
                 aria-label={
@@ -1782,7 +1804,7 @@ export default function PortfolioUI({
                 })}
               </div>
 
-              {/* Evenly Matched Theme Toggle */}
+              {/* Theme Toggle */}
               <button
                 type="button"
                 onClick={() =>
@@ -1810,9 +1832,7 @@ export default function PortfolioUI({
           </div>
         </header>
 
-        {/* UNIFIED SINGLE-PAGE FLOW: Profile Info -> Projects -> Certificates */}
         <main className="flex-1 flex flex-col pb-10">
-          {/* 1. Centered Profile Hero (with Bottom 4 Social Icons), Experience, Technical Skills & Education */}
           <MoreInfoView
             lang={lang}
             profileName={profileName}
@@ -1837,7 +1857,6 @@ export default function PortfolioUI({
             }
           />
 
-          {/* 2. Projects Showcase Section (Shared Grid / Stage Mode) */}
           <ShowcaseSectionBlock
             sectionId="projects"
             headingEn="Projects"
@@ -1863,7 +1882,6 @@ export default function PortfolioUI({
             renderLinkified={renderLinkified}
           />
 
-          {/* 3. Certificates & Accreditations Section (Shared Grid / Stage Mode) */}
           {rawCertificates.length > 0 && (
             <ShowcaseSectionBlock
               sectionId="certificates"
@@ -1893,7 +1911,6 @@ export default function PortfolioUI({
           )}
         </main>
 
-        {/* Grounded Symmetric 3-Column Footer */}
         <footer className="w-full mt-auto pt-4 pb-6 text-[12px]">
           <div className="apple-shell">
             <div className="mx-auto max-w-[1040px] pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
@@ -1913,6 +1930,7 @@ export default function PortfolioUI({
                       rel={isMail ? undefined : "noopener noreferrer"}
                       aria-label={s.label}
                       title={s.label}
+                      data-cursor="magnetic"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:bg-[var(--pill-bg)] transition-colors"
                     >
                       <Icon className="h-4 w-4" />
@@ -1929,6 +1947,7 @@ export default function PortfolioUI({
                 {profileData?.email && (
                   <a
                     href={`mailto:${profileData.email}`}
+                    onPointerEnter={footerEmailMagnetic.onPointerEnter}
                     onPointerMove={footerEmailMagnetic.onPointerMove}
                     onPointerLeave={footerEmailMagnetic.onPointerLeave}
                     data-cursor="magnetic"
@@ -1943,7 +1962,6 @@ export default function PortfolioUI({
         </footer>
       </div>
 
-      {/* Seamless Full-Bleed Split-Inspector Modal (Strictly 2 Close Paths) */}
       <ProjectDetailModal
         project={selectedProject}
         lang={lang}

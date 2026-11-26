@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useCallback, useSyncExternalStore } from "react";
-import { motion } from "framer-motion";
 
 export function subscribeReducedMotion(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
@@ -25,62 +24,39 @@ export function useReducedMotionPreference(): boolean {
 
 /**
  * Scroll3DSection
- * Apple-style scroll-triggered 3D spatial reveal using IntersectionObserver + GPU transform only.
- * Uses `once: true` + `amount: "some"` so tall multi-card mobile sections (~3,000px+) trigger
- * immediately upon entering view and never vanish while scrolling through cards or pagination.
+ * Zero-overhead native semantic section container (no scroll-linked JS observers or 3D
+ * projection matrices during scroll so low-end laptops scroll with zero jank).
  */
 export function Scroll3DSection({
   id,
   className = "",
   children,
-  delay = 0,
 }: {
   id?: string;
   className?: string;
   children: React.ReactNode;
   delay?: number;
 }) {
-  const reducedMotion = useReducedMotionPreference();
-
   return (
-    <section id={id} className={`apple-perspective-stage ${className}`}>
-      <motion.div
-        initial={
-          reducedMotion
-            ? false
-            : { opacity: 0, y: 24, scale: 0.984, rotateX: 3.5 }
-        }
-        whileInView={
-          reducedMotion
-            ? undefined
-            : { opacity: 1, y: 0, scale: 1, rotateX: 0 }
-        }
-        viewport={{ once: true, amount: "some", margin: "0px 0px -20px 0px" }}
-        transition={{
-          duration: 0.58,
-          delay,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        style={{ transformOrigin: "50% 12%" }}
-        className="will-change-transform"
-      >
-        {children}
-      </motion.div>
+    <section id={id} className={className}>
+      {children}
     </section>
   );
 }
 
 /**
  * Tilt3DCard
- * Interactive 3D perspective card with subtle Apple VisionOS specular sheen on desktop fine pointers,
- * plus scroll-triggered 3D entrance and responsive press feedback on mobile/touch devices.
+ * Lightweight interactive card:
+ * - Zero scroll observers, zero Framer Motion wrapper overhead, zero idle `will-change` VRAM cost.
+ * - Caches card bounding box once on `pointerenter` so mouse movement never triggers layout reflow.
+ * - Automatically skips 3D specular calculation on low-core devices (`hardwareConcurrency <= 4`).
  */
 export function Tilt3DCard({
   children,
   onClick,
   className = "",
-  maxTilt = 4.2,
-  index = 0,
+  maxTilt = 3.2,
+  cursorZone = "view",
   style,
 }: {
   children: React.ReactNode;
@@ -88,19 +64,39 @@ export function Tilt3DCard({
   className?: string;
   maxTilt?: number;
   index?: number;
+  cursorZone?: "view" | "magnetic";
   style?: React.CSSProperties;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const rafRef = useRef<number | null>(null);
-
   const reducedMotion = useReducedMotionPreference();
+
+  const handlePointerEnter = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (reducedMotion || e.pointerType !== "mouse") return;
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.hardwareConcurrency &&
+        navigator.hardwareConcurrency <= 4
+      ) {
+        return;
+      }
+      rectRef.current = e.currentTarget.getBoundingClientRect();
+    },
+    [reducedMotion]
+  );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (reducedMotion || e.pointerType !== "mouse") return;
-      const el = cardRef.current;
-      if (!el) return;
-
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.hardwareConcurrency &&
+        navigator.hardwareConcurrency <= 4
+      ) {
+        return;
+      }
       const clientX = e.clientX;
       const clientY = e.clientY;
 
@@ -108,9 +104,8 @@ export function Tilt3DCard({
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         const target = cardRef.current;
-        if (!target) return;
-        const rect = target.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
+        const rect = rectRef.current;
+        if (!target || !rect || !rect.width || !rect.height) return;
 
         const px = (clientX - rect.left) / rect.width;
         const py = (clientY - rect.top) / rect.height;
@@ -132,6 +127,7 @@ export function Tilt3DCard({
       window.cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    rectRef.current = null;
     const el = cardRef.current;
     if (!el) return;
     el.style.setProperty("--rx", "0deg");
@@ -139,45 +135,22 @@ export function Tilt3DCard({
     el.style.setProperty("--glare-opacity", "0");
   }, []);
 
-  const staggerDelay = Math.min(index % 6, 5) * 0.04;
-
   return (
-    <motion.div
-      initial={
-        reducedMotion
-          ? false
-          : { opacity: 0, y: 20, scale: 0.972, rotateX: 4 }
-      }
-      whileInView={
-        reducedMotion
-          ? undefined
-          : { opacity: 1, y: 0, scale: 1, rotateX: 0 }
-      }
-      viewport={{ once: true, amount: "some", margin: "0px 0px -16px 0px" }}
-      transition={{
-        duration: 0.48,
-        delay: staggerDelay,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      style={{ transformPerspective: 1100 }}
-      className="h-full"
+    <div
+      ref={cardRef}
+      onClick={onClick}
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      data-cursor={onClick ? cursorZone : undefined}
+      style={style}
+      className={`apple-3d-tilt-card relative h-full ${className}`}
     >
+      {children}
       <div
-        ref={cardRef}
-        onClick={onClick}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        data-cursor={onClick ? "magnetic" : undefined}
-        style={style}
-        className={`apple-3d-tilt-card relative h-full ${className}`}
-      >
-        {children}
-        {/* Dynamic Specular Sheen Overlay (Mouse hover only, 0 cost at rest) */}
-        <div
-          aria-hidden="true"
-          className="apple-3d-glare pointer-events-none absolute inset-0 rounded-[inherit]"
-        />
-      </div>
-    </motion.div>
+        aria-hidden="true"
+        className="apple-3d-glare pointer-events-none absolute inset-0 rounded-[inherit]"
+      />
+    </div>
   );
 }
