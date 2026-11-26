@@ -16,11 +16,11 @@
   --ink-decorative: #c6c6cf;
   --pill-bg: rgba(229, 229, 235, 0.92);
   --pill-active-bg: #ffffff;
-  --row-hover-bg: rgba(20, 20, 22, 0.04);
+  --row-hover-bg: rgba(20, 20, 22, 0.045);
   --glass-bg: rgba(245, 245, 247, 0.88);
   --glass-border: rgba(20, 20, 22, 0.08);
   --glass-sub-ink: #43434a;
-  --glass-shadow: 0 12px 32px rgba(15, 15, 20, 0.07), 0 2px 6px rgba(15, 15, 20, 0.03);
+  --glass-shadow: 0 12px 32px rgba(15, 15, 20, 0.08), 0 2px 6px rgba(15, 15, 20, 0.035);
   --card-border: rgba(20, 20, 22, 0.08);
   --card-shadow: 0 10px 26px rgba(15, 15, 20, 0.045), 0 2px 6px rgba(15, 15, 20, 0.025);
   --specular-rim: inset 0 1px 0 rgba(255, 255, 255, 0.95);
@@ -56,7 +56,7 @@
   --ink-decorative: #3d404b;
   --pill-bg: #1c1e26;
   --pill-active-bg: #2c2f3b;
-  --row-hover-bg: rgba(255, 255, 255, 0.042);
+  --row-hover-bg: rgba(255, 255, 255, 0.048);
   --glass-bg: rgba(9, 10, 14, 0.88);
   --glass-border: rgba(255, 255, 255, 0.09);
   --glass-sub-ink: #c9cbd4;
@@ -120,8 +120,6 @@ body.lock-scroll {
 
 /*
  * Architectural Studio Canvas (Static Single-Pass GPU Texture — 0ms Scroll Cost)
- * Combines overhead warm-platinum softbox spotlight, champagne & silver rim washes,
- * and deep obsidian falloff using pure mathematical gradients with zero CSS blur filters.
  */
 .apple-studio-canvas {
   background-color: var(--background);
@@ -206,8 +204,6 @@ body.lock-scroll {
 
 /*
  * Elevated Smoked-Titanium Surface Card
- * Opaque gradient surface with specular rim — zero per-card backdrop-filter blur
- * so scrolling 12+ cards stays silky smooth on low-end integrated GPUs.
  */
 .apple-surface-card {
   background: var(--surface-card-bg);
@@ -232,7 +228,7 @@ body.lock-scroll {
   box-shadow: none !important;
 }
 
-/* Frosted Glass Surface (Used selectively on floating mobile nav popover) */
+/* Frosted Glass Surface (Used selectively on floating switchers & mobile nav popover) */
 .apple-glass {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--glass-border);
@@ -247,6 +243,47 @@ body.lock-scroll {
     backdrop-filter: blur(14px) saturate(155%);
     -webkit-backdrop-filter: blur(14px) saturate(155%);
   }
+}
+
+/*
+ * GPU-Composited Section Entrance Reveal (One-Shot IntersectionObserver, 0ms Scroll Overhead)
+ */
+.apple-section-reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.apple-section-reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/*
+ * Grid Card Row-by-Row, Left-to-Right, Bottom-to-Top Cascading Entrance
+ * Pure GPU `opacity` + `translate3d` so even 4x CPU-throttled devices hold 60fps.
+ */
+.apple-grid-card-entrance {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0) scale(0.985);
+  transition:
+    opacity 430ms cubic-bezier(0.22, 1, 0.36, 1) var(--stagger-delay, 0ms),
+    transform 450ms cubic-bezier(0.22, 1, 0.36, 1) var(--stagger-delay, 0ms),
+    box-shadow 220ms ease,
+    border-color 200ms ease;
+}
+
+.apple-grid-card-entrance[data-card-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.apple-grid-card-entrance[data-card-settled="true"] {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease,
+    border-color 200ms ease;
 }
 
 /* Subtle Hover Row & Magnetic Parallax (Zero idle will-change VRAM overhead) */
@@ -279,7 +316,7 @@ body.lock-scroll {
 }
 
 /* Lightweight Interactive Card Lift & Optional Fine-Pointer Specular Tilt */
-.apple-3d-tilt-card {
+.apple-3d-tilt-card:not(.apple-grid-card-entrance) {
   transform: translate3d(0, 0, 0);
   transition:
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -288,9 +325,10 @@ body.lock-scroll {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .apple-3d-tilt-card:hover {
+  .apple-3d-tilt-card[data-card-settled="true"]:hover,
+  .apple-3d-tilt-card:not(.apple-grid-card-entrance):hover {
     will-change: transform;
-    transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, -2px, 0);
+    transform: perspective(1050px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, -3px, 0);
   }
 }
 
@@ -326,8 +364,8 @@ body.lock-scroll {
   letter-spacing: -0.008em;
 }
 
-/* ── Reference Portfolio Custom Cursor + Smooth Spring Effect (Desktop Fine Pointer Only) ── */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+/* ── Reference Portfolio Custom Cursor + Smooth Spring Effect (Desktop >= 768px Fine Pointer Only) ── */
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   html.custom-cursor-active,
   html.custom-cursor-active body,
   html.custom-cursor-active a,
@@ -336,6 +374,13 @@ body.lock-scroll {
   html.custom-cursor-active [role="tab"],
   html.custom-cursor-active [data-cursor] {
     cursor: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .apple-cursor,
+  .apple-cursor-dot {
+    display: none !important;
   }
 }
 
@@ -503,6 +548,11 @@ body.lock-scroll {
   .apple-cursor,
   .apple-cursor-dot {
     display: none !important;
+  }
+  .apple-section-reveal,
+  .apple-grid-card-entrance {
+    opacity: 1 !important;
+    transform: none !important;
   }
   *,
   *::before,

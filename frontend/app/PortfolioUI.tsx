@@ -34,11 +34,15 @@ import CustomCursor from "./components/CustomCursor";
 import AmbientBackdrop from "./components/AmbientBackdrop";
 import {
   Scroll3DSection,
+  StaggeredShowcaseGrid,
   Tilt3DCard,
   useReducedMotionPreference,
 } from "./components/Scroll3D";
 import { AdaptiveGridCover } from "./components/SafePortfolioImage";
-import { preloadImagesBackground } from "./components/imagePreloader";
+import {
+  preloadImagesBackground,
+  preloadImagesPriority,
+} from "./components/imagePreloader";
 import {
   buildTagColorMap,
   getTagColorScheme,
@@ -701,7 +705,6 @@ interface ShowcaseSectionBlockProps {
   tags: string[];
   tagColorMap: Map<string, TagColorScheme>;
   layoutMode: ShowcaseLayout;
-  onLayoutModeChange: (mode: ShowcaseLayout) => void;
   sortOrder: SortOrder;
   onSortOrderChange: (ord: SortOrder) => void;
   selectedCategory: string | null;
@@ -727,7 +730,6 @@ function ShowcaseSectionBlock({
   tags,
   tagColorMap,
   layoutMode,
-  onLayoutModeChange,
   sortOrder,
   onSortOrderChange,
   selectedCategory,
@@ -815,11 +817,14 @@ function ShowcaseSectionBlock({
   };
 
   const showCategoryPills = categories.length > 1;
+  const gridViewKey = `${sectionId}-grid-${currentPage}-${
+    activeCategory ?? "all"
+  }-${selectedTag ?? "all"}-${sortOrder}`;
 
   return (
     <Scroll3DSection id={sectionId} className="apple-shell py-4 sm:py-6">
       <div ref={sectionTopRef} className="space-y-4 sm:space-y-5">
-        {/* Section Header + Evenly Balanced Responsive Switches */}
+        {/* Section Header + Clean Sort Capsule (Layout Switcher Floats Globally) */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-[var(--card-border)]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -843,50 +848,15 @@ function ShowcaseSectionBlock({
                 ? `Interactive Stage · ${filteredItems.length} ${
                     isCertificateSection ? "credentials" : "projects"
                   }`
-                : `Sân khấu 3 cột · ${filteredItems.length} ${
+                : `Sân khấu tương tác · ${filteredItems.length} ${
                     isCertificateSection ? "chứng chỉ" : "dự án"
                   }`}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="flex h-9 sm:h-10 items-center p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
-              <button
-                type="button"
-                onClick={() => onLayoutModeChange("grid")}
-                data-cursor="magnetic"
-                aria-pressed={layoutMode === "grid"}
-                className={`flex-1 sm:flex-initial inline-flex h-7 sm:h-8 items-center justify-center gap-1.5 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                  layoutMode === "grid"
-                    ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                    : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">
-                  {lang === "EN" ? "Grid" : "Lưới"}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onLayoutModeChange("stage")}
-                data-cursor="magnetic"
-                aria-pressed={layoutMode === "stage"}
-                className={`flex-1 sm:flex-initial inline-flex h-7 sm:h-8 items-center justify-center gap-1.5 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                  layoutMode === "stage"
-                    ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                    : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                }`}
-              >
-                <GalleryHorizontalEnd className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">
-                  {lang === "EN" ? "Stage" : "Sân khấu"}
-                </span>
-              </button>
-            </div>
-
-            <div className="flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
-              <span className="hidden md:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
+          <div className="flex items-center justify-start sm:justify-end w-full sm:w-auto">
+            <div className="flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[11px] sm:rounded-[12px] bg-[var(--pill-bg)] apple-hairline w-full sm:w-auto">
+              <span className="inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span>{lang === "EN" ? "Sort" : "Xếp"}</span>
               </span>
@@ -899,7 +869,7 @@ function ShowcaseSectionBlock({
                     onPageChange(1);
                   }}
                   data-cursor="magnetic"
-                  className={`flex-1 sm:flex-initial h-7 sm:h-8 px-2 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer truncate ${
+                  className={`flex-1 sm:flex-initial h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer truncate ${
                     sortOrder === ord
                       ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
                       : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
@@ -1061,7 +1031,10 @@ function ShowcaseSectionBlock({
                   : "Không có mục nào khớp bộ lọc đang chọn."}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <StaggeredShowcaseGrid
+                key={gridViewKey}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+              >
                 {paginatedGridItems.map((item, idx) => {
                   const title =
                     (lang === "EN" ? item.title_en : item.title_vn) ||
@@ -1101,8 +1074,14 @@ function ShowcaseSectionBlock({
                     <Tilt3DCard
                       key={item.id}
                       index={idx}
+                      staggerReveal
                       maxTilt={3.2}
                       cursorZone="view"
+                      onPrewarm={
+                        primarySrc
+                          ? () => preloadImagesPriority([primarySrc], 1080)
+                          : undefined
+                      }
                       onClick={() => onSelectProject(item)}
                       className="group flex flex-col rounded-[20px] sm:rounded-[24px] apple-surface-card overflow-hidden cursor-pointer"
                     >
@@ -1201,7 +1180,7 @@ function ShowcaseSectionBlock({
                     </Tilt3DCard>
                   );
                 })}
-              </div>
+              </StaggeredShowcaseGrid>
             )}
 
             {totalPages > 1 && (
@@ -1268,8 +1247,9 @@ export default function PortfolioUI({
   profileData: incomingProfile = null,
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
+  // Default showcase view is Stage ("stage") per user preference
   const [showcaseLayoutMode, setShowcaseLayoutMode] =
-    useState<ShowcaseLayout>("grid");
+    useState<ShowcaseLayout>("stage");
 
   const [selectedProjectCategory, setSelectedProjectCategory] = useState<
     string | null
@@ -1289,10 +1269,13 @@ export default function PortfolioUI({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeSection, setActiveSection] = useState<string>("about");
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showFloatingViewSwitch, setShowFloatingViewSwitch] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  const mainRef = useRef<HTMLElement | null>(null);
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
   const isScrolledRef = useRef(false);
+  const showFloatingSwitchRef = useRef(false);
   const activeSectionRef = useRef("about");
 
   const { resolvedTheme, setTheme } = useTheme();
@@ -1452,22 +1435,16 @@ export default function PortfolioUI({
     if (profileData.github) {
       links.push({
         type: "github",
+        name: "GitHub",
         label: "GitHub",
         href: profileData.github,
         icon: GithubIcon,
       });
     }
-    if (profileData.email) {
-      links.push({
-        type: "email",
-        label: `Email (${profileData.email})`,
-        href: `mailto:${profileData.email}`,
-        icon: Mail,
-      });
-    }
     if (profileData.linkedin) {
       links.push({
         type: "linkedin",
+        name: "LinkedIn",
         label: "LinkedIn",
         href: profileData.linkedin,
         icon: LinkedinIcon,
@@ -1476,9 +1453,19 @@ export default function PortfolioUI({
     if (profileData.instagram) {
       links.push({
         type: "instagram",
+        name: "Instagram",
         label: "Instagram",
         href: profileData.instagram,
         icon: InstagramIcon,
+      });
+    }
+    if (profileData.email) {
+      links.push({
+        type: "email",
+        name: "Email",
+        label: `Email (${profileData.email})`,
+        href: `mailto:${profileData.email}`,
+        icon: Mail,
       });
     }
     return links;
@@ -1529,11 +1516,12 @@ export default function PortfolioUI({
     rawCertificates.length,
   ]);
 
-  // Zero-Reflow Scroll-Spy: Caches section offsetTop positions and only updates React state on boundary crossings
+  // Zero-Reflow Scroll-Spy + Mid-Education Floating View Switcher Threshold
   useEffect(() => {
     if (typeof window === "undefined") return;
     let rafId: number | null = null;
     let cachedOffsets: { id: string; top: number }[] = [];
+    let eduMidScrollTriggerY = 480;
 
     const measureOffsets = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0;
@@ -1544,6 +1532,23 @@ export default function PortfolioUI({
           top: el ? el.getBoundingClientRect().top + scrollY : 0,
         };
       });
+
+      const eduEl = document.getElementById("education");
+      const projEl = document.getElementById("projects");
+      if (eduEl) {
+        const rect = eduEl.getBoundingClientRect();
+        const eduMidDocY = rect.top + scrollY + rect.height * 0.5;
+        eduMidScrollTriggerY = Math.max(
+          140,
+          eduMidDocY - window.innerHeight * 0.52
+        );
+      } else if (projEl) {
+        const rect = projEl.getBoundingClientRect();
+        eduMidScrollTriggerY = Math.max(
+          140,
+          rect.top + scrollY - window.innerHeight * 0.55
+        );
+      }
     };
 
     const evaluateScroll = () => {
@@ -1556,6 +1561,12 @@ export default function PortfolioUI({
       }
 
       if (!cachedOffsets.length) measureOffsets();
+
+      const nextShowFloating = y >= eduMidScrollTriggerY;
+      if (nextShowFloating !== showFloatingSwitchRef.current) {
+        showFloatingSwitchRef.current = nextShowFloating;
+        setShowFloatingViewSwitch(nextShowFloating);
+      }
 
       const triggerY = y + 150;
       let current = cachedOffsets[0]?.id || "about";
@@ -1585,10 +1596,20 @@ export default function PortfolioUI({
     measureOffsets();
     evaluateScroll();
 
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && mainRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        measureOffsets();
+        onScroll();
+      });
+      resizeObserver.observe(mainRef.current);
+    }
+
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize, { passive: true });
     return () => {
       if (rafId !== null) window.cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
@@ -1650,8 +1671,6 @@ export default function PortfolioUI({
     []
   );
 
-  const footerEmailMagnetic = useMagneticHandlers(4);
-
   const activeTypingRole = profileData
     ? (lang === "VN" ? profileData.role_vn : profileData.role_en) ||
       profileData.role_en ||
@@ -1667,6 +1686,9 @@ export default function PortfolioUI({
 
   const activeNavEntry =
     navSections.find((s) => s.id === activeSection) || navSections[0];
+
+  const floatingSwitcherVisible =
+    showFloatingViewSwitch && !selectedProject && !mobileNavOpen;
 
   return (
     <div className="relative min-h-screen flex flex-col text-[var(--foreground)]">
@@ -1832,7 +1854,7 @@ export default function PortfolioUI({
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col pb-10">
+        <main ref={mainRef} className="flex-1 flex flex-col pb-10">
           <MoreInfoView
             lang={lang}
             profileName={profileName}
@@ -1867,7 +1889,6 @@ export default function PortfolioUI({
             tags={projectTags}
             tagColorMap={tagColorMap}
             layoutMode={showcaseLayoutMode}
-            onLayoutModeChange={setShowcaseLayoutMode}
             sortOrder={projectSort}
             onSortOrderChange={setProjectSort}
             selectedCategory={selectedProjectCategory}
@@ -1894,7 +1915,6 @@ export default function PortfolioUI({
               tags={certTags}
               tagColorMap={tagColorMap}
               layoutMode={showcaseLayoutMode}
-              onLayoutModeChange={setShowcaseLayoutMode}
               sortOrder={certSort}
               onSortOrderChange={setCertSort}
               selectedCategory={selectedCertCategory}
@@ -1911,12 +1931,13 @@ export default function PortfolioUI({
           )}
         </main>
 
-        <footer className="w-full mt-auto pt-4 pb-6 text-[12px]">
+        <footer className="w-full mt-auto pt-4 pb-20 sm:pb-16 text-[12.5px]">
           <div className="apple-shell">
-            <div className="mx-auto max-w-[1040px] pt-4 border-t border-[var(--card-border)] flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className="mx-auto max-w-[1040px] pt-4 border-t border-[var(--card-border)] flex flex-col md:flex-row items-center justify-between gap-3">
+              {/* Unified Footer Social + Email Links (Icon + Name in 1 Single Clickable Link) */}
               <nav
                 aria-label="Social links"
-                className="flex flex-wrap items-center justify-center md:justify-start gap-3"
+                className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-3"
               >
                 {socialLinks.map((s) => {
                   const Icon = s.icon;
@@ -1931,36 +1952,99 @@ export default function PortfolioUI({
                       aria-label={s.label}
                       title={s.label}
                       data-cursor="magnetic"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:bg-[var(--pill-bg)] transition-colors"
+                      data-testid={`footer-social-${s.type}`}
+                      className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[var(--ink-meta)] hover:text-[var(--ink-primary)] hover:bg-[var(--row-hover-bg)] transition-colors cursor-pointer select-none"
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105" />
+                      <span className="font-medium leading-none">{s.name}</span>
                     </a>
                   );
                 })}
               </nav>
 
-              <p className="text-[var(--ink-muted)] text-center">
+              <p className="text-[var(--ink-muted)] text-center md:text-right">
                 © {new Date().getFullYear()} {profileName} Portfolio
               </p>
-
-              <div className="flex items-center justify-center md:justify-end">
-                {profileData?.email && (
-                  <a
-                    href={`mailto:${profileData.email}`}
-                    onPointerEnter={footerEmailMagnetic.onPointerEnter}
-                    onPointerMove={footerEmailMagnetic.onPointerMove}
-                    onPointerLeave={footerEmailMagnetic.onPointerLeave}
-                    data-cursor="magnetic"
-                    className="magnetic-target text-[var(--ink-meta)] hover:text-[var(--ink-primary)] transition-colors break-all text-center"
-                  >
-                    {profileData.email}
-                  </a>
-                )}
-              </div>
             </div>
           </div>
         </footer>
       </div>
+
+      {/* FLOATING & STICKY VIEW SWITCHER (`Stage | Grid`) — Appears at Mid-#education, Hides Above */}
+      <AnimatePresence>
+        {floatingSwitcherVisible && (
+          <motion.div
+            data-testid="floating-view-switcher"
+            role="group"
+            aria-label={
+              lang === "EN"
+                ? "Switch showcase view mode"
+                : "Chuyển chế độ hiển thị dự án và chứng chỉ"
+            }
+            initial={{ opacity: 0, y: 20, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.92 }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 30,
+              mass: 0.72,
+            }}
+            className="fixed bottom-4 right-3.5 sm:bottom-6 sm:right-6 z-40 inline-flex items-center gap-0.5 p-1.5 rounded-full apple-glass"
+          >
+            {(
+              [
+                {
+                  mode: "stage" as const,
+                  icon: GalleryHorizontalEnd,
+                  labelEn: "Stage",
+                  labelVn: "Sân khấu",
+                },
+                {
+                  mode: "grid" as const,
+                  icon: LayoutGrid,
+                  labelEn: "Grid",
+                  labelVn: "Lưới",
+                },
+              ] as const
+            ).map((opt) => {
+              const active = showcaseLayoutMode === opt.mode;
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.mode}
+                  type="button"
+                  onClick={() => setShowcaseLayoutMode(opt.mode)}
+                  aria-pressed={active}
+                  data-cursor="magnetic"
+                  data-testid={`floating-switch-${opt.mode}`}
+                  className={`relative inline-flex h-8 sm:h-9 items-center justify-center gap-1.5 px-3 sm:px-3.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                    active
+                      ? "text-[var(--ink-primary)]"
+                      : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="floating-view-active-pill"
+                      transition={{
+                        type: "spring",
+                        stiffness: 450,
+                        damping: 34,
+                      }}
+                      className="absolute inset-0 rounded-full bg-[var(--pill-active-bg)] apple-hairline shadow-xs"
+                    />
+                  )}
+                  <Icon className="relative z-10 h-3.5 w-3.5 shrink-0" />
+                  <span className="relative z-10">
+                    {lang === "EN" ? opt.labelEn : opt.labelVn}
+                  </span>
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ProjectDetailModal
         project={selectedProject}

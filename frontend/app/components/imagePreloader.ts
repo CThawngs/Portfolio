@@ -2,15 +2,16 @@
 
 import {
   getOptimizedImageUrl,
+  recordLoadedBitmap,
   type AllowedNextImageWidth,
 } from "./SafePortfolioImage";
 
 /**
- * Lightweight Polite Image Prefetcher
- * - Warms compressed WebP thumbnails (~30–65 KB via `/_next/image`) ONLY for adjacent
- *   pagination / Stage items instead of downloading all 60+ multi-megabyte raw PNGs.
- * - Runs during browser idle time with max 2 concurrent low-priority fetches and
- *   automatically skips background prefetch on Data-Saver or slow 2G/3G connections.
+ * Lightweight Polite Image Prefetcher & Decoder
+ * - Warms compressed WebP thumbnails (~30–75 KB via `/_next/image`) ONLY for adjacent
+ *   pagination / Stage items and hovered cards instead of downloading 60+ raw PNGs.
+ * - Pre-decodes bitmaps off the main thread (`img.decode()`) and registers exact `currentSrc`
+ *   in `loadedBitmapCache` so opening `ProjectDetailModal` displays the image in 0ms.
  */
 
 const warmedUrls = new Set<string>();
@@ -68,14 +69,28 @@ function warmSingle(
     img.decoding = "async";
     if ("fetchPriority" in img) {
       (img as HTMLImageElement & { fetchPriority?: string }).fetchPriority =
-        highPriority ? "auto" : "low";
+        highPriority ? "high" : "low";
     }
-    const done = () => {
+    const finish = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        recordLoadedBitmap(
+          rawUrl,
+          img.currentSrc || img.src || targetUrl,
+          img.naturalWidth,
+          img.naturalHeight
+        );
+      }
       warmedUrls.add(targetUrl);
       inflightMap.delete(targetUrl);
       resolve();
     };
-    img.onload = done;
+    img.onload = () => {
+      if (typeof img.decode === "function") {
+        img.decode().then(finish, finish);
+      } else {
+        finish();
+      }
+    };
     img.onerror = () => {
       inflightMap.delete(targetUrl);
       resolve();

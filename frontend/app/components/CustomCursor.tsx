@@ -6,12 +6,12 @@ import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 type CursorZone = "default" | "prev" | "next" | "magnetic" | "view" | "overlay";
 
 /**
- * Reference-Portfolio Dual-Layer Custom Cursor (Zero React Re-renders, 0% Idle CPU)
+ * Reference-Portfolio Dual-Layer Custom Cursor (Desktop Fine Pointer >= 768px Only)
  * - `.apple-cursor-dot`: 1:1 zero-latency hardware dot so exact pointer position is always visible.
  * - `.apple-cursor`: Smooth framerate-independent spring-trailing circle that morphs across
  *   buttons/links (`magnetic`), project/certificate cards & Stage artwork (`view`), and prev/next controls.
- * - Fail-safe: Only hides native OS cursor (`html.custom-cursor-active`) once real mouse movement
- *   is confirmed and cursor DOM elements are mounted; immediately restores OS cursor on Tab/blur/touch.
+ * - Strictly disabled below `768px` and on touch/pen devices so mobile responsive viewports
+ *   never display stray desktop cursor rings.
  */
 export default function CustomCursor() {
   const ringRef = useRef<HTMLDivElement | null>(null);
@@ -21,13 +21,15 @@ export default function CustomCursor() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const mediaDesktop = window.matchMedia("(min-width: 768px)");
     const mediaFine = window.matchMedia("(hover: hover) and (pointer: fine)");
     const mediaMotion = window.matchMedia(
       "(prefers-reduced-motion: no-preference)"
     );
 
     const updateCapability = () => {
-      const ok = mediaFine.matches && mediaMotion.matches;
+      const ok =
+        mediaDesktop.matches && mediaFine.matches && mediaMotion.matches;
       setEnabled(ok);
       if (!ok) {
         document.documentElement.classList.remove("custom-cursor-active");
@@ -35,11 +37,13 @@ export default function CustomCursor() {
     };
 
     updateCapability();
+    mediaDesktop.addEventListener("change", updateCapability);
     mediaFine.addEventListener("change", updateCapability);
     mediaMotion.addEventListener("change", updateCapability);
 
     return () => {
       document.documentElement.classList.remove("custom-cursor-active");
+      mediaDesktop.removeEventListener("change", updateCapability);
       mediaFine.removeEventListener("change", updateCapability);
       mediaMotion.removeEventListener("change", updateCapability);
     };
@@ -90,7 +94,6 @@ export default function CustomCursor() {
       if (target.closest(".carousel-overlay-surface")) {
         return "overlay";
       }
-      // Check innermost interactive buttons/links BEFORE outer card `data-cursor="view"`
       const directControl = target.closest(
         "a, button, [role='tab'], input, select, textarea, [data-cursor='prev'], [data-cursor='next'], [data-cursor='magnetic']"
       );
@@ -138,7 +141,6 @@ export default function CustomCursor() {
       const dt = lastTime ? Math.min(0.05, (now - lastTime) / 1000) : 1 / 60;
       lastTime = now;
 
-      // Framerate-independent spring glide (snappy like iPadOS / reference portfolio)
       const alpha = 1 - Math.pow(0.00012, dt);
       ringX += (targetX - ringX) * alpha;
       ringY += (targetY - ringY) * alpha;
@@ -172,7 +174,11 @@ export default function CustomCursor() {
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch" || e.pointerType === "pen") {
+      if (
+        e.pointerType === "touch" ||
+        e.pointerType === "pen" ||
+        window.innerWidth < 768
+      ) {
         hideCursorAndRestoreNative();
         return;
       }
@@ -191,7 +197,6 @@ export default function CustomCursor() {
         ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
       }
 
-      // 1:1 instant zero-lag update on precision dot
       dot.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) translate(-50%, -50%)`;
 
       const nextZone = resolveZone(e.target);
