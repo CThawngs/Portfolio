@@ -4,15 +4,15 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUpRight,
   Award,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Code,
   ExternalLink,
   Maximize2,
+  Minus,
   Plus,
-  X,
 } from "lucide-react";
 import type { Project } from "../PortfolioUI";
 
@@ -22,6 +22,7 @@ interface ShowcaseCarouselProps {
   isCertificateReel?: boolean;
   onSelectProject: (project: Project) => void;
   formatYearOrDate: (project: Project) => string;
+  formatDateRange: (dateRange: Project["project_date"]) => string | null;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
 }
 
@@ -35,10 +36,11 @@ export default function ShowcaseCarousel({
   isCertificateReel = false,
   onSelectProject,
   formatYearOrDate,
+  formatDateRange,
   renderLinkifiedText,
 }: ShowcaseCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isAnimated, setIsAnimated] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -82,19 +84,15 @@ export default function ShowcaseCarousel({
 
   const safeIndex = items.length ? Math.min(currentIndex, items.length - 1) : 0;
   const activeItem = items[safeIndex] || null;
-  const isOverlayOpen = Boolean(activeItem && expandedItemId === activeItem.id);
+  const isOverlayOpen = !isMinimized;
 
-  const toggleOverlay = useCallback(
-    (nextOpen?: boolean) => {
-      if (!activeItem) return;
-      setExpandedItemId((prev) => {
-        const currentlyOpen = prev === activeItem.id;
-        const target = typeof nextOpen === "boolean" ? nextOpen : !currentlyOpen;
-        return target ? activeItem.id : null;
-      });
-    },
-    [activeItem]
-  );
+  const toggleOverlay = useCallback((nextOpen?: boolean) => {
+    setIsMinimized((prevMin) => {
+      const currentlyOpen = !prevMin;
+      const targetOpen = typeof nextOpen === "boolean" ? nextOpen : !currentlyOpen;
+      return !targetOpen;
+    });
+  }, []);
 
   const goToIndex = useCallback(
     (nextIdx: number, durationMs?: number) => {
@@ -104,7 +102,6 @@ export default function ShowcaseCarousel({
       setIsAnimated(true);
       setDragOffset(0);
       setCurrentIndex(clamped);
-      setExpandedItemId(null);
     },
     [items.length]
   );
@@ -131,7 +128,6 @@ export default function ShowcaseCarousel({
       ? Math.min(48, Math.max(12, Math.round(sideSpace * 0.4)))
       : Math.min(96, Math.max(36, Math.round(sideSpace * 0.3)));
 
-    // Total gap between active card and immediate neighbor = bigMargin + minMargin
     const bigMargin = Math.max(minMargin, Math.round(sideSpace - desiredPeek - minMargin));
 
     const margins = widths.map((_, i) => ({
@@ -200,7 +196,7 @@ export default function ShowcaseCarousel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [safeIndex, items.length, goToIndex, toggleOverlay]);
 
-  // Magnetic parallax on desktop frosted overlay (+/- 10px)
+  // Magnetic parallax on desktop frosted overlay (+/- 8px)
   const handleOverlayPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (isMobile || e.pointerType !== "mouse") return;
@@ -211,8 +207,8 @@ export default function ShowcaseCarousel({
       if (!rect.width || !rect.height) return;
       const nx = Math.max(-1, Math.min(1, (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)));
       const ny = Math.max(-1, Math.min(1, (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)));
-      el.style.setProperty("--px", `${(nx * 10).toFixed(2)}px`);
-      el.style.setProperty("--py", `${(ny * 10).toFixed(2)}px`);
+      el.style.setProperty("--px", `${(nx * 8).toFixed(2)}px`);
+      el.style.setProperty("--py", `${(ny * 8).toFixed(2)}px`);
     },
     [isMobile]
   );
@@ -223,10 +219,7 @@ export default function ShowcaseCarousel({
       el.style.setProperty("--px", "0px");
       el.style.setProperty("--py", "0px");
     }
-    if (!isMobile && isOverlayOpen) {
-      toggleOverlay(false);
-    }
-  }, [isMobile, isOverlayOpen, toggleOverlay]);
+  }, []);
 
   // iOS Photos Touch Swipe Physics (<= 920px: 20px edge guard, 10px axis lock, 0.55 rubber band, flick velocity)
   const touchStateRef = useRef<{
@@ -248,7 +241,6 @@ export default function ShowcaseCarousel({
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isMobile || e.touches.length !== 1) return;
     const t = e.touches[0];
-    // Preserve >= 20px edge-back gesture zone for iOS Safari / Android Chrome
     if (t.clientX < 20 || t.clientX > window.innerWidth - 20) return;
 
     touchStateRef.current = {
@@ -372,17 +364,17 @@ export default function ShowcaseCarousel({
     (lang === "EN"
       ? activeItem.desc_en || activeItem.desc_vn
       : activeItem.desc_vn || activeItem.desc_en) || "";
-  const activeYear = formatYearOrDate(activeItem);
-  const activePill =
-    activeItem.tags?.[0] ||
-    activeItem.category ||
-    (isCertificateReel
+  const activeDateStr = formatDateRange(activeItem.project_date) || formatYearOrDate(activeItem);
+  const activeCategory =
+    activeItem.category && activeItem.category !== "Uncategorized"
+      ? activeItem.category
+      : isCertificateReel
       ? lang === "EN"
-        ? "Credential"
+        ? "Certificate"
         : "Chứng chỉ"
       : lang === "EN"
-      ? "Software"
-      : "Dự án");
+      ? "Project"
+      : "Dự án";
 
   const renderOverlayCard = () => (
     <div
@@ -393,41 +385,43 @@ export default function ShowcaseCarousel({
         if (!isOverlayOpen) toggleOverlay(true);
       }}
       data-cursor="overlay"
-      className={`carousel-overlay-surface magnetic-target z-20 rounded-[20px] sm:rounded-[22px] transition-all duration-300 ${
+      className={`carousel-overlay-surface magnetic-target z-20 rounded-[20px] sm:rounded-[24px] transition-all duration-300 ${
         isMobile
-          ? "relative mx-auto mt-4 w-[min(82vw,540px)] apple-glass px-4 sm:px-5 py-3.5 sm:py-4 text-left"
+          ? "relative mx-auto mt-4 w-[min(82vw,540px)] apple-glass p-4 sm:p-5 text-left"
           : `absolute top-1/2 ${
               isOverlayOpen
-                ? "apple-glass w-[330px] p-5 rounded-[24px]"
-                : "apple-glass hover:scale-[1.03] px-4.5 py-3.5 w-[285px] cursor-pointer"
+                ? "apple-glass w-[345px] xl:w-[370px] p-5 rounded-[24px]"
+                : "apple-glass hover:scale-[1.03] px-4.5 py-3.5 w-[290px] cursor-pointer"
             }`
       }`}
       style={
         !isMobile
           ? {
-              left: "max(var(--page-gutter), calc(50% - min(30vw, 380px) - 44px))",
+              left: "max(var(--page-gutter), calc(50% - min(30vw, 380px) - 52px))",
               transform: `translate3d(var(--px, 0px), calc(-50% + var(--py, 0px)), 0)`,
             }
           : undefined
       }
     >
-      <div className="flex items-start justify-between gap-3 py-[0.08em]">
+      <div className="flex items-start justify-between gap-3 py-[0.06em]">
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] sm:text-[16px] leading-[1.35] font-bold text-[var(--ink-primary)] line-clamp-2">
-            {activeTitle}
-          </h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {activeYear && (
-              <span className="text-[12.5px] font-semibold tabular-nums text-[var(--ink-meta)]">
-                {activeYear}
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            {activeCategory && (
+              <span className="px-2.5 py-0.5 rounded-[7px] bg-[var(--pill-bg)] text-[var(--ink-primary)] font-semibold text-[11px] leading-[18px]">
+                {activeCategory}
               </span>
             )}
-            {activePill && (
-              <span className="px-2 py-0.5 rounded-[6px] bg-[var(--pill-bg)] text-[var(--ink-meta)] font-semibold text-[11px] leading-[18px]">
-                {activePill}
+            {activeDateStr && (
+              <span className="inline-flex items-center gap-1 text-[12px] font-semibold tabular-nums text-[var(--ink-meta)]">
+                <Calendar className="h-3 w-3 opacity-75" />
+                <span>{activeDateStr}</span>
               </span>
             )}
           </div>
+
+          <h3 className="text-[16px] sm:text-[17.5px] leading-[1.35] font-bold text-[var(--ink-primary)] break-words">
+            {activeTitle}
+          </h3>
         </div>
 
         <button
@@ -436,19 +430,28 @@ export default function ShowcaseCarousel({
             e.stopPropagation();
             toggleOverlay();
           }}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pill-bg)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors cursor-pointer"
           aria-expanded={isOverlayOpen}
           aria-label={
             isOverlayOpen
               ? lang === "EN"
-                ? "Collapse summary"
-                : "Thu gọn mô tả"
+                ? "Minimize card details"
+                : "Thu gọn thông tin thẻ"
               : lang === "EN"
-              ? "Expand summary"
-              : "Mở rộng mô tả"
+              ? "Expand card details"
+              : "Mở rộng thông tin thẻ"
+          }
+          title={
+            isOverlayOpen
+              ? lang === "EN"
+                ? "Minimize"
+                : "Thu gọn"
+              : lang === "EN"
+              ? "Expand"
+              : "Mở rộng"
           }
         >
-          {isOverlayOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {isOverlayOpen ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
         </button>
       </div>
 
@@ -459,23 +462,23 @@ export default function ShowcaseCarousel({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.2, 0.6, 0.2, 1] }}
-            className={`overflow-hidden ${
-              isMobile
-                ? "max-h-[42dvh] overflow-y-auto overscroll-contain"
-                : "max-h-[min(48vh,360px)] overflow-y-auto overscroll-contain"
-            }`}
+            transition={{ duration: 0.35, ease: [0.2, 0.6, 0.2, 1] }}
+            className="overflow-hidden"
           >
-            <div className="pt-3.5 mt-3 border-t border-[var(--card-border)] space-y-3.5 py-[0.12em]">
+            <div className="pt-3 mt-3 border-t border-[var(--card-border)] space-y-3 py-[0.08em]">
               {activeDesc && (
-                <div className="text-[13.5px] leading-[1.6] text-[var(--glass-sub-ink)] line-clamp-6">
+                <div
+                  className={`text-[13.5px] leading-[1.6] text-[var(--glass-sub-ink)] whitespace-pre-line pr-1 overflow-y-auto overscroll-contain ${
+                    isMobile ? "max-h-[34dvh]" : "max-h-[165px]"
+                  }`}
+                >
                   {renderLinkifiedText(activeDesc)}
                 </div>
               )}
 
               {activeItem.tags && activeItem.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {activeItem.tags.slice(0, 6).map((tag) => (
+                  {activeItem.tags.map((tag) => (
                     <span
                       key={tag}
                       className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-secondary)]"
@@ -493,10 +496,18 @@ export default function ShowcaseCarousel({
                     e.stopPropagation();
                     onSelectProject(activeItem);
                   }}
-                  className="inline-flex min-h-[38px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs font-semibold hover:opacity-85 transition-opacity cursor-pointer"
+                  className="inline-flex min-h-[36px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--ink-primary)] text-[var(--background)] text-xs font-semibold hover:opacity-85 transition-opacity cursor-pointer"
                 >
                   <Maximize2 className="h-3.5 w-3.5" />
-                  <span>{lang === "EN" ? "Full Details" : "Xem Chi Tiết"}</span>
+                  <span>
+                    {isCertificateReel
+                      ? lang === "EN"
+                        ? "View Certificate"
+                        : "Xem Chứng Chỉ"
+                      : lang === "EN"
+                      ? "View Details"
+                      : "Xem Chi Tiết"}
+                  </span>
                 </button>
 
                 {activeItem.links && (
@@ -505,9 +516,9 @@ export default function ShowcaseCarousel({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex min-h-[38px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                    className="inline-flex min-h-[36px] items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--pill-bg)] text-[var(--ink-primary)] text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
                   >
-                    <span>{lang === "EN" ? "Live" : "Mở Link"}</span>
+                    <span>{lang === "EN" ? "Open Live" : "Xem Trực Tiếp"}</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
@@ -533,7 +544,7 @@ export default function ShowcaseCarousel({
           ? "Projects showcase"
           : "Trình diễn dự án"
       }
-      className="relative w-full select-none focus:outline-none my-3 sm:my-4"
+      className="relative w-full select-none focus:outline-none my-2 sm:my-3"
     >
       {/* Main Horizontal Stage (overflow-x-clip prevents vertical clipping of expanded desktop frosted overlay) */}
       <div
@@ -545,23 +556,23 @@ export default function ShowcaseCarousel({
           touchAction: "pan-y",
         }}
       >
-        {/* Desktop Stage-Anchored Frosted Overlay */}
+        {/* Desktop Stage-Anchored Frosted Summary Card */}
         {!isMobile && renderOverlayCard()}
 
-        {/* Desktop Invisible Left / Right Click Zones (disabled on <= 920px per Apple HIG audit) */}
+        {/* Desktop Invisible Left / Right Click Zones */}
         {!isMobile && items.length > 1 && (
           <>
             <div
               onClick={() => safeIndex > 0 && goToIndex(safeIndex - 1)}
               data-cursor={safeIndex > 0 ? "prev" : "disabled"}
               aria-hidden="true"
-              className="absolute inset-y-0 left-0 w-[22%] z-10"
+              className="absolute inset-y-0 left-0 w-[20%] z-10"
             />
             <div
               onClick={() => safeIndex < items.length - 1 && goToIndex(safeIndex + 1)}
               data-cursor={safeIndex < items.length - 1 ? "next" : "disabled"}
               aria-hidden="true"
-              className="absolute inset-y-0 right-0 w-[22%] z-10"
+              className="absolute inset-y-0 right-0 w-[20%] z-10"
             />
           </>
         )}
@@ -583,6 +594,7 @@ export default function ShowcaseCarousel({
               item.title_en ||
               item.title_vn ||
               "Untitled";
+            const itemDate = formatDateRange(item.project_date) || formatYearOrDate(item);
             const coverSrc = item.images && item.images[0] ? item.images[0] : "";
             const margins = itemMargins[idx] || { ml: 16, mr: 16 };
 
@@ -640,45 +652,40 @@ export default function ShowcaseCarousel({
                     )}
                   </div>
                 ) : (
-                  /* Bespoke Apple Studio Poster Card when a Notion entry has no cover image */
-                  <div className="relative flex h-full w-full flex-col justify-between p-6 sm:p-10 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)]">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-[var(--pill-bg)] text-[var(--ink-primary)]">
+                  /* Minimalist Apple Studio Artwork Canvas when a Notion entry has no cover image */
+                  <div className="relative flex h-full w-full flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[var(--surface-elevated)] via-[var(--background)] to-[var(--pill-bg)] overflow-hidden">
+                    <div
+                      className={`flex flex-col items-center justify-center text-center transition-transform duration-300 ${
+                        !isMobile && isActive && isOverlayOpen ? "lg:translate-x-[18%]" : ""
+                      }`}
+                    >
+                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-[22px] sm:rounded-[26px] bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] mb-4 shadow-2xs">
                         {isCertificateReel ? (
-                          <Award className="h-5 w-5" />
+                          <Award className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
                         ) : (
-                          <Code className="h-5 w-5" />
+                          <Code className="h-8 w-8 sm:h-9 sm:w-9 opacity-80" />
                         )}
-                      </span>
-                      <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                        {formatYearOrDate(item)}
-                      </span>
-                    </div>
-
-                    <div className="max-w-lg py-[0.12em]">
-                      <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] font-semibold text-[var(--ink-meta)] mb-1.5 sm:mb-2">
-                        {item.category || (isCertificateReel ? "Credential" : "Featured Work")}
-                      </p>
-                      <h4 className="apple-h2 text-lg sm:text-3xl font-semibold text-[var(--ink-primary)] line-clamp-2">
-                        {title}
-                      </h4>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        {(item.tags || []).slice(0, 3).map((t) => (
-                          <span
-                            key={t}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-secondary)]"
-                          >
-                            {t}
-                          </span>
-                        ))}
                       </div>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-meta)] shrink-0">
-                        <span>{lang === "EN" ? "Open" : "Mở"}</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      <span className="px-3 py-1 rounded-full bg-[var(--pill-bg)] text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--ink-meta)]">
+                        {item.category ||
+                          (isCertificateReel
+                            ? lang === "EN"
+                              ? "Credential"
+                              : "Chứng chỉ"
+                            : lang === "EN"
+                            ? "Project"
+                            : "Dự án")}
                       </span>
+                      {!isActive && (
+                        <p className="mt-3 max-w-[260px] text-sm font-medium text-[var(--ink-secondary)] line-clamp-2">
+                          {title}
+                        </p>
+                      )}
+                      {itemDate && (
+                        <span className="mt-2 text-xs font-medium tabular-nums text-[var(--ink-muted)]">
+                          {itemDate}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -687,7 +694,7 @@ export default function ShowcaseCarousel({
           })}
         </div>
 
-        {/* Mobile Overlay beneath active card (flush width with card) */}
+        {/* Mobile Full Info Card beneath active card (flush width with card) */}
         {isMobile && renderOverlayCard()}
       </div>
 

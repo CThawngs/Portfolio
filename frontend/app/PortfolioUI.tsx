@@ -13,7 +13,10 @@ import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase,
+  Calendar,
   Camera,
+  ExternalLink,
+  FolderKanban,
   Mail,
   ArrowLeft,
   ArrowUpRight,
@@ -22,7 +25,7 @@ import {
   Code,
   LayoutGrid,
   GalleryHorizontalEnd,
-  SlidersHorizontal,
+  Tag,
   Sun,
   Moon,
   ChevronLeft,
@@ -239,6 +242,7 @@ interface PortfolioUIProps {
 type SortOrder = "newest" | "oldest";
 type ActiveView = "showcase" | "more-info";
 type ShowcaseLayout = "stage" | "grid";
+type MacroTab = "projects" | "certificates";
 
 function cleanText(str: string): string {
   if (!str) return "";
@@ -445,6 +449,7 @@ function parseParagraphs(text: string): string[] {
 }
 
 const ITEMS_PER_PAGE = 6;
+const INITIAL_VISIBLE_TAGS = 12;
 
 const getTimeValue = (item: Project): number => {
   if (item.project_date?.start) {
@@ -477,13 +482,13 @@ const DEV_DEMO_PROFILE: ProfileData = {
     "AI Engineering Lab | AI Engineer Intern | 2026 - Present | Featured\n- Built LLM & Computer Vision optimization pipelines reducing inference latency by 38%\n- Designed automated bilingual content orchestration with zero-token idle overhead\nIndependent Studio | Solo Founder & Builder | 2024 - 2026\n- Shipped full-stack developer tools and Notion-synced web applications",
   experience_vn:
     "Phòng Nghiên Cứu AI | Thực Tập Sinh Kỹ Sư AI | 2026 - Hiện tại | Nổi bật\n- Xây dựng luồng tối ưu hóa LLM & Thị giác máy tính giúp giảm 38% độ trễ suy luận\n- Thiết kế kiến trúc đồng bộ nội dung song ngữ tự động hoàn toàn qua GitHub Actions\nIndependent Studio | Nhà Sáng Lập Độc Lập | 2024 - 2026\n- Phát triển công cụ cho lập trình viên và nền tảng web đồng bộ trực tiếp với Notion",
-  education_en: "University of Information Technology | B.S. in Information Technology | GPA: 3.7/4.0 | 2023 - 2027",
-  education_vn: "Đại học Công nghệ Thông tin | Cử nhân Công nghệ Thông tin | GPA: 3.7/4.0 | 2023 - 2027",
-  dob: null,
-  email: "contact@chithang.dev",
+  education_en: "Ly Tu Trong College | Information Technology | Specialized in AI & Software Engineering | 2022 - 2027",
+  education_vn: "Cao đẳng Lý Tự Trọng | Công nghệ Thông tin | Chuyên sâu AI & Kỹ thuật Phần mềm | 2022 - 2027",
+  dob: "2007-04-28",
+  email: "nguyenchithang2804@gmail.com",
   github: "https://github.com/CThawngs",
-  linkedin: "https://linkedin.com",
-  instagram: "https://instagram.com",
+  linkedin: "https://www.linkedin.com/in/cthawngs/",
+  instagram: "https://www.instagram.com/cthawngs2804/",
 };
 
 const DEV_DEMO_PROJECTS: Project[] = [
@@ -492,12 +497,14 @@ const DEV_DEMO_PROJECTS: Project[] = [
     status: "Published",
     title_en: "Portfolio AI Automation CMS",
     title_vn: "Hệ Thống CMS Portfolio Tự Động Hóa AI",
-    desc_en: "Serverless bridge between Notion CMS and OpenRouter LLMs with context-aware bilingual translation and instant ISR publishing. https://github.com/CThawngs/Portfolio",
-    desc_vn: "Cầu nối serverless giữa Notion CMS và OpenRouter LLM giúp dịch thuật song ngữ tự động chuẩn ngữ cảnh kỹ thuật số. https://github.com/CThawngs/Portfolio",
+    desc_en:
+      "Serverless bridge between Notion CMS and OpenRouter LLMs with context-aware bilingual translation and instant ISR publishing. https://github.com/CThawngs/Portfolio",
+    desc_vn:
+      "Cầu nối serverless giữa Notion CMS và OpenRouter LLM giúp dịch thuật song ngữ tự động chuẩn ngữ cảnh kỹ thuật số. https://github.com/CThawngs/Portfolio",
     category: "AI Systems",
     links: "https://github.com/CThawngs/Portfolio",
     images: ["/Portfolio Publish One Click.gif"],
-    tags: ["Next.js", "Notion API", "Python", "OpenRouter"],
+    tags: ["Next.js", "Notion API", "Python", "OpenRouter", "Tailwind CSS"],
     project_date: { start: "2026-09-01", end: null },
   },
   {
@@ -505,49 +512,72 @@ const DEV_DEMO_PROJECTS: Project[] = [
     status: "Published",
     title_en: "Context-Aware Translation Engine",
     title_vn: "Bộ Máy Dịch Thuật Nhận Thức Ngữ Cảnh",
-    desc_en: "Zero-idle-token hourly pipeline preserving software engineering terminology across English and Vietnamese.",
-    desc_vn: "Luồng dịch thuật định kỳ tiết kiệm tối đa token và giữ nguyên chuẩn xác thuật ngữ chuyên ngành phần mềm.",
+    desc_en:
+      "Zero-idle-token hourly pipeline preserving software engineering terminology across English and Vietnamese.",
+    desc_vn:
+      "Luồng dịch thuật định kỳ tiết kiệm tối đa token và giữ nguyên chuẩn xác thuật ngữ chuyên ngành phần mềm.",
     category: "AI Systems",
     links: "https://github.com/CThawngs/Portfolio",
     images: ["/Portfolio Translate Automation.gif"],
-    tags: ["LLM", "GitHub Actions", "Automation"],
+    tags: ["LLM", "GitHub Actions", "Automation", "Python"],
     project_date: { start: "2026-06-15", end: "2026-08-20" },
   },
   {
     id: "demo-3",
     status: "Published",
-    title_en: "Lifecycle Archive Controller",
-    title_vn: "Bộ Điều Khiển Lưu Trữ Tự Động",
-    desc_en: "Real-time Notion status synchronization with clean archival workflows and instant edge revalidation.",
-    desc_vn: "Đồng bộ trạng thái Notion theo thời gian thực cùng cơ chế lưu trữ và làm mới bộ nhớ đệm tức thì.",
+    title_en: "Disk Cleaner MCP & Lifecycle Controller",
+    title_vn: "Công Cụ Dọn Đĩa MCP & Điều Khiển Lưu Trữ Tự Động",
+    desc_en:
+      "AI-powered Model Context Protocol server for safe workspace analysis, duplicate detection, and instant archival revalidation.",
+    desc_vn:
+      "Máy chủ Model Context Protocol tích hợp AI phân tích dung lượng ổ đĩa, phát hiện trùng lặp và làm mới bộ nhớ đệm tức thì.",
     category: "Developer Tools",
-    links: "",
+    links: "https://github.com/CThawngs",
     images: ["/Portfolio Archive.gif"],
-    tags: ["TypeScript", "Edge ISR", "REST API"],
-    project_date: { start: "2026-03-10", end: null },
+    tags: ["TypeScript", "MCP", "Edge ISR", "REST API", "Node.js"],
+    project_date: { start: "2026-03-10", end: "2026-05-01" },
   },
   {
     id: "demo-cert-1",
     status: "Published",
-    title_en: "DeepLearning.AI Generative AI Specialization",
-    title_vn: "Chứng Chỉ Chuyên Sâu AI Tạo Sinh DeepLearning.AI",
-    desc_en: "Comprehensive credential covering transformer architectures, fine-tuning, RLHF, and production LLM deployment.",
-    desc_vn: "Chứng chỉ chuyên sâu về kiến trúc Transformer, tinh chỉnh mô hình, RLHF và triển khai LLM thực tế.",
+    title_en: "AI Riser Vietnam 2026 (Google Hackathon) — Top 200 Teams",
+    title_vn: "AI Riser Vietnam 2026 (Google Hackathon) — Top 200 Đội Xuất Sắc",
+    desc_en:
+      "Selected among the top 200 teams nationwide in Google's AI Riser Vietnam 2026 Hackathon for building practical Generative AI agent workflows.",
+    desc_vn:
+      "Lọt Top 200 đội thi xuất sắc toàn quốc tại cuộc thi AI Riser Vietnam 2026 do Google tổ chức với giải pháp tác tử AI tạo sinh thực tiễn.",
     category: "Certificate",
-    links: "https://www.deeplearning.ai",
+    links: "https://google.com",
     images: [],
-    tags: ["Generative AI", "LLMs", "PyTorch"],
+    tags: ["Google", "Generative AI", "Hackathon", "AI Agents"],
     project_date: { start: "2026-05-12", end: null },
+  },
+  {
+    id: "demo-cert-2",
+    status: "Published",
+    title_en: "Google People Management Essentials",
+    title_vn: "Chứng Chỉ Quản Trị Đội Ngũ Cốt Lõi Google",
+    desc_en:
+      "Credential covering high-performing team leadership, goal setting, and structured individual growth coaching.",
+    desc_vn:
+      "Chứng chỉ về dẫn dắt đội ngũ hiệu suất cao, thiết lập mục tiêu OKRs và huấn luyện phát triển cá nhân bài bản.",
+    category: "Certificate",
+    links: "https://coursera.org",
+    images: [],
+    tags: ["Google", "Leadership", "Management"],
+    project_date: { start: "2026-02-18", end: null },
   },
 ];
 
 function MagneticTabButton({
   active,
   onClick,
+  count,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  count?: number;
   children: React.ReactNode;
 }) {
   const { onPointerMove, onPointerLeave } = useMagneticHandlers(6, active);
@@ -561,15 +591,40 @@ function MagneticTabButton({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       data-cursor="magnetic"
-      className={`magnetic-target relative shrink-0 h-8 px-3.5 rounded-[9px] text-[13.5px] font-semibold transition-all cursor-pointer ${
+      className={`magnetic-target relative shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[9px] text-[13.5px] font-semibold transition-all cursor-pointer ${
         active
           ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs cursor-default"
           : "bg-transparent text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
       }`}
     >
-      {children}
+      <span>{children}</span>
+      {typeof count === "number" && (
+        <span
+          className={`px-1.5 py-0.2 rounded-full text-[11px] tabular-nums ${
+            active
+              ? "bg-[var(--pill-bg)] text-[var(--ink-primary)]"
+              : "text-[var(--ink-muted)]"
+          }`}
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
+}
+
+function buildPageNumbers(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) pages.push("ellipsis");
+  for (let p = start; p <= end; p++) pages.push(p);
+  if (end < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
 }
 
 export default function PortfolioUI({
@@ -578,9 +633,11 @@ export default function PortfolioUI({
 }: PortfolioUIProps) {
   const [lang, setLang] = useState<"EN" | "VN">("EN");
   const [activeView, setActiveView] = useState<ActiveView>("showcase");
-  const [activeTab, setActiveTab] = useState<string>("all-projects");
+  const [macroTab, setMacroTab] = useState<MacroTab>("projects");
+  const [selectedProjectCategory, setSelectedProjectCategory] = useState<string | null>(null);
+  const [selectedCertCategory, setSelectedCertCategory] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<ShowcaseLayout>("stage");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const [selectedProjectTag, setSelectedProjectTag] = useState<string | null>(null);
@@ -602,6 +659,7 @@ export default function PortfolioUI({
 
   const [vnTime, setVnTime] = useState<string>("");
   const pageWrapperRef = useRef<HTMLDivElement | null>(null);
+  const gridTopRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const syncFromLocation = () => {
@@ -773,23 +831,35 @@ export default function PortfolioUI({
     }
   }, []);
 
-  const { rawProjects, rawCertificates, projectTags, certTags, projectCategories } = useMemo(() => {
+  const {
+    rawProjects,
+    rawCertificates,
+    projectTags,
+    certTags,
+    projectCategories,
+    certCategories,
+  } = useMemo(() => {
     const feat: Project[] = [];
     const cert: Project[] = [];
     const pTagSet = new Set<string>();
     const cTagSet = new Set<string>();
-    const catSet = new Set<string>();
+    const pCatCounts = new Map<string, number>();
+    const cCatCounts = new Map<string, number>();
 
     projects.forEach((item) => {
-      const cat = (item.category || "").toLowerCase();
-      if (cat.includes("certificate") || cat.includes("chứng chỉ")) {
+      const rawCat = (item.category || "").trim();
+      const lowerCat = rawCat.toLowerCase();
+      if (lowerCat.includes("certificate") || lowerCat.includes("chứng chỉ")) {
         cert.push(item);
         if (Array.isArray(item.tags)) item.tags.forEach((t) => cTagSet.add(t));
+        if (rawCat && rawCat !== "Uncategorized") {
+          cCatCounts.set(rawCat, (cCatCounts.get(rawCat) || 0) + 1);
+        }
       } else {
         feat.push(item);
         if (Array.isArray(item.tags)) item.tags.forEach((t) => pTagSet.add(t));
-        if (item.category && item.category !== "Uncategorized") {
-          catSet.add(item.category);
+        if (rawCat && rawCat !== "Uncategorized") {
+          pCatCounts.set(rawCat, (pCatCounts.get(rawCat) || 0) + 1);
         }
       }
     });
@@ -799,7 +869,14 @@ export default function PortfolioUI({
       rawCertificates: cert,
       projectTags: Array.from(pTagSet),
       certTags: Array.from(cTagSet),
-      projectCategories: Array.from(catSet),
+      projectCategories: Array.from(pCatCounts.entries()).map(([name, count]) => ({
+        name,
+        count,
+      })),
+      certCategories: Array.from(cCatCounts.entries()).map(([name, count]) => ({
+        name,
+        count,
+      })),
     };
   }, [projects]);
 
@@ -902,35 +979,49 @@ export default function PortfolioUI({
   }, [profileData]);
 
   const showcaseTabs = useMemo(() => {
-    const tabs: { id: string; label: string }[] = [
-      { id: "all-projects", label: lang === "EN" ? "Projects" : "Dự án" },
+    const tabs: { id: MacroTab; label: string; count: number }[] = [
+      {
+        id: "projects",
+        label: lang === "EN" ? "Projects" : "Dự án",
+        count: rawProjects.length,
+      },
     ];
-    if (projectCategories.length >= 2 && projectCategories.length <= 4) {
-      projectCategories.forEach((cat) => {
-        tabs.push({ id: `cat:${cat}`, label: cat });
-      });
-    }
     if (rawCertificates.length > 0) {
       tabs.push({
         id: "certificates",
         label: lang === "EN" ? "Certificates" : "Chứng chỉ",
+        count: rawCertificates.length,
       });
     }
     return tabs;
-  }, [projectCategories, rawCertificates.length, lang]);
+  }, [rawProjects.length, rawCertificates.length, lang]);
 
-  const effectiveTab = useMemo(
-    () => (showcaseTabs.some((t) => t.id === activeTab) ? activeTab : "all-projects"),
-    [showcaseTabs, activeTab]
+  const effectiveMacroTab: MacroTab =
+    macroTab === "certificates" && rawCertificates.length > 0 ? "certificates" : "projects";
+  const isCertTab = effectiveMacroTab === "certificates";
+
+  const activeProjectCategory = useMemo(
+    () =>
+      selectedProjectCategory &&
+      projectCategories.some((c) => c.name === selectedProjectCategory)
+        ? selectedProjectCategory
+        : null,
+    [selectedProjectCategory, projectCategories]
   );
 
-  const isCertTab = effectiveTab === "certificates";
+  const activeCertCategory = useMemo(
+    () =>
+      selectedCertCategory &&
+      certCategories.some((c) => c.name === selectedCertCategory)
+        ? selectedCertCategory
+        : null,
+    [selectedCertCategory, certCategories]
+  );
 
   const activeProjectPool = useMemo(() => {
     let base = rawProjects;
-    if (effectiveTab.startsWith("cat:")) {
-      const cat = effectiveTab.slice(4);
-      base = base.filter((p) => p.category === cat);
+    if (activeProjectCategory) {
+      base = base.filter((p) => p.category === activeProjectCategory);
     }
     if (selectedProjectTag) {
       base = base.filter((p) => p.tags && p.tags.includes(selectedProjectTag));
@@ -940,10 +1031,13 @@ export default function PortfolioUI({
       const tB = getTimeValue(b);
       return projectSort === "newest" ? tB - tA : tA - tB;
     });
-  }, [rawProjects, effectiveTab, selectedProjectTag, projectSort]);
+  }, [rawProjects, activeProjectCategory, selectedProjectTag, projectSort]);
 
   const activeCertPool = useMemo(() => {
     let base = rawCertificates;
+    if (activeCertCategory) {
+      base = base.filter((c) => c.category === activeCertCategory);
+    }
     if (selectedCertTag) {
       base = base.filter((c) => c.tags && c.tags.includes(selectedCertTag));
     }
@@ -952,19 +1046,48 @@ export default function PortfolioUI({
       const tB = getTimeValue(b);
       return certSort === "newest" ? tB - tA : tA - tB;
     });
-  }, [rawCertificates, selectedCertTag, certSort]);
+  }, [rawCertificates, activeCertCategory, selectedCertTag, certSort]);
 
   const currentItems = isCertTab ? activeCertPool : activeProjectPool;
+  const currentCategories = isCertTab ? certCategories : projectCategories;
+  const currentSelectedCategory = isCertTab ? activeCertCategory : activeProjectCategory;
   const currentTags = isCertTab ? certTags : projectTags;
   const currentSelectedTag = isCertTab ? selectedCertTag : selectedProjectTag;
   const currentSort = isCertTab ? certSort : projectSort;
-  const currentPage = isCertTab ? certPage : projectPage;
+  const rawPage = isCertTab ? certPage : projectPage;
   const totalPages = Math.max(1, Math.ceil(currentItems.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(rawPage, totalPages);
 
   const paginatedGridItems = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return currentItems.slice(start, start + ITEMS_PER_PAGE);
   }, [currentItems, currentPage]);
+
+  const visibleTags = useMemo(() => {
+    if (showAllTags || currentTags.length <= INITIAL_VISIBLE_TAGS) {
+      return currentTags;
+    }
+    const base = currentTags.slice(0, INITIAL_VISIBLE_TAGS);
+    if (currentSelectedTag && !base.includes(currentSelectedTag)) {
+      return [...base, currentSelectedTag];
+    }
+    return base;
+  }, [currentTags, showAllTags, currentSelectedTag]);
+
+  const changePage = useCallback(
+    (nextPage: number) => {
+      if (isCertTab) {
+        setCertPage(nextPage);
+      } else {
+        setProjectPage(nextPage);
+      }
+      if (gridTopRef.current) {
+        const y = gridTopRef.current.getBoundingClientRect().top + window.scrollY - 20;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      }
+    },
+    [isCertTab]
+  );
 
   const formatDate = useCallback((dateString: string | null) => {
     if (!dateString) return "";
@@ -1018,7 +1141,10 @@ export default function PortfolioUI({
       ""
     : "";
 
-  const hasCenterTabs = activeView === "showcase" && showcaseTabs.length > 1;
+  const hasCenterTabs = activeView === "showcase" && showcaseTabs.length > 0;
+  const showCategoryPills = isCertTab
+    ? currentCategories.length > 1
+    : currentCategories.length >= 1;
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)] selection:bg-[#FFD433] selection:text-black">
@@ -1053,8 +1179,10 @@ export default function PortfolioUI({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab("all-projects");
+                      setMacroTab("projects");
+                      setSelectedProjectCategory(null);
                       setSelectedProjectTag(null);
+                      setProjectPage(1);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     onPointerMove={navLeftMagnetic.onPointerMove}
@@ -1078,14 +1206,15 @@ export default function PortfolioUI({
               {hasCenterTabs && (
                 <nav
                   role="tablist"
-                  aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
+                  aria-label={lang === "EN" ? "Portfolio sections" : "Phân mục hồ sơ"}
                   className="hidden lg:inline-flex lg:justify-self-center items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
                 >
                   {showcaseTabs.map((tab) => (
                     <MagneticTabButton
                       key={tab.id}
-                      active={effectiveTab === tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      active={effectiveMacroTab === tab.id}
+                      count={tab.count}
+                      onClick={() => setMacroTab(tab.id)}
                     >
                       {tab.label}
                     </MagneticTabButton>
@@ -1145,19 +1274,20 @@ export default function PortfolioUI({
               </div>
             </div>
 
-            {/* Mobile & Tablet (< 1024px) Centered Segmented Category Row */}
+            {/* Mobile & Tablet (< 1024px) Segmented Section Row (safe horizontal scroll without left clipping) */}
             {hasCenterTabs && (
-              <div className="lg:hidden mt-3 flex justify-center">
+              <div className="lg:hidden mt-3 w-full overflow-x-auto hide-scrollbar">
                 <nav
                   role="tablist"
-                  aria-label={lang === "EN" ? "Portfolio categories" : "Danh mục"}
-                  className="inline-flex items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline max-w-full overflow-x-auto hide-scrollbar"
+                  aria-label={lang === "EN" ? "Portfolio sections" : "Phân mục hồ sơ"}
+                  className="mx-auto flex w-max items-center gap-1 p-1 h-10 rounded-[12px] bg-[var(--pill-bg)] apple-hairline"
                 >
                   {showcaseTabs.map((tab) => (
                     <MagneticTabButton
                       key={tab.id}
-                      active={effectiveTab === tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      active={effectiveMacroTab === tab.id}
+                      count={tab.count}
+                      onClick={() => setMacroTab(tab.id)}
                     >
                       {tab.label}
                     </MagneticTabButton>
@@ -1172,168 +1302,242 @@ export default function PortfolioUI({
           <AnimatePresence mode="wait">
             {activeView === "showcase" ? (
               <motion.div
-                key={`showcase-${effectiveTab}-${layoutMode}`}
+                key={`showcase-${effectiveMacroTab}-${layoutMode}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.32, ease: "easeOut" }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
                 className="w-full"
               >
-                {/* Flush 40px Sub-Toolbar */}
-                {(currentItems.length > 1 || currentTags.length > 0) && (
-                  <div className="apple-shell mt-1 sm:mt-2">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <div className="inline-flex h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
-                        <button
-                          type="button"
-                          onClick={() => setLayoutMode("stage")}
-                          data-cursor="magnetic"
-                          className={`inline-flex h-8 items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
-                            layoutMode === "stage"
-                              ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                              : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                          }`}
-                        >
-                          <GalleryHorizontalEnd className="h-3.5 w-3.5" />
-                          <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLayoutMode("grid")}
-                          data-cursor="magnetic"
-                          className={`inline-flex h-8 items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
-                            layoutMode === "grid"
-                              ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                              : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                          }`}
-                        >
-                          <LayoutGrid className="h-3.5 w-3.5" />
-                          <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
-                        </button>
-                      </div>
+                {/* Full Classification, Layout & Sort Toolbar */}
+                {projects.length > 0 && (
+                  <div className="apple-shell mt-1.5 sm:mt-2 space-y-2.5">
+                    {/* Row 1: Count Summary + Stage/Grid Toggle + Newest/Oldest Sort */}
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <p className="text-xs sm:text-[13px] font-medium tabular-nums text-[var(--ink-meta)]">
+                        {layoutMode === "grid"
+                          ? lang === "EN"
+                            ? `Showing ${paginatedGridItems.length} of ${currentItems.length} ${
+                                isCertTab ? "credentials" : "projects"
+                              }`
+                            : `Hiển thị ${paginatedGridItems.length} / ${currentItems.length} ${
+                                isCertTab ? "chứng chỉ" : "dự án"
+                              }`
+                          : lang === "EN"
+                          ? `${currentItems.length} ${
+                              isCertTab ? "credentials" : "projects"
+                            }`
+                          : `${currentItems.length} ${
+                              isCertTab ? "chứng chỉ" : "dự án"
+                            }`}
+                      </p>
 
-                      {(currentTags.length > 0 || currentItems.length > 1) && (
-                        <button
-                          type="button"
-                          onClick={() => setShowFilters((prev) => !prev)}
-                          data-cursor="magnetic"
-                          aria-expanded={showFilters}
-                          className={`inline-flex h-10 items-center gap-1.5 px-3.5 rounded-[12px] apple-hairline text-xs font-semibold transition-all cursor-pointer ${
-                            showFilters || currentSelectedTag
-                              ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                              : "bg-[var(--pill-bg)] text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                          }`}
-                        >
-                          <SlidersHorizontal className="h-3.5 w-3.5" />
-                          <span>
-                            {currentSelectedTag
-                              ? `#${currentSelectedTag}`
-                              : lang === "EN"
-                              ? "Filter & Sort"
-                              : "Lọc & Sắp xếp"}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Stage / Grid Switch */}
+                        <div className="inline-flex h-9 sm:h-10 items-center p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                          <button
+                            type="button"
+                            onClick={() => setLayoutMode("stage")}
+                            data-cursor="magnetic"
+                            className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                              layoutMode === "stage"
+                                ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <GalleryHorizontalEnd className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Stage" : "Sân khấu"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLayoutMode("grid")}
+                            data-cursor="magnetic"
+                            className={`inline-flex h-7 sm:h-8 items-center gap-1.5 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                              layoutMode === "grid"
+                                ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Grid" : "Lưới"}</span>
+                          </button>
+                        </div>
+
+                        {/* Sort Newest / Oldest Switch (Directly Visible) */}
+                        <div className="inline-flex h-9 sm:h-10 items-center gap-0.5 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
+                          <span className="hidden sm:inline-flex items-center gap-1 px-2 text-xs font-medium text-[var(--ink-meta)]">
+                            <ArrowUpDown className="h-3.5 w-3.5" />
+                            <span>{lang === "EN" ? "Sort" : "Xếp"}</span>
                           </span>
-                        </button>
-                      )}
+                          {(["newest", "oldest"] as const).map((ord) => (
+                            <button
+                              key={ord}
+                              type="button"
+                              onClick={() => {
+                                if (isCertTab) {
+                                  setCertSort(ord);
+                                  setCertPage(1);
+                                } else {
+                                  setProjectSort(ord);
+                                  setProjectPage(1);
+                                }
+                              }}
+                              className={`h-7 sm:h-8 px-2.5 sm:px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
+                                currentSort === ord
+                                  ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
+                                  : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                              }`}
+                            >
+                              {ord === "newest"
+                                ? lang === "EN"
+                                  ? "Newest"
+                                  : "Mới nhất"
+                                : lang === "EN"
+                                ? "Oldest"
+                                : "Cũ nhất"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                <AnimatePresence initial={false}>
-                  {showFilters && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="apple-shell pt-3.5 pb-1">
-                        <div className="mx-auto max-w-3xl flex flex-col items-center gap-3">
-                          <div className="inline-flex h-10 items-center gap-1 p-1 rounded-[12px] bg-[var(--pill-bg)] apple-hairline">
-                            <span className="inline-flex items-center gap-1 px-2.5 text-xs font-medium text-[var(--ink-meta)]">
-                              <ArrowUpDown className="h-3.5 w-3.5" />
-                              <span>{lang === "EN" ? "Sort" : "Sắp xếp"}</span>
+                    {/* Row 2: Notion Category Classification Pills (unconditional for >= 1 project categories) */}
+                    {showCategoryPills && (
+                      <div className="w-full overflow-x-auto hide-scrollbar">
+                        <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 pr-1 text-[11.5px] font-semibold text-[var(--ink-meta)]">
+                            <FolderKanban className="h-3.5 w-3.5 opacity-75" />
+                            <span>{lang === "EN" ? "Category:" : "Danh mục:"}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isCertTab) {
+                                setSelectedCertCategory(null);
+                                setCertPage(1);
+                              } else {
+                                setSelectedProjectCategory(null);
+                                setProjectPage(1);
+                              }
+                            }}
+                            className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              !currentSelectedCategory
+                                ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            <span>{lang === "EN" ? "All" : "Tất cả"}</span>
+                            <span className="opacity-75 tabular-nums text-[11px]">
+                              ({isCertTab ? rawCertificates.length : rawProjects.length})
                             </span>
-                            {(["newest", "oldest"] as const).map((ord) => (
-                              <button
-                                key={ord}
-                                type="button"
-                                onClick={() => {
-                                  if (isCertTab) {
-                                    setCertSort(ord);
-                                    setCertPage(1);
-                                  } else {
-                                    setProjectSort(ord);
-                                    setProjectPage(1);
-                                  }
-                                }}
-                                className={`h-8 px-3 rounded-[8px] text-xs font-semibold transition-all cursor-pointer ${
-                                  currentSort === ord
-                                    ? "bg-[var(--pill-active-bg)] text-[var(--ink-primary)] shadow-2xs"
-                                    : "text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                                }`}
-                              >
-                                {ord === "newest"
-                                  ? lang === "EN"
-                                    ? "Newest"
-                                    : "Mới nhất"
-                                  : lang === "EN"
-                                  ? "Oldest"
-                                  : "Cũ nhất"}
-                              </button>
-                            ))}
-                          </div>
+                          </button>
 
-                          {currentTags.length > 0 && (
-                            <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          {currentCategories.map((cat) => {
+                            const active = currentSelectedCategory === cat.name;
+                            return (
                               <button
+                                key={cat.name}
                                 type="button"
                                 onClick={() => {
                                   if (isCertTab) {
-                                    setSelectedCertTag(null);
+                                    setSelectedCertCategory(active ? null : cat.name);
                                     setCertPage(1);
                                   } else {
-                                    setSelectedProjectTag(null);
+                                    setSelectedProjectCategory(active ? null : cat.name);
                                     setProjectPage(1);
                                   }
                                 }}
-                                className={`h-8 px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                                  !currentSelectedTag
+                                className={`inline-flex h-7 items-center gap-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  active
                                     ? "bg-[var(--ink-primary)] text-[var(--background)]"
                                     : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
                                 }`}
                               >
-                                {lang === "EN" ? "All" : "Tất cả"}
+                                <span>{cat.name}</span>
+                                <span className="opacity-75 tabular-nums text-[11px]">
+                                  ({cat.count})
+                                </span>
                               </button>
-                              {currentTags.map((tag) => (
-                                <button
-                                  key={tag}
-                                  type="button"
-                                  onClick={() => {
-                                    if (isCertTab) {
-                                      setSelectedCertTag(selectedCertTag === tag ? null : tag);
-                                      setCertPage(1);
-                                    } else {
-                                      setSelectedProjectTag(selectedProjectTag === tag ? null : tag);
-                                      setProjectPage(1);
-                                    }
-                                  }}
-                                  className={`h-8 px-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                                    currentSelectedTag === tag
-                                      ? "bg-[var(--ink-primary)] text-[var(--background)]"
-                                      : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
-                                  }`}
-                                >
-                                  {tag}
-                                </button>
-                              ))}
-                            </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 3: Tech Stack / Credential Tag Filter Pills (Directly Visible) */}
+                    {currentTags.length > 0 && (
+                      <div className="w-full overflow-x-auto hide-scrollbar">
+                        <div className="flex w-max sm:w-auto sm:flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 pr-1 text-[11.5px] font-semibold text-[var(--ink-meta)]">
+                            <Tag className="h-3.5 w-3.5 opacity-75" />
+                            <span>{lang === "EN" ? "Tags:" : "Thẻ:"}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isCertTab) {
+                                setSelectedCertTag(null);
+                                setCertPage(1);
+                              } else {
+                                setSelectedProjectTag(null);
+                                setProjectPage(1);
+                              }
+                            }}
+                            className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                              !currentSelectedTag
+                                ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                            }`}
+                          >
+                            {lang === "EN" ? "All" : "Tất cả"}
+                          </button>
+
+                          {visibleTags.map((tag) => {
+                            const active = currentSelectedTag === tag;
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  if (isCertTab) {
+                                    setSelectedCertTag(active ? null : tag);
+                                    setCertPage(1);
+                                  } else {
+                                    setSelectedProjectTag(active ? null : tag);
+                                    setProjectPage(1);
+                                  }
+                                }}
+                                className={`h-7 px-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                                  active
+                                    ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                    : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+
+                          {currentTags.length > INITIAL_VISIBLE_TAGS && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllTags((prev) => !prev)}
+                              className="h-7 px-2.5 rounded-full text-xs font-semibold bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
+                            >
+                              {showAllTags
+                                ? lang === "EN"
+                                  ? "Show less"
+                                  : "Thu gọn"
+                                : lang === "EN"
+                                ? `+${currentTags.length - INITIAL_VISIBLE_TAGS} more`
+                                : `+${currentTags.length - INITIAL_VISIBLE_TAGS} thẻ`}
+                            </button>
                           )}
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    )}
+                  </div>
+                )}
 
                 {projects.length === 0 ? (
                   <div className="apple-shell py-20 text-center">
@@ -1359,131 +1563,215 @@ export default function PortfolioUI({
                   </div>
                 ) : layoutMode === "stage" ? (
                   <ShowcaseCarousel
-                    key={`${effectiveTab}-${currentSelectedTag ?? "all"}-${currentSort}`}
+                    key={`${effectiveMacroTab}-${currentSelectedCategory ?? "all"}-${
+                      currentSelectedTag ?? "all"
+                    }-${currentSort}`}
                     items={currentItems}
                     lang={lang}
                     isCertificateReel={isCertTab}
                     onSelectProject={setSelectedProject}
                     formatYearOrDate={formatYearOrDate}
+                    formatDateRange={formatDateRangeString}
                     renderLinkifiedText={renderLinkified}
                   />
                 ) : (
-                  <section className="apple-shell py-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {paginatedGridItems.map((item, idx) => {
-                        const title =
-                          (lang === "EN" ? item.title_en : item.title_vn) ||
-                          item.title_en ||
-                          item.title_vn ||
-                          "Untitled";
-                        const desc =
-                          (lang === "EN"
-                            ? item.desc_en || item.desc_vn
-                            : item.desc_vn || item.desc_en) || "";
-                        const hasImage = Boolean(item.images && item.images[0]);
+                  <section ref={gridTopRef} className="apple-shell py-6 sm:py-8">
+                    {paginatedGridItems.length === 0 ? (
+                      <div className="mx-auto max-w-2xl px-6 py-16 text-center rounded-[26px] apple-hairline bg-[var(--surface-elevated)] text-[var(--ink-meta)] text-sm">
+                        {lang === "EN"
+                          ? "No items match the selected filter."
+                          : "Không có mục nào khớp bộ lọc đang chọn."}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {paginatedGridItems.map((item, idx) => {
+                          const title =
+                            (lang === "EN" ? item.title_en : item.title_vn) ||
+                            item.title_en ||
+                            item.title_vn ||
+                            "Untitled";
+                          const desc =
+                            (lang === "EN"
+                              ? item.desc_en || item.desc_vn
+                              : item.desc_vn || item.desc_en) || "";
+                          const hasImage = Boolean(item.images && item.images[0]);
+                          const dateStr =
+                            formatDateRangeString(item.project_date) || formatYearOrDate(item);
+                          const badgeCategory =
+                            item.category && item.category !== "Uncategorized"
+                              ? item.category
+                              : isCertTab
+                              ? lang === "EN"
+                                ? "Certificate"
+                                : "Chứng chỉ"
+                              : "";
 
-                        return (
-                          <motion.article
-                            key={item.id}
-                            onClick={() => setSelectedProject(item)}
-                            data-cursor="magnetic"
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.35, delay: idx * 0.04 }}
-                            className="group flex h-full flex-col rounded-[24px] apple-hairline bg-[var(--background)] hover:bg-[var(--surface-elevated)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
-                            style={{ boxShadow: "var(--card-shadow)" }}
-                          >
-                            <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
-                              {hasImage ? (
-                                <Image
-                                  src={item.images[0]}
-                                  alt={title}
-                                  fill
-                                  unoptimized={
-                                    /(\.gif|\.svg)(\?|$)/i.test(item.images[0]) ||
-                                    item.images[0].startsWith("data:")
-                                  }
-                                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                  className={`${
-                                    isCertTab ? "object-contain p-3" : "object-cover object-top"
-                                  } transition-transform duration-500 group-hover:scale-[1.03]`}
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-[var(--pill-bg)]">
-                                  {isCertTab ? (
-                                    <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
-                                  ) : (
-                                    <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                          return (
+                            <motion.article
+                              key={item.id}
+                              onClick={() => setSelectedProject(item)}
+                              data-cursor="magnetic"
+                              initial={{ opacity: 0, y: 16 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.35, delay: idx * 0.04 }}
+                              className="group flex h-full flex-col rounded-[24px] apple-hairline bg-[var(--background)] hover:bg-[var(--surface-elevated)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
+                              style={{ boxShadow: "var(--card-shadow)" }}
+                            >
+                              <div className="relative w-full aspect-[16/10] overflow-hidden bg-[var(--surface-elevated)] border-b border-[var(--card-border)]">
+                                {hasImage ? (
+                                  <Image
+                                    src={item.images[0]}
+                                    alt={title}
+                                    fill
+                                    unoptimized={
+                                      /(\.gif|\.svg)(\?|$)/i.test(item.images[0]) ||
+                                      item.images[0].startsWith("data:")
+                                    }
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    className={`${
+                                      isCertTab ? "object-contain p-3" : "object-cover object-top"
+                                    } transition-transform duration-500 group-hover:scale-[1.03]`}
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-[var(--pill-bg)]">
+                                    {isCertTab ? (
+                                      <Award className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
+                                    ) : (
+                                      <Code className="h-10 w-10 text-[var(--ink-meta)] opacity-50" />
+                                    )}
+                                  </div>
+                                )}
 
-                            <div className="flex flex-1 flex-col p-5 sm:p-6">
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                                  {formatDateRangeString(item.project_date) ||
-                                    formatYearOrDate(item)}
-                                </span>
-                                <ArrowUpRight className="h-4 w-4 text-[var(--ink-meta)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                {badgeCategory && (
+                                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold text-[var(--ink-primary)]">
+                                    {badgeCategory}
+                                  </span>
+                                )}
+
+                                {item.images && item.images.length > 1 && (
+                                  <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full apple-glass text-[11px] font-semibold tabular-nums text-[var(--ink-primary)]">
+                                    1 / {item.images.length}
+                                  </span>
+                                )}
                               </div>
 
-                              <h3 className="text-[17px] leading-[1.35] font-semibold text-[var(--ink-primary)] line-clamp-2">
-                                {title}
-                              </h3>
-
-                              {desc && (
-                                <div className="mt-2 text-[13.5px] leading-[1.6] text-[var(--ink-secondary)] line-clamp-3 flex-1">
-                                  <LinkifiedText text={desc} />
-                                </div>
-                              )}
-
-                              {item.tags && item.tags.length > 0 && (
-                                <div className="mt-auto pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-1.5">
-                                  {item.tags.slice(0, 4).map((t) => (
-                                    <span
-                                      key={t}
-                                      className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-meta)]"
-                                    >
-                                      {t}
+                              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  {dateStr ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                                      <Calendar className="h-3.5 w-3.5 opacity-75" />
+                                      <span>{dateStr}</span>
                                     </span>
-                                  ))}
+                                  ) : (
+                                    <span />
+                                  )}
+
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-primary)] group-hover:translate-x-0.5 transition-transform">
+                                    <span>
+                                      {isCertTab
+                                        ? lang === "EN"
+                                          ? "View Certificate"
+                                          : "Xem Chứng Chỉ"
+                                        : lang === "EN"
+                                        ? "View Details"
+                                        : "Xem Chi Tiết"}
+                                    </span>
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                          </motion.article>
-                        );
-                      })}
-                    </div>
+
+                                <h3 className="text-[17.5px] sm:text-[18.5px] leading-[1.35] font-semibold text-[var(--ink-primary)] break-words">
+                                  {title}
+                                </h3>
+
+                                {desc && (
+                                  <div className="mt-2.5 text-[13.5px] sm:text-[14px] leading-[1.65] text-[var(--ink-secondary)] whitespace-pre-line flex-1">
+                                    <LinkifiedText text={desc} />
+                                  </div>
+                                )}
+
+                                {((item.tags && item.tags.length > 0) || item.links) && (
+                                  <div className="mt-auto pt-4 border-t border-[var(--card-border)] space-y-2.5">
+                                    {item.tags && item.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {item.tags.map((t) => (
+                                          <span
+                                            key={t}
+                                            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-secondary)]"
+                                          >
+                                            {t}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {item.links && (
+                                      <div className="pt-0.5">
+                                        <a
+                                          href={item.links}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--pill-bg)] text-xs font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity"
+                                        >
+                                          <span>
+                                            {lang === "EN" ? "Open Live Link" : "Xem Trực Tiếp"}
+                                          </span>
+                                          <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </motion.article>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {totalPages > 1 && (
-                      <div className="mt-8 flex items-center justify-center gap-2.5">
+                      <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                         <button
                           type="button"
-                          onClick={() =>
-                            isCertTab
-                              ? setCertPage((p) => Math.max(1, p - 1))
-                              : setProjectPage((p) => Math.max(1, p - 1))
-                          }
+                          onClick={() => changePage(Math.max(1, currentPage - 1))}
                           disabled={currentPage === 1}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
-                          aria-label="Previous page"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                          aria-label={lang === "EN" ? "Previous page" : "Trang trước"}
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="inline-flex h-10 items-center px-4 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
-                          {currentPage} / {totalPages}
-                        </span>
+
+                        {buildPageNumbers(currentPage, totalPages).map((entry, i) =>
+                          entry === "ellipsis" ? (
+                            <span
+                              key={`ellipsis-${i}`}
+                              className="px-1.5 text-xs font-semibold text-[var(--ink-meta)]"
+                            >
+                              …
+                            </span>
+                          ) : (
+                            <button
+                              key={entry}
+                              type="button"
+                              onClick={() => changePage(entry)}
+                              className={`h-10 min-w-[40px] px-3 rounded-full text-xs font-semibold tabular-nums transition-all cursor-pointer ${
+                                currentPage === entry
+                                  ? "bg-[var(--ink-primary)] text-[var(--background)]"
+                                  : "bg-[var(--pill-bg)] apple-hairline text-[var(--ink-meta)] hover:text-[var(--ink-primary)]"
+                              }`}
+                            >
+                              {entry}
+                            </button>
+                          )
+                        )}
+
                         <button
                           type="button"
-                          onClick={() =>
-                            isCertTab
-                              ? setCertPage((p) => Math.min(totalPages, p + 1))
-                              : setProjectPage((p) => Math.min(totalPages, p + 1))
-                          }
+                          onClick={() => changePage(Math.min(totalPages, currentPage + 1))}
                           disabled={currentPage === totalPages}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
-                          aria-label="Next page"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                          aria-label={lang === "EN" ? "Next page" : "Trang tiếp"}
                         >
                           <ChevronRight className="h-4 w-4" />
                         </button>
@@ -1506,8 +1794,13 @@ export default function PortfolioUI({
                 projectTags={projectTags}
                 socialLinks={socialLinks}
                 formatDate={formatDate}
+                formatDateRange={formatDateRangeString}
                 formatYearOrDate={formatYearOrDate}
                 onSelectProject={setSelectedProject}
+                onOpenCertificatesShowcase={() => {
+                  setMacroTab("certificates");
+                  switchView("showcase");
+                }}
                 renderLinkifiedText={renderLinkified}
                 renderTypingSubtitle={() =>
                   profileData ? (
@@ -1549,7 +1842,7 @@ export default function PortfolioUI({
               </nav>
 
               <p className="text-center font-semibold text-[var(--ink-muted)] md:justify-self-center">
-                © {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
+                &copy; {new Date().getFullYear()} {profileData?.name_en || "Nguyen Chi Thang"} Portfolio
               </p>
 
               <div className="hidden md:flex items-center justify-end md:justify-self-end">

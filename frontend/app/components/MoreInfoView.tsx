@@ -2,7 +2,14 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Calendar, ChevronDown } from "lucide-react";
+import {
+  ArrowUpRight,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
 import { useMagneticHandlers } from "./Magnetic";
 import type { Project, ProfileData } from "../PortfolioUI";
 
@@ -46,11 +53,15 @@ interface MoreInfoViewProps {
   projectTags: string[];
   socialLinks: SocialLinkEntry[];
   formatDate: (d: string | null) => string;
+  formatDateRange: (dateRange: Project["project_date"]) => string | null;
   formatYearOrDate: (p: Project) => string;
   onSelectProject: (p: Project) => void;
+  onOpenCertificatesShowcase?: () => void;
   renderLinkifiedText: (text: string, className?: string) => React.ReactNode;
   renderTypingSubtitle: () => React.ReactNode;
 }
+
+const CERTS_PER_PAGE = 6;
 
 function AppleHoverRow({
   children,
@@ -124,13 +135,16 @@ export default function MoreInfoView({
   projectTags,
   socialLinks,
   formatDate,
+  formatDateRange,
   formatYearOrDate,
   onSelectProject,
+  onOpenCertificatesShowcase,
   renderLinkifiedText,
   renderTypingSubtitle,
 }: MoreInfoViewProps) {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [openExpIdx, setOpenExpIdx] = useState<number | null>(0);
+  const [certPage, setCertPage] = useState(1);
   const ctaMagnetic = useMagneticHandlers(5);
   const readMoreMagnetic = useMagneticHandlers(4);
 
@@ -142,6 +156,13 @@ export default function MoreInfoView({
   const extraAbout = aboutParagraphs.slice(1);
   const anyExpHasBullets = parsedExperiences.some(
     (e) => e.bullets && e.bullets.length > 0
+  );
+
+  const totalCertPages = Math.max(1, Math.ceil(certificates.length / CERTS_PER_PAGE));
+  const safeCertPage = Math.min(certPage, totalCertPages);
+  const visibleCerts = certificates.slice(
+    (safeCertPage - 1) * CERTS_PER_PAGE,
+    safeCertPage * CERTS_PER_PAGE
   );
 
   return (
@@ -372,44 +393,9 @@ export default function MoreInfoView({
           </div>
         )}
 
-        {/* 3. Certificates & Accreditations Section */}
-        {certificates.length > 0 && (
-          <div className="mb-12">
-            <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
-              {lang === "EN" ? "Certificates" : "Chứng chỉ"}
-            </h2>
-
-            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
-              {certificates.map((cert) => {
-                const title =
-                  (lang === "EN" ? cert.title_en : cert.title_vn) ||
-                  cert.title_en ||
-                  cert.title_vn ||
-                  "Certificate";
-                const dateStr = formatYearOrDate(cert);
-                return (
-                  <div key={cert.id} className="py-0.5">
-                    <AppleHoverRow onClick={() => onSelectProject(cert)}>
-                      <div className="flex items-baseline justify-between gap-4">
-                        <span className="text-[16px] sm:text-[17px] font-normal text-[var(--ink-primary)] line-clamp-2">
-                          {title}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[13.5px] sm:text-[14.5px] tabular-nums text-[var(--ink-meta)] shrink-0">
-                          <span>{dateStr || (lang === "EN" ? "View" : "Xem")}</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </span>
-                      </div>
-                    </AppleHoverRow>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 4. Education Section */}
+        {/* 3. Education Section */}
         {parsedEducations.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-12">
             <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)] mb-3">
               {lang === "EN" ? "Education" : "Học vấn"}
             </h2>
@@ -452,6 +438,152 @@ export default function MoreInfoView({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* 4. Certificates & Accreditations Section (Full Card Metadata + Paginated) */}
+        {certificates.length > 0 && (
+          <div className="mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="apple-h2 text-[24px] sm:text-[28px] font-normal text-[var(--ink-primary)]">
+                  {lang === "EN" ? "Certificates & Accreditations" : "Chứng chỉ & Thành tựu"}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[var(--pill-bg)] text-[var(--ink-meta)]">
+                  {certificates.length}
+                </span>
+              </div>
+
+              {onOpenCertificatesShowcase && (
+                <button
+                  type="button"
+                  onClick={onOpenCertificatesShowcase}
+                  data-cursor="magnetic"
+                  className="inline-flex h-9 items-center gap-1.5 px-3.5 rounded-[10px] bg-[var(--pill-bg)] apple-hairline text-xs font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <span>{lang === "EN" ? "Browse Gallery" : "Mở Bộ Sưu Tập"}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="divide-y divide-[var(--card-border)] border-t border-b border-[var(--card-border)]">
+              {visibleCerts.map((cert) => {
+                const title =
+                  (lang === "EN" ? cert.title_en : cert.title_vn) ||
+                  cert.title_en ||
+                  cert.title_vn ||
+                  "Certificate";
+                const desc =
+                  (lang === "EN"
+                    ? cert.desc_en || cert.desc_vn
+                    : cert.desc_vn || cert.desc_en) || "";
+                const dateStr = formatDateRange(cert.project_date) || formatYearOrDate(cert);
+
+                return (
+                  <div key={cert.id} className="py-4">
+                    <div
+                      onClick={() => onSelectProject(cert)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelectProject(cert);
+                        }
+                      }}
+                      data-cursor="magnetic"
+                      className="apple-list-row group block -mx-3.5 px-3.5 sm:-mx-4 sm:px-4 py-3 text-left cursor-pointer"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {cert.category && (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--pill-bg)] text-[var(--ink-primary)]">
+                              {cert.category}
+                            </span>
+                          )}
+                          {dateStr && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium tabular-nums text-[var(--ink-meta)]">
+                              <Calendar className="h-3 w-3 opacity-75" />
+                              <span>{dateStr}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-meta)] group-hover:text-[var(--ink-primary)] transition-colors">
+                          <span>{lang === "EN" ? "View Certificate" : "Xem Chứng Chỉ"}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+
+                      <h3 className="text-[16.5px] sm:text-[17.5px] font-medium text-[var(--ink-primary)] leading-[1.4]">
+                        {title}
+                      </h3>
+
+                      {desc && (
+                        <div className="mt-1.5 text-[14px] leading-[1.6] text-[var(--ink-secondary)] whitespace-pre-line">
+                          {renderLinkifiedText(desc)}
+                        </div>
+                      )}
+
+                      {((cert.tags && cert.tags.length > 0) || cert.links) && (
+                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap gap-1.5">
+                            {(cert.tags || []).map((t) => (
+                              <span
+                                key={t}
+                                className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--pill-bg)] text-[var(--ink-meta)]"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+
+                          {cert.links && (
+                            <a
+                              href={cert.links}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--pill-bg)] text-[11px] font-semibold text-[var(--ink-primary)] hover:opacity-80 transition-opacity"
+                            >
+                              <span>{lang === "EN" ? "Verify Link" : "Link Xác Thực"}</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {totalCertPages > 1 && (
+              <div className="mt-5 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCertPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCertPage === 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
+                  aria-label="Previous certificates page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="inline-flex h-9 items-center px-3.5 rounded-full bg-[var(--pill-bg)] apple-hairline text-xs font-semibold tabular-nums text-[var(--ink-meta)]">
+                  {safeCertPage} / {totalCertPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCertPage((p) => Math.min(totalCertPages, p + 1))}
+                  disabled={safeCertPage === totalCertPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pill-bg)] apple-hairline text-[var(--ink-primary)] disabled:opacity-35 cursor-pointer"
+                  aria-label="Next certificates page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
